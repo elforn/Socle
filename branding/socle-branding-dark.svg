@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="320" viewBox="0 0 680 320" role="img">
+<title>Socle — Free. Simple. Yours. (dark)</title>
+<desc>Socle library branding on dark background: stepped pedestal mark with orange accent cap, wordmark in lowercase, and tagline</desc>
+
+<style>
+  .bg    { fill: #1C1C1E; }
+  .mark  { fill: #F5F2EE; }
+  .acc   { fill: #E8824A; }
+  .wm    { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 62px; font-weight: 500; fill: #F5F2EE; }
+  .tag   { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 17px; font-weight: 500; fill: #F5F2EE; letter-spacing: 0.04em; }
+  .sub   { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; font-weight: 400; fill: #8A8A8E; }
+  .lbl   { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 400; fill: #6A6A6E; }
+  .div   { fill: #3A3A3C; }
+</style>
+
+<rect width="680" height="320" class="bg"/>
+
+<!-- Icon mark -->
+<rect x="52" y="28" width="76" height="62" rx="4" class="mark"/>
+<rect x="52" y="28" width="76" height="9" rx="4" class="acc"/>
+<rect x="36" y="90" width="108" height="19" rx="3" class="mark"/>
+
+<!-- Wordmark -->
+<text x="182" y="88" class="wm">socle</text>
+
+<!-- Tagline -->
+<text x="184" y="120" class="tag">Free. Simple. Yours.</text>
+
+<!-- Divider -->
+<rect x="40" y="158" width="600" height="0.5" class="div"/>
+
+<!-- Icon variants label -->
+<text x="40" y="184" class="lbl">Icon mark — 80 · 48 · 32 · 16 px</text>
+
+<!-- 80px -->
+<rect x="60" y="200" width="68" height="52" rx="3" class="mark"/>
+<rect x="60" y="200" width="68" height="8" rx="3" class="acc"/>
+<rect x="47" y="252" width="94" height="16" rx="2" class="mark"/>
+<text x="94" y="286" text-anchor="middle" class="lbl">80px</text>
+
+<!-- 48px -->
+<rect x="225" y="216" width="41" height="31" rx="2" class="mark"/>
+<rect x="225" y="216" width="41" height="5" rx="2" class="acc"/>
+<rect x="217" y="247" width="57" height="10" rx="2" class="mark"/>
+<text x="245" y="276" text-anchor="middle" class="lbl">48px</text>
+
+<!-- 32px -->
+<rect x="357" y="225" width="28" height="21" rx="2" class="mark"/>
+<rect x="357" y="225" width="28" height="4" rx="2" class="acc"/>
+<rect x="350" y="246" width="42" height="7" rx="1" class="mark"/>
+<text x="371" y="271" text-anchor="middle" class="lbl">32px</text>
+
+<!-- 16px -->
+<rect x="463" y="232" width="14" height="10" rx="1" class="mark"/>
+<rect x="463" y="232" width="14" height="3" rx="1" class="acc"/>
+<rect x="459" y="242" width="22" height="4" rx="1" class="mark"/>
+<text x="470" y="264" text-anchor="middle" class="lbl">16px</text>
+
+</svg>

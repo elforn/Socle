@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../"
+		}
+	],
+	"settings": {
+		"editor.formatOnSave": true,
+		"files.autoSave": "onFocusChange",
+		"github.copilot.chat.enabled": false
+	}
+}
