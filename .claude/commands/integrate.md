@@ -39,15 +39,15 @@ Once confirmed, implement the reference app usage:
 - No dummy data — use the Store and IDB layer as a real app would
 
 ### Step 4 — Add an E2E test
-In `e2e/`, add a Playwright test that:
+In `reference-app/tests/e2e/`, add a Playwright test that:
 - Exercises the feature through the UI as a user would
 - Asserts the observable outcome (UI change, data persisted, navigation occurred, etc.)
-- Is named clearly: `<feature-name>.spec.js`
+- Is named clearly: `reference-app/tests/e2e/<feature-name>.spec.js`
 
 ### Step 5 — Report
 Confirm:
 - [ ] Feature used in reference app in a meaningful, domain-appropriate way
-- [ ] E2E test written and passing
+- [ ] E2E test written and passing (`reference-app/tests/e2e/<feature-name>.spec.js`)
 - [ ] No library code was changed during integration (if it was, flag it — integration should not require hacking the library)
 
 If the integration revealed that the library API was awkward to use, report that as a finding for the developer to consider — do not silently work around it.

@@ -9,7 +9,10 @@ Check the file system against the build order defined in CLAUDE.md and report:
 ### Build phases (in order)
 
 1. **Monorepo scaffolding + build script + reference app shell**
-   - Check: `package.json`, `build.js`, `reference-app/index.html`, `reference-app/sw.js`
+   - Check: `package.json`, `core/sw.js`, `scaffold/` directory structure
+   - Check: `reference-app/utils/build.js`, `reference-app/index.html`, `reference-app/manifest.json`
+   - Check: `reference-app/_lib/core` and `reference-app/_lib/modules` symlinks exist
+   - Check: `reference-app/app/main.js`, `reference-app/tests/unit/`, `reference-app/tests/e2e/`
 
 2. **AppElement + Shadow DOM + CSS token system**
    - Check: `core/app-element.js`, `core/styles/tokens.css`, `core/styles/base.js` (adoptedStyleSheets)

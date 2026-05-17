@@ -18,13 +18,15 @@ Scaffold a new Web Component for this project.
    Only then implement.
 
 1. **Determine the file path** based on tier:
-   - `page` → `reference-app/pages/<name>/<name>.js`
+   - `page` → `reference-app/app/pages/<name>/<name>.js`
    - `ui` → `core/components/<name>/<name>.js`
    - `service` → `core/services/<name>/<name>.js`
 
 2. **Create the component file** following these rules exactly:
-   - Extend `AppElement` (import from `../../core/app-element.js`, adjust path as needed)
-   - If `gestures` were specified, also mix in `Gestures` from `modules/gestures/gestures.js`
+   - Extend `AppElement`:
+     - `page` tier: import from `../../../_lib/core/app-element.js`
+     - `ui` and `service` tiers (both inside `core/`): import from `../../app-element.js`
+   - If `gestures` were specified, also mix in `Gestures` from `_lib/modules/gestures/gestures.js`
    - `template()` returns a template literal with a `<style>` block first, then markup
    - All style values use CSS custom properties from the token system — no hardcoded values
    - `subscribe()` wires store subscriptions if this is a `page` component
@@ -43,8 +45,8 @@ Scaffold a new Web Component for this project.
 ## Component template (page tier example)
 
 ```js
-import { AppElement } from '../../core/app-element.js';
-import { Store } from '../../core/store.js';
+import { AppElement } from '../../../_lib/core/app-element.js';
+import { Store } from '../../../_lib/core/store.js';
 
 class ScoreCard extends AppElement {
   subscribe() {
