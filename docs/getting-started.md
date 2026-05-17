@@ -68,6 +68,39 @@ Your app will be live at `https://your-username.github.io/your-repo-name/`.
 
 The build script automatically sets the correct base path in all asset URLs — no manual configuration needed.
 
+## Write your first component
+
+All components extend `AppElement` from `_lib/core/app-element.js`. Create a file in `app/components/` and register a custom element:
+
+```js
+// app/components/hello-world/hello-world.js
+import { AppElement } from '../../../_lib/core/app-element.js';
+
+class HelloWorld extends AppElement {
+  template() {
+    return `
+      <style>
+        :host { display: block; padding: var(--space-md); }
+        p { color: var(--color-text-primary); font-size: var(--font-size-body); }
+      </style>
+      <p>Hello, world.</p>
+    `;
+  }
+}
+
+customElements.define('hello-world', HelloWorld);
+```
+
+Use it in your page HTML or from another component's `template()`:
+
+```html
+<hello-world></hello-world>
+```
+
+Design tokens from `_lib/core/styles/tokens.css` are available in any component style block via `var(--token-name)` — no extra imports needed.
+
+See [components.md](components.md) for the full component guide including tiers, the subscribe/unsubscribe lifecycle, and targeted DOM update patterns.
+
 ## Update the library
 
 ```bash
