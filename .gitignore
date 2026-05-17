@@ -3,3 +3,5 @@ exp
 node_modules/
 reference-app/dist/
 .claude/settings.local.json
+.DS_Store
+**/.DS_Store

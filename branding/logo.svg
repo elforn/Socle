@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img">
+<title>Socle</title>
+<desc>Socle app icon — dark container with document mark and orange accent cap on stepped pedestal base</desc>
+
+<!-- Container -->
+<rect width="512" height="512" rx="112" fill="#4e4e52"/>
+
+<!-- Document body -->
+<rect x="156" y="124" width="200" height="164" rx="12" fill="#F5F2EE" stroke="#4e4e52" stroke-width="2"/>
+
+<!-- Orange accent cap -->
+<rect x="156" y="124" width="200" height="28" rx="12" fill="#e86f4a" stroke="#4e4e52" stroke-width="2"/>
+
+<!-- Pedestal base -->
+<rect x="108" y="288" width="296" height="52" rx="10" fill="#F5F2EE" stroke="#4e4e52" stroke-width="2"/>
+
+</svg>
