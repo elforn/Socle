@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "node utils/build.js"
+    "build": "node utils/build.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "vitest": "^3.2.0"
   }
 }
