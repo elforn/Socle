@@ -26,16 +26,17 @@ The CLI asks which modules you need, scaffolds a project into `./my-app`, and wr
 
 ```
 my-app/
-  _lib/       ← library code, updated by CLI
-  app/        ← your components, pages, and store
+  _lib/         ← library code, updated by CLI
+  app/          ← your components, pages, and store
+  utils/
+    build.js
   index.html
-  build.js
 ```
 
 ```bash
 cd my-app
-node build.js
-# open index.html in Firefox or Chrome
+node utils/build.js
+# open dist/ in Firefox or Chrome
 ```
 
 ## Docs
@@ -61,11 +62,11 @@ node build.js
 
 **Web Components.** Custom elements with Shadow DOM mean components are self-contained, style-isolated, and portable. No framework lock-in, no virtual DOM, no build-time JSX transform.
 
-## Reference apps
+## Reference app
 
-`reference-app/goals/` — a yearly goals app with lists of things to achieve. Demonstrates offline operation, event sourcing, gesture interactions, routing, and the SW update flow. Single-user, no P2P.
+`reference-app/` — a yearly goals app with lists of things to achieve. Demonstrates offline operation, event sourcing, gesture interactions, routing, and the SW update flow. Single-user, no P2P.
 
-`reference-app/fencing/` — a fencing competition scoring app. Demonstrates P2P sync, domain ownership, hub mode, and long-session stability. Built after V2.
+The reference app's `_lib/` is a symlink to the monorepo's `core/` and `modules/` directories — library changes are reflected immediately without a sync step. Every library feature must be exercised in the reference app before it is considered complete.
 
 ## Browser support
 

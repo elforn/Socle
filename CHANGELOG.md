@@ -9,20 +9,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Monorepo structure and minimal Node.js build script (asset hashing, version.json, SW manifest injection)
-- AppElement base class with Shadow DOM, adoptedStyleSheets, and render/subscribe lifecycle
-- CSS token system (`core/styles/tokens.css`) — warm neutral palette, accent theming via two variables
-- Optional CSS animations file (`core/styles/animations.css`) — page transitions, gestures, toasts, charts
-- History API router with SW navigation intercept — all routes serve index.html
-- Store module with one-way data flow (action → store → IDB → component)
-- IndexedDB wrapper with append-only event log schema and migration runner
-- Event schema: `{ id, deviceId, recordedAt, occurredAt, type, payload }`
-- SW lifecycle management: two-layer update flow (SW waiting detection + version.json check)
-- Gesture library: tap, long press, swipe (in progress)
-- Reference app: yearly goals app (`reference-app/goals/`)
-- UI design system (`.claude/ui.md`) extracted from visual references
+- Monorepo structure: `core/`, `modules/`, `scaffold/`, `cli/`, `reference-app/`, `docs/`
+- Build script (`utils/build.js`) — content-hashed assets, `version.json`, SW template injection, `BASE_PATH` support for GitHub Pages subdirectory deployments
+- CSS token system (`core/styles/tokens.css`) — warm neutral palette, accent theming via two CSS variables
+- CSS animations (`core/styles/animations.css`) — page transitions, element entrances, bottom sheet, toasts, tap feedback, drag and swipe gesture classes; respects `prefers-reduced-motion`
+- Service Worker template (`core/sw.js`) — cache-first strategy, cache versioning, activate-time stale-cache cleanup
+- Scaffold templates (`scaffold/`) — mirroring the exact app directory structure with `%%TOKEN%%` placeholders for CLI substitution
+- GitHub Actions workflow template (`scaffold/.github/workflows/deploy.yml`) — builds and deploys to GitHub Pages on push to main
+- Reference app shell (`reference-app/`) — `_lib/` symlinked to monorepo `core/` and `modules/` for live development
 - Claude Code project files for library development (`.claude/commands/`)
-- CLI template generation for app developers (`/generate-claude` command)
 
 ---
 
