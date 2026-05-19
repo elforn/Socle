@@ -41,6 +41,8 @@ Socle/
     index.html, manifest.json, package.json, .gitignore, README.md
   cli/
     index.js          # npx socle entry point (Phase 8)
+  tests/              # Library infrastructure tests (run by library developers only, never shipped)
+                      # scaffold-parity, lib-boundary, css-logical-props, scaffold-tokens
   reference-app/      # Real app instance using the library. _lib/ is symlinked to core/ and modules/.
   docs/
   .claude/
@@ -86,7 +88,7 @@ my-app/
   - Generates `version.json`
   - Reads `_lib/core/sw.js` and injects `CACHE_VERSION` + asset list → `dist/sw.js`
   - Replaces `__APP_VERSION__` token in `app/main.js` → hashed output in `dist/`
-  - Rewrites two import paths in `main.js` for the `dist/` layout: `'../_lib/` → `'./_lib/` and `'./pages/` → `'./app/pages/`
+  - Rewrites import paths in `main.js` for the `dist/` layout: `'../_lib/` → `'./_lib/`, and all other app-relative imports (`'./anything`) → `'./app/anything` using the regex `/'\.\/(?!_lib\/)/g` — catches any new app-relative imports automatically without needing to add new rules per directory
   - Copies `_lib/` and `app/` into `dist/` so the output is self-contained — ES modules resolve relative imports at runtime with no bundler, so everything they reference must be physically present in `dist/`. Uses `dereference: true` so the reference-app's symlinked `_lib/` is copied as real files; harmless no-op in scaffolded apps where `_lib/` is already real files
   - Accepts `BASE_PATH` env var (default `/`) for GitHub Pages subdirectory deployments
 - **Vitest** for unit tests
@@ -128,6 +130,15 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - Components never touch IDB directly.
 - One-way data flow always: Action → Store → IDB → State → Component.
 
+**API:**
+- `boot({ dbName, reducer, deviceId?, version? })` — opens IDB, runs migrations, replays event log via `reducer`, sets initial state. Must be `await`ed in `main.js` before the router or any component renders. The only entry point to IDB at startup.
+- `dispatch(type, payload, occurredAt?)` — writes a full event `{ id, deviceId, recordedAt, occurredAt, type, payload }` to IDB, applies reducer, notifies subscribers of changed state keys. Throws if called before `boot`.
+- `subscribe(key, cb)` — registers a callback for a top-level state key. Calls `cb` immediately with the current value.
+- `unsubscribe(key, cb)` — removes the callback. No-op if not registered.
+- `getState()` — returns the current state snapshot. For debugging and test assertions.
+- `reset()` — clears all module state. Test isolation only — never call in production code.
+- `deviceId` is an app concept, not a library concept. Apps pass it into `boot()` for P2P contexts. For single-device apps, omit it — the store defaults `deviceId` to `null` on every event.
+
 ### IDB / Data Model
 
 - **Append-only event log** as primary storage. This is non-negotiable.
@@ -139,9 +150,9 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - **V1: state is always calculated by replaying the full event log on boot.** No caching, no materialised views. However, log sizes can reach hundreds of thousands of events in team and competition apps — snapshot support is not a distant concern and the boot function must be designed to swap strategies without touching anything else.
 - **V2 note:** snapshots are the confirmed approach for large logs — a periodic frozen state tagged with a log position, with only subsequent events replayed on top. Materialised views are not suitable for out-of-order multi-device streams.
 - **The boot sequence must be isolated behind a single function.** Nothing calls IDB directly at boot except this function. This makes the V1→V2 transition a one-line change.
-- Schema versioning from day one. Migration functions run on SW activation before any UI renders.
+- Schema versioning from day one. Migration functions run inside `boot()` before state is replayed and before any UI renders. Not in SW activate — migrations are data-layer concerns, not service-worker concerns.
 - A failed migration must throw — it will be caught and halt app startup visibly, never silently corrupt data.
-- Write the IDB wrapper from scratch. Promise-based and minimal (~100 lines). No `idb` library.
+- The IDB wrapper is implemented in `core/idb/idb.js` — Promise-based and minimal (~35 lines). Exports only `openDB`, `put`, `getAll`. No `idb` library.
 
 ### Service Worker
 
@@ -317,16 +328,28 @@ The second reference app is a **fencing competition scoring app** (built after P
 
 **Every library feature must be used in the reference app before it is considered complete.**
 
+**The reference app is the living example of a correctly scaffolded app.** Its `package.json`, `vitest.config.js`, `playwright.config.js`, `utils/build.js`, `app/main.js`, and test templates must stay structurally identical to the scaffold equivalents. The only permitted differences are hardcoded names/values where the scaffold uses `%%TOKEN%%` placeholders. `tests/scaffold-parity.test.js` enforces this automatically — a failing parity test is a build error, not a logic bug.
+
+**DevDependencies in the monorepo.** The reference-app's devDependencies are declared in both `reference-app/package.json` (for documentation and parity) and the monorepo root `package.json` (for the shared `node_modules/`). When adding a new devDependency, add it in both places at the same version.
+
 ---
 
 ## Testing
 
-Three distinct test scopes — do not mix them:
+Four distinct test scopes — do not mix them:
 
 **Library unit tests** (library developer):
 - Co-located `*.test.js` files next to source in `core/` and `modules/`
 - CLI unit tests co-located in `cli/`
-- Run with Vitest. Use happy-dom environment for IDB and Store tests.
+- Run with Vitest in Node environment. IDB tests use `fake-indexeddb` (loaded globally via `core/test-setup.js`). DOM tests use `// @vitest-environment happy-dom` only when Shadow DOM or `document` access is actually needed — pure IDB/Store tests run in Node without any DOM environment.
+
+**Library infrastructure tests** (library developer):
+- `tests/` at monorepo root — automated consistency checks that no unit test can catch
+- `scaffold-parity.test.js` — verifies scaffold matches reference-app structure and tokens
+- `lib-boundary.test.js` — verifies no `core/` or `modules/` file imports from `app/` or uses bare module specifiers
+- `css-logical-props.test.js` — verifies no directional CSS properties in `core/styles/`
+- `scaffold-tokens.test.js` — verifies all `%%TOKEN%%` placeholders are present in scaffold files
+- These tests run automatically with `npm test` and act as a build-time guardrail
 
 **Reference app tests** (library developer, proves features work end-to-end):
 - `reference-app/tests/unit/` — component and store unit tests
@@ -336,8 +359,14 @@ Three distinct test scopes — do not mix them:
 **Scaffolded app tests** (delivered to app developers via `scaffold/`):
 - `tests/unit/` and `tests/e2e/` scaffolded with working Vitest + Playwright configs
 - App developers extend these — they never configure the test infrastructure from scratch
+- `scaffold/tests/` is excluded from the monorepo `vitest.config.js` — these are templates, not runnable tests
 
-Rules applying to all three:
+**IDB and DOM environments:**
+- `fake-indexeddb` provides the `indexedDB` global in Node/test environments. Loaded once via `core/test-setup.js` → `setupFiles` in `vitest.config.js`. Never mock IDB — run against `fake-indexeddb` instead.
+- `happy-dom` provides DOM APIs (document, customElements, shadowRoot, CSS). Apply `// @vitest-environment happy-dom` only to test files that actually need DOM access. IDB and Store tests do not need it.
+- These are independent: `happy-dom` does not provide IndexedDB, and `fake-indexeddb` does not provide DOM APIs.
+
+Rules applying to all four:
 - Test files are created alongside the feature, not after.
 - UI components must be testable in isolation with no store dependency.
 - Every key feature has a test before the feature is considered done.
@@ -352,7 +381,14 @@ Custom slash commands are available for all repeating tasks. The important thing
 
 **When building a feature:** use `/component`, `/gesture`, or `/migration` to scaffold correctly. Do not create these files manually.
 
-**After completing a feature:** run `/test`, then `/integrate`, then `/a11y`, then `/docs feature`, then `/review` — in that order. A feature is not done until all five pass.
+**After completing a feature:** run `/test`, then `/integrate`, then `/sync`, then `/a11y`, then `/docs feature`, then `/review` — in that order. A feature is not done until all six pass.
+
+**`/integrate` and `/sync` are distinct checks that must both run — do not skip either:**
+- `/integrate` — proves the feature is meaningfully used in the reference app (domain-aware, per-feature)
+- `/sync` — proves the scaffold reflects reference-app infrastructure changes (structural, cross-cutting)
+They answer different questions. Running one does not substitute for the other.
+
+**`/sync` is mandatory after any change to `reference-app/` infrastructure** (build script, main.js, vitest config, package.json, page structure, test templates). It checks that the scaffold reflects the same changes. Skipping it is the single most common way scaffold and reference-app drift apart.
 
 **Before moving to the next build phase:** run `/status` to confirm the current phase is genuinely complete.
 

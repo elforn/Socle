@@ -141,6 +141,143 @@ The Service Worker solves this: it intercepts all navigation requests (requests 
 
 The SW intercept is active after the first visit, once the SW has installed and taken control of the page.
 
+## Store and IDB
+
+The Store is the single source of truth for all app state. Components never touch IndexedDB directly — every write goes through `Store.dispatch()`, every read comes via `Store.subscribe()`.
+
+### Data model — append-only event log
+
+All data is stored as an append-only log of events in IndexedDB. An event records what happened, not what the current state is:
+
+```js
+{
+  id:         '550e8400-...',   // crypto.randomUUID()
+  deviceId:   null,             // set by apps using P2P; null for single-device
+  recordedAt: 1715000000000,    // Date.now() at write time — immutable
+  occurredAt: 1715000000000,    // when the real-world event happened — correctable
+  type:       'goal:added',
+  payload:    { title: 'Run a 5k' },
+}
+```
+
+`recordedAt` is the log ordering key — it records when the device wrote the event and is immutable. `occurredAt` records when the event happened in the real world; it can be user-supplied and corrected without affecting data integrity.
+
+State is calculated by replaying the full event log through your reducer on every boot.
+
+### Boot
+
+Call `boot()` at the top of `main.js` and `await` it before the router or any component renders. Nothing else touches IDB at startup — this is the only entry point.
+
+```js
+import { boot } from '../_lib/core/store/store.js';
+import { reducer } from './store/reducer.js';
+
+await boot({ dbName: 'my-app', reducer });
+```
+
+`boot()` options:
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `dbName` | yes | IDB database name — use your app name |
+| `reducer` | yes | `(state, event) => newState` — called for every event on replay |
+| `version` | no | IDB schema version — defaults to library's `CURRENT_VERSION` |
+| `deviceId` | no | Identifies this device in P2P contexts — omit for single-device apps |
+
+### Dispatch
+
+```js
+import { dispatch } from '../_lib/core/store/store.js';
+
+await dispatch('goal:added', { title: 'Run a 5k' });
+
+// With a custom occurredAt (e.g. user entered a past date):
+await dispatch('goal:added', { title: 'Past goal' }, pastTimestamp);
+```
+
+`dispatch` writes the event to IDB, runs the reducer, then notifies subscribers of any changed state keys.
+
+### Subscribe
+
+```js
+import { subscribe, unsubscribe } from '../_lib/core/store/store.js';
+
+class GoalList extends AppElement {
+  subscribe() {
+    this._onGoals = goals => { /* update DOM */ };
+    Store.subscribe('goals', this._onGoals);
+  }
+  unsubscribe() {
+    Store.unsubscribe('goals', this._onGoals);
+  }
+}
+```
+
+`subscribe(key, cb)` calls `cb` immediately with the current value, then again whenever that top-level state key changes. Call `unsubscribe` in the component's `unsubscribe()` lifecycle method to avoid memory leaks.
+
+### Writing a reducer
+
+Your reducer lives in `app/store/reducer.js`. It receives the current state and one event, and must return a new state object:
+
+```js
+export function reducer(state, event) {
+  switch (event.type) {
+    case 'goal:added':
+      return { ...state, goals: [...(state.goals ?? []), event.payload] };
+    default:
+      return state;
+  }
+}
+```
+
+The reducer must be a pure function — no side effects, no IDB calls, no mutation of the existing state object. The Store detects changes using reference equality (`!==`), so always return a new object when state changes.
+
+### Schema migrations
+
+The IDB schema is versioned from day one. Migrations live in `core/idb/migrations.js` — add a new function to the array when you need a new object store or index:
+
+```js
+// core/idb/migrations.js
+const migrations = [
+  null,       // slot 0 — IDB versions start at 1
+  db => {     // version 1 — initial schema
+    const store = db.createObjectStore('events', { keyPath: 'id' });
+    store.createIndex('by_recordedAt', 'recordedAt');
+  },
+  db => {     // version 2 — add a new store
+    db.createObjectStore('snapshots', { keyPath: 'id' });
+  },
+];
+```
+
+Migrations run inside `boot()` before any state is replayed and before any UI renders. A failed migration throws, halting app startup visibly — it never silently corrupts data.
+
+### API reference
+
+#### `boot({ dbName, reducer, version?, deviceId? })`
+
+Opens the IDB database, runs any pending migrations, replays the event log through `reducer`, and sets the initial state. Must be `await`ed in `main.js` before anything else runs. Rejects if migrations fail.
+
+#### `dispatch(type, payload, occurredAt?)`
+
+Writes a complete event to IDB, applies the reducer, and notifies subscribers of changed state keys. Throws if called before `boot`. Returns a Promise that resolves when the write is complete.
+
+#### `subscribe(key, cb)`
+
+Registers `cb` for changes to a top-level state key. Calls `cb` immediately with the current value. Call in your component's `subscribe()` lifecycle method.
+
+#### `unsubscribe(key, cb)`
+
+Removes a previously registered callback. No-op if the callback was not registered. Call in your component's `unsubscribe()` lifecycle method.
+
+#### `getState()`
+
+Returns the current state snapshot. Use in tests and for debugging. Do not use in production component code — use `subscribe()` instead.
+
+#### `reset()`
+
+Clears all module state. **Test isolation only — never call in production code.**
+
 ## Service Worker
 
 The SW source lives at `_lib/core/sw.js` — library-owned, never edited directly. The build processes it into `dist/sw.js`, injecting:
