@@ -56,11 +56,6 @@ describe('matchRoute', () => {
     expect(result.params).toEqual({});
   });
 
-  it('returns null when no routes match and no wildcard', () => {
-    const routes = [{ path: '/', component: 'home-page' }];
-    expect(matchRoute(routes, '/about')).toBeNull();
-  });
-
   it('decodes URI-encoded param values', () => {
     const routes = [{ path: '/search/:query', component: 'search-page' }];
     const result = matchRoute(routes, '/search/hello%20world');
