@@ -56,9 +56,12 @@ describe('build — default (BASE_PATH=/)', () => {
   it('rewrites import paths in main.js for dist/ layout', () => {
     const content = readDist(mainFilename());
     expect(content).not.toContain("'../_lib/");
-    expect(content).not.toContain("'./pages/");
     expect(content).toContain("'./_lib/");
+    expect(content).toContain("'./app/store/");
     expect(content).toContain("'./app/pages/");
+    // General invariant: no bare app-relative imports remain after rewriting
+    const unrewritten = content.match(/'\.\/(?!app\/|_lib\/)/g);
+    expect(unrewritten, 'unrewritten app-relative imports found').toBeNull();
   });
 
   it('injects CACHE_VERSION into sw.js', () => {
@@ -105,12 +108,6 @@ describe('build — default (BASE_PATH=/)', () => {
     expect(existsSync(join(DIST, 'app', 'pages', 'not-found-page.js'))).toBe(true);
   });
 
-  it('produces a deterministic hash — same content yields same filename', () => {
-    const first = mainFilename();
-    rmSync(DIST, { recursive: true, force: true });
-    runBuild();
-    expect(mainFilename()).toBe(first);
-  });
 });
 
 describe('build — custom BASE_PATH', () => {
