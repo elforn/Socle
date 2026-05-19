@@ -7,6 +7,9 @@
 	"settings": {
 		"editor.formatOnSave": true,
 		"files.autoSave": "onFocusChange",
-		"github.copilot.chat.enabled": false
+		"files.watcherExclude": {
+			"**/scaffold/tests/**": true
+		},
+		"vitest.configSearchPatternExclude": "{**/node_modules/**,**/vendor/**,**/.*/**,**/*.d.ts,**/scaffold/**}"
 	}
 }

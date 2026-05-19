@@ -1,17 +1,28 @@
-# /port
+# /sync
 
-Check that everything built in the reference app that belongs in the scaffold has been ported.
+Verify bidirectional consistency between the reference app and the scaffold.
 
-The development pattern is: build in `reference-app/`, prove it works, then port the relevant parts to `scaffold/`. This command enforces that nothing gets left behind.
+There are two directions to check:
+
+1. **reference-app → scaffold**: infrastructure changes built in the reference app must be ported to the scaffold template so new apps get the same patterns.
+2. **scaffold → reference-app**: the reference app must continue to look like what a scaffolded app produces — it is the living example of a correctly generated project.
+
+Both directions matter. A gap in either direction means the reference app and a newly scaffolded app would diverge.
 
 ## Usage
-/port
+/sync
 
 Run after completing a phase or feature in the reference app, before `/commit`.
 
 ---
 
 ## What to do
+
+### Step 0 — Run the test suite first
+
+Run `npm test` from the monorepo root before doing anything else. The `tests/scaffold-parity.test.js` suite will catch the most common structural mismatches automatically. Read the failures — they tell you exactly what is out of sync. Then continue with the manual steps below for anything not covered by the automated tests.
+
+---
 
 ### Understand what belongs where
 
@@ -59,8 +70,8 @@ Scaffold files must use `%%APP_NAME%%`, `%%LANG%%`, `%%MAIN_JS%%` etc. where the
 
 ### Step 3 — Check package.json parity
 
-Compare `reference-app/package.json` with `scaffold/package.json`:
-- Every `devDependency` in the reference-app should be in the scaffold (or have a documented reason to omit)
+Compare `reference-app/package.json` with `scaffold/package.json` to find what scaffolded apps need but may not have:
+- Every devDependency a scaffolded app needs at runtime (e.g. `fake-indexeddb`, `happy-dom`, Playwright) should be in `scaffold/package.json`
 - Every `scripts` entry relevant to a developer (build, test, test:e2e) should be present
 - Version pins should match
 

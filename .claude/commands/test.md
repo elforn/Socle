@@ -18,11 +18,11 @@ Example: `/test core/store.js`
    - Every known edge case (empty input, missing keys, concurrent writes)
    - Every error condition that should throw or fail loudly
    - For Web Components: mount, attribute reflection, event emission, store isolation (ui components only)
-   - For IDB/Store modules: use happy-dom, mock or stub IDB where necessary — prefer the real implementation where possible
+   - For IDB/Store modules: use `fake-indexeddb` (loaded globally via `core/test-setup.js`) — never mock IDB, run against the real API. `happy-dom` is for DOM access only; pure IDB/Store tests run in Node without it. Only add `// @vitest-environment happy-dom` if the test actually uses `document`, `customElements`, or Shadow DOM.
    - For the SW module: note what cannot be unit tested and flag it for Playwright E2E coverage instead
 
 4. **Write the tests** using Vitest. Follow these rules:
-   - Test file lives alongside the source file: `foo.js` → `foo.test.js`
+   - Test file lives alongside the source file: `foo.js` → `foo.test.js`. Exception: library infrastructure tests live in `tests/` at monorepo root (scaffold-parity, lib-boundary, etc.) — these are not co-located because they test the library as a whole, not a single module.
    - Test descriptions are plain English statements of behaviour: `'emits an event when a new score is appended'` not `'test score append'`
    - No test should depend on another test's side effects — each test is fully isolated
    - Do not mock what you can run for real

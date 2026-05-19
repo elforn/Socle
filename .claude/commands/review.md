@@ -17,7 +17,7 @@ Read the file and evaluate it against the following. Report each section separat
 
 ### 2. Standards compliance
 Check against project rules:
-- [ ] **`_lib/` ownership rule:** if this file lives in `_lib/` (or will be scaffolded into `_lib/`), it must have zero imports from `app/` or any path outside `_lib/`. Check every import statement. This is a hard architectural rule — any violation breaks the update mechanism.
+- [ ] **`_lib/` ownership rule:** if this file lives in `_lib/` (or will be scaffolded into `_lib/`), it must have zero imports from `app/` or any path outside `_lib/`. Check every import statement. This is a hard architectural rule — any violation breaks the update mechanism. Note: `tests/lib-boundary.test.js` automates this check across all of `core/` and `modules/` — run `npm test` to catch violations before review.
 - [ ] No runtime library imports
 - [ ] **UI compliance** (for any component with a template): cross-check against the consistency checklist at the bottom of `.claude/ui.md`. All style values from `tokens.css`, touch targets met, no hover-only interactions, colour never the only state indicator.
 - [ ] No hardcoded design values (colours, spacing, typography) — CSS custom properties only
