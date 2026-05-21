@@ -9,6 +9,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `Gestures(Base)` class mixin (`modules/gestures/gestures.js`) — tap and long-press gestures using Pointer Events; normalised event object; automatic pointer event wiring and cleanup on connect/disconnect; `touch-action` and `user-select` set per gesture type
+- `goal-card` UI component (`reference-app/app/components/goal-card/goal-card.js`) — first component using the Gestures mixin; tap to toggle, long press to delete; keyboard alternatives (Enter/Space → tap, Delete/Backspace → long press); `aria-pressed` and `aria-label` for accessibility
+- `dev` and `serve` npm scripts in scaffold and reference app — `npm run dev` builds then serves at port 3000; `npm run serve` serves a previously built `dist/`
+- Deterministic hash test added to `reference-app/tests/unit/build.test.js` — verifies the same content produces the same hashed filename across two independent builds
+- `docs/gestures.md` — full gesture library guide: mixin usage, two-layer model, implemented gestures, event object, coordination rules, keyboard alternatives, testing guidance, and API reference
+
+### Changed
+- Library infrastructure tests moved from `tests/` to `library_tests/` at monorepo root — makes the folder's purpose immediately clear to a new contributor
+- Reducer `goal:added` property spread order fixed — `{ ...event.payload, id: event.id, completed: false }` ensures the event `id` is always authoritative, even if payload carries an `id` field
+- Gesture architecture formalised as hybrid model: mixin for host-level gestures (zero boilerplate), `Gestures.attach(element, type, handler)` static method for child sub-elements (deferred until first use case)
+- Library slogan updated to "Build Offline Mobile Apps"
+
+### Added (Phase 5)
 - `setState(key, value)` on the store — updates in-memory state and notifies subscribers without writing to IDB; use for ephemeral runtime state that does not belong in the event log
 - `<sw-manager>` service component (`core/sw-manager/sw-manager.js`) — owns SW registration, waiting detection, `version.json` polling, and `controllerchange` reload; two-layer update detection with first-install guard
 - `<update-banner>` UI component (`core/components/update-banner/update-banner.js`) — fixed-position notification banner subscribed to `updateAvailable`; Reload posts `SKIP_WAITING` to the waiting SW; Dismiss hides without reloading; respects `--safe-area-top`; `role="alert"` for screen readers

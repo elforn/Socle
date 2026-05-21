@@ -20,6 +20,12 @@ Example: `/test core/store.js`
    - For Web Components: mount, attribute reflection, event emission, store isolation (ui components only)
    - For IDB/Store modules: use `fake-indexeddb` (loaded globally via `core/test-setup.js`) — never mock IDB, run against the real API. `happy-dom` is for DOM access only; pure IDB/Store tests run in Node without it. Only add `// @vitest-environment happy-dom` if the test actually uses `document`, `customElements`, or Shadow DOM.
    - For the SW module: note what cannot be unit tested and flag it for Playwright E2E coverage instead
+   - For components using the `Gestures` mixin: mock pointer capture at module scope before importing the component. `happy-dom` does not implement these methods and the mixin calls them unconditionally:
+     ```js
+     HTMLElement.prototype.setPointerCapture = () => {};
+     HTMLElement.prototype.releasePointerCapture = () => {};
+     ```
+   - For components that update the DOM in response to store callbacks: use `vi.waitFor(() => expect(...))` rather than asserting synchronously — store callbacks fire asynchronously after `dispatch()` and synchronous assertions will see stale DOM
 
 4. **Write the tests** using Vitest. Follow these rules:
    - Test file lives alongside the source file: `foo.js` → `foo.test.js`. Exception: library infrastructure tests live in `tests/` at monorepo root (scaffold-parity, lib-boundary, etc.) — these are not co-located because they test the library as a whole, not a single module.

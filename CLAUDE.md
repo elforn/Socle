@@ -41,7 +41,7 @@ Socle/
     index.html, manifest.json, package.json, .gitignore, README.md
   cli/
     index.js          # npx socle entry point (Phase 8)
-  tests/              # Library infrastructure tests (run by library developers only, never shipped)
+  library_tests/      # Library infrastructure tests (run by library developers only, never shipped)
                       # scaffold-parity, lib-boundary, css-logical-props, scaffold-tokens
   reference-app/      # Real app instance using the library. _lib/ is symlinked to core/ and modules/.
   docs/
@@ -112,7 +112,7 @@ All components extend `AppElement extends HTMLElement`. It provides:
 ### Component Tiers
 
 - **Page components** — one per route, own layout, subscribe to store slices
-- **UI components** — reusable widgets, receive data via attributes/properties, emit events upward, zero store knowledge. Must be testable in isolation with no store.
+- **UI components** — reusable widgets, receive data via attributes/properties, emit events upward, zero store knowledge. Must be testable in isolation with no store. All `CustomEvent`s must use `{ bubbles: true, composed: true }` so they cross shadow DOM boundaries — without `composed: true`, events fired inside a shadow root are swallowed and never reach the parent's listener.
 - **Service components** — invisible elements (`<sw-manager>`, `<db-init>`), manage lifecycle, never render
 
 ### Router
@@ -180,22 +180,36 @@ Update checks happen at boot and via the browser's 24h background sweep. With SP
 
 ### Gesture Library (`modules/gestures/`)
 
-A `Gestures` mixin composable on `AppElement`. Components declare semantic gesture handlers; the mixin handles all raw event wiring and cleanup.
+A hybrid model with two layers:
 
-Gestures to implement (in priority order):
-1. Tap (with movement threshold — not a `click` alias)
-2. Long press (timer + movement cancellation)
-3. Swipe (directional, with velocity; must yield to native scroll correctly)
-4. Leave-touch-to-select (hold to preview, release to confirm)
-5. Drag (continuous, with pointer capture)
-6. Drag menu (slide-out menu anchored to finger, snaps to option on release)
+**Layer 1 — Mixin** (`Gestures(Base)`): for gestures on the host element. Components override handler methods; the mixin handles all pointer event wiring, `touch-action`, gesture state coordination, and lifecycle cleanup automatically.
+
+```js
+class GoalCard extends Gestures(AppElement) {
+  onTap(e)       { /* fires on tap */ }
+  onLongPress(e) { /* fires after 500ms hold */ }
+  onSwipe(e)     { /* fires on directional swipe */ }
+}
+```
+
+**Layer 2 — `Gestures.attach(element, type, handler)`** (static method, not yet implemented): for gestures on child sub-elements that are not their own Web Components — drag handles, slider thumbs, swipe rows. Returns a cleanup function. Called from `subscribe()`, cleaned up in `unsubscribe()`. Child gestures are independent of host gesture state.
+
+Implement `Gestures.attach` when the first concrete use case arrives (expected: drag handle for the progress bar in the yearly goals app).
+
+**Rule of thumb:** if the child has its own visual state or is reused elsewhere, make it a Web Component and use the mixin. If it is a structural part of the parent (a handle div), use `Gestures.attach`.
 
 Normalised event object passed to all handlers:
 ```js
 { type, direction, velocity, distance, startX, startY, endX, endY, duration, originalEvent }
 ```
 
-CSS `touch-action` must be set automatically on the host element based on which gestures are registered.
+`touch-action` is set automatically on the element based on which gestures are active:
+- tap only → `'manipulation'`
+- longPress → additionally sets `user-select: none`
+- swipe (horizontal) → `'pan-y'`
+- drag → `'none'`
+
+**Implemented:** tap, long press. **Next:** swipe, drag (+ `Gestures.attach`), swipe-to-delete, drag-to-complete.
 
 ### P2P (V2 — schema ready in V1)
 
@@ -333,7 +347,7 @@ The second reference app is a **fencing competition scoring app** (built after P
 
 **Every library feature must be used in the reference app before it is considered complete.**
 
-**The reference app is the living example of a correctly scaffolded app.** Its `package.json`, `vitest.config.js`, `playwright.config.js`, `utils/build.js`, `app/main.js`, and test templates must stay structurally identical to the scaffold equivalents. The only permitted differences are hardcoded names/values where the scaffold uses `%%TOKEN%%` placeholders. `tests/scaffold-parity.test.js` enforces this automatically — a failing parity test is a build error, not a logic bug.
+**The reference app is the living example of a correctly scaffolded app.** Its `package.json`, `vitest.config.js`, `playwright.config.js`, `utils/build.js`, `app/main.js`, and test templates must stay structurally identical to the scaffold equivalents. The only permitted differences are hardcoded names/values where the scaffold uses `%%TOKEN%%` placeholders. `library_tests/scaffold-parity.test.js` enforces this automatically — a failing parity test is a build error, not a logic bug.
 
 **DevDependencies in the monorepo.** The reference-app's devDependencies are declared in both `reference-app/package.json` (for documentation and parity) and the monorepo root `package.json` (for the shared `node_modules/`). When adding a new devDependency, add it in both places at the same version.
 
@@ -349,7 +363,7 @@ Four distinct test scopes — do not mix them:
 - Run with Vitest in Node environment. IDB tests use `fake-indexeddb` (loaded globally via `core/test-setup.js`). DOM tests use `// @vitest-environment happy-dom` only when Shadow DOM or `document` access is actually needed — pure IDB/Store tests run in Node without any DOM environment.
 
 **Library infrastructure tests** (library developer):
-- `tests/` at monorepo root — automated consistency checks that no unit test can catch
+- `library_tests/` at monorepo root — automated consistency checks that no unit test can catch
 - `scaffold-parity.test.js` — verifies scaffold matches reference-app structure and tokens
 - `lib-boundary.test.js` — verifies no `core/` or `modules/` file imports from `app/` or uses bare module specifiers
 - `css-logical-props.test.js` — verifies no directional CSS properties in `core/styles/`
@@ -370,6 +384,8 @@ Four distinct test scopes — do not mix them:
 - `fake-indexeddb` provides the `indexedDB` global in Node/test environments. Loaded once via `core/test-setup.js` → `setupFiles` in `vitest.config.js`. Never mock IDB — run against `fake-indexeddb` instead.
 - `happy-dom` provides DOM APIs (document, customElements, shadowRoot, CSS). Apply `// @vitest-environment happy-dom` only to test files that actually need DOM access. IDB and Store tests do not need it.
 - These are independent: `happy-dom` does not provide IndexedDB, and `fake-indexeddb` does not provide DOM APIs.
+- **Pointer capture mocks:** `happy-dom` does not implement `setPointerCapture` or `releasePointerCapture`. Any test file that mounts a component using the `Gestures` mixin must add at module scope: `HTMLElement.prototype.setPointerCapture = () => {};` and `HTMLElement.prototype.releasePointerCapture = () => {};`. These are no-ops — pointer capture is not exercised in unit tests. Do not add these to the global setup (`core/test-setup.js`) — they belong only in test files that mount gesture-enabled components.
+- **Async DOM assertions:** when asserting DOM state that updates in response to a store callback or other async side effect, use `vi.waitFor(() => expect(...))` rather than asserting synchronously. Store callbacks fire asynchronously after `dispatch()` — synchronous assertions will see stale DOM.
 
 Rules applying to all four:
 - Test files are created alongside the feature, not after.
