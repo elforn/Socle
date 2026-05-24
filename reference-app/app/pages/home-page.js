@@ -41,18 +41,21 @@ class HomePage extends AppElement {
     this.shadowRoot.querySelector('#add').addEventListener('click', this._onAdd);
 
     const goals = this.shadowRoot.querySelector('#goals');
-    this._onGoalTap    = e => Store.dispatch('goal:toggled', { id: e.detail.id });
-    this._onGoalDelete = e => Store.dispatch('goal:deleted',  { id: e.detail.id });
-    goals.addEventListener('goal-tap',    this._onGoalTap);
-    goals.addEventListener('goal-delete', this._onGoalDelete);
+    this._onGoalTap              = e => Store.dispatch('goal:toggled',           { id: e.detail.id });
+    this._onGoalDelete           = e => Store.dispatch('goal:deleted',            { id: e.detail.id });
+    this._onGoalCompletionChange = e => Store.dispatch('goal:completion-changed', { id: e.detail.id, completion: e.detail.completion });
+    goals.addEventListener('goal-tap',               this._onGoalTap);
+    goals.addEventListener('goal-delete',            this._onGoalDelete);
+    goals.addEventListener('goal-completion-change', this._onGoalCompletionChange);
   }
 
   unsubscribe() {
     Store.unsubscribe('goals', this._onGoals);
     this.shadowRoot.querySelector('#add')?.removeEventListener('click', this._onAdd);
     const goals = this.shadowRoot.querySelector('#goals');
-    goals?.removeEventListener('goal-tap',    this._onGoalTap);
-    goals?.removeEventListener('goal-delete', this._onGoalDelete);
+    goals?.removeEventListener('goal-tap',               this._onGoalTap);
+    goals?.removeEventListener('goal-delete',            this._onGoalDelete);
+    goals?.removeEventListener('goal-completion-change', this._onGoalCompletionChange);
   }
 
   _renderGoals(goals) {
