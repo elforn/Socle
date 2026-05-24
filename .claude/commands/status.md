@@ -34,7 +34,7 @@ Check the file system against the build order defined in CLAUDE.md and report:
    - Check: `reference-app/tests/e2e/offline.spec.js`, `update-flow.spec.js`, `install.spec.js`
 
 6. **Gesture library**
-   - Check: `modules/gestures/gestures.js`, registered gestures (tap, longPress, swipe, leaveTouchToSelect, drag, dragMenu)
+   - Check: `modules/gestures/gestures.js`, implemented gestures: tap, longPress, swipe (`onSwipe`/`onSwipeMove`), holdDrag (`onHoldDragStart`/`onHoldDrag`/`onHoldDragEnd`), `Gestures.attach` static method
    - Check: `modules/gestures/gestures.test.js`
 
 7. **Reference app features**

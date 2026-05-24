@@ -64,7 +64,7 @@ the last generation run — this table is the record of every decision made.
 | `migration.md` | Yes | Copy with review | Verify no library-specific content. |
 | `i18n.md` | Yes | Adapt | Remove `_lib/` ownership checks and the `defineStrings()`/`t()` scaffolding steps — app devs don't write `_lib/` components. Keep the hardcoded-string audit and the `app/locales/` key-parity check. |
 | `integrate.md` | No | Exclude | Reference app concept does not exist in user projects. |
-| `port.md` | No | Exclude | Reference-app → scaffold sync concept does not exist in user projects. |
+| `sync.md` | No | Exclude | Reference-app → scaffold sync concept does not exist in user projects. |
 | `update-meta.md` | No | Exclude | Audits Socle's own CLAUDE.md and command files — library development only. |
 | `gesture.md` | No | Exclude | Gestures come from `_lib/`, app devs don't write gesture implementations. |
 | `generate-claude.md` | No | Exclude | This is a library development tool only. |

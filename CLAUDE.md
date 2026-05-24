@@ -186,30 +186,33 @@ A hybrid model with two layers:
 
 ```js
 class GoalCard extends Gestures(AppElement) {
-  onTap(e)       { /* fires on tap */ }
-  onLongPress(e) { /* fires after 500ms hold */ }
-  onSwipe(e)     { /* fires on directional swipe */ }
+  onTap(e)            { /* fires on tap */ }
+  onLongPress(e)      { /* fires after 500ms hold */ }
+  onSwipe(e)          { /* fires on directional swipe end */ }
+  onSwipeMove(e)      { /* fires on every move during a swipe */ }
+  onHoldDragStart(e)  { /* fires after 500ms hold — begins drag phase */ }
+  onHoldDrag(e)       { /* fires on every move during hold-drag */ }
+  onHoldDragEnd(e)    { /* fires on pointer up after hold-drag */ }
 }
 ```
 
-**Layer 2 — `Gestures.attach(element, type, handler)`** (static method, not yet implemented): for gestures on child sub-elements that are not their own Web Components — drag handles, slider thumbs, swipe rows. Returns a cleanup function. Called from `subscribe()`, cleaned up in `unsubscribe()`. Child gestures are independent of host gesture state.
-
-Implement `Gestures.attach` when the first concrete use case arrives (expected: drag handle for the progress bar in the yearly goals app).
+**Layer 2 — `Gestures.attach(element, handlers)`** (static method): for gestures on child sub-elements that are not their own Web Components — drag handles, slider thumbs, swipe rows. Returns a cleanup function. Called from `subscribe()`, cleaned up in `unsubscribe()`. Child gestures are independent of host gesture state.
 
 **Rule of thumb:** if the child has its own visual state or is reused elsewhere, make it a Web Component and use the mixin. If it is a structural part of the parent (a handle div), use `Gestures.attach`.
 
 Normalised event object passed to all handlers:
 ```js
-{ type, direction, velocity, distance, startX, startY, endX, endY, duration, originalEvent }
+{ type, direction, velocity, distance, dx, dy, startX, startY, endX, endY, duration, originalEvent }
 ```
 
 `touch-action` is set automatically on the element based on which gestures are active:
 - tap only → `'manipulation'`
 - longPress → additionally sets `user-select: none`
 - swipe (horizontal) → `'pan-y'`
+- hold-drag → `'none'` (set automatically by `Gestures.attach`)
 - drag → `'none'`
 
-**Implemented:** tap, long press. **Next:** swipe, drag (+ `Gestures.attach`), swipe-to-delete, drag-to-complete.
+**Implemented:** tap, long press, swipe, hold-drag, `Gestures.attach`. **Next:** drag-to-complete (full-width CTA pattern, see `ui.md`).
 
 ### P2P (V2 — schema ready in V1)
 
@@ -350,6 +353,25 @@ The second reference app is a **fencing competition scoring app** (built after P
 **The reference app is the living example of a correctly scaffolded app.** Its `package.json`, `vitest.config.js`, `playwright.config.js`, `utils/build.js`, `app/main.js`, and test templates must stay structurally identical to the scaffold equivalents. The only permitted differences are hardcoded names/values where the scaffold uses `%%TOKEN%%` placeholders. `library_tests/scaffold-parity.test.js` enforces this automatically — a failing parity test is a build error, not a logic bug.
 
 **DevDependencies in the monorepo.** The reference-app's devDependencies are declared in both `reference-app/package.json` (for documentation and parity) and the monorepo root `package.json` (for the shared `node_modules/`). When adding a new devDependency, add it in both places at the same version.
+
+### Dev server
+
+```bash
+npm run dev          # desktop — http://localhost:3000
+npm run dev:https    # mobile — https://localhost:3000 + https://<LAN-IP>:3000
+```
+
+`dev:https` requires a locally-trusted cert in `reference-app/` (`localhost+1.pem` + `localhost+1-key.pem`). Service workers only register on HTTPS or `localhost` — always use `dev:https` when testing offline mode or SW behaviour on a real device.
+
+To generate the cert (one-time per machine):
+```bash
+brew install mkcert && mkcert -install
+cd reference-app && mkcert localhost <LAN-IP>
+```
+
+Android devices also need the mkcert root CA installed once: `mkcert -CAROOT` → copy `rootCA.pem` to device → Settings → Security → Install certificate → CA certificate.
+
+Cert files (`*.pem`, `*.key`, `*.crt`) are gitignored — never commit them.
 
 ---
 

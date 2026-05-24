@@ -2,6 +2,11 @@ TODO.md
 exp
 node_modules/
 reference-app/dist/
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
 **/test-results/
 **/playwright-report/
 .claude/settings.local.json

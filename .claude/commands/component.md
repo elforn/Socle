@@ -46,7 +46,7 @@ Scaffold a new Web Component for this project.
 
 ```js
 import { AppElement } from '../../../_lib/core/app-element.js';
-import { Store } from '../../../_lib/core/store.js';
+import * as Store from '../../../_lib/core/store/store.js';
 
 class ScoreCard extends AppElement {
   subscribe() {
