@@ -15,13 +15,30 @@ function contentHash(content) {
   return createHash('sha256').update(content).digest('hex').slice(0, 8);
 }
 
+function hashDir(dir) {
+  const hash = createHash('sha256');
+  function walk(d) {
+    for (const entry of readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (entry.name.startsWith('.')) continue;
+      if (entry.name.endsWith('.test.js') || entry.name === 'test-setup.js' || entry.name === 'sw.js') continue;
+      const fullPath = join(d, entry.name);
+      const isDir = entry.isDirectory() || (entry.isSymbolicLink() && statSync(fullPath).isDirectory());
+      if (isDir) walk(fullPath);
+      else hash.update(readFileSync(fullPath));
+    }
+  }
+  walk(dir);
+  return hash.digest('hex').slice(0, 8);
+}
+
 // 1. Process app/main.js — inject __APP_VERSION__, rewrite import paths for dist/ layout
 const mainSrc = readFileSync(join(root, 'app', 'main.js'), 'utf8');
 const mainProcessed = mainSrc
   .replaceAll('__APP_VERSION__', `'${version}'`)
   .replaceAll("'../_lib/", "'./_lib/")          // ../_lib → ./_lib (dist root)
   .replace(/'\.\/(?!_lib\/)/g, "'./app/");      // ./anything → ./app/anything (all app-relative imports)
-const mainHash = contentHash(mainProcessed);
+const mainHash  = contentHash(mainProcessed);
+const cacheHash = contentHash(mainProcessed + hashDir(join(root, 'app')) + hashDir(join(root, '_lib')));
 const mainFilename = `main.${mainHash}.js`;
 writeFileSync(join(dist, mainFilename), mainProcessed);
 
@@ -52,7 +69,7 @@ const libAssets = enumerateAssets(join(root, '_lib'), `${BASE_PATH}_lib/`);
 const appAssets = enumerateAssets(join(root, 'app'), `${BASE_PATH}app/`);
 const assets = [BASE_PATH, `${BASE_PATH}${mainFilename}`, `${BASE_PATH}manifest.json`, ...libAssets, ...appAssets];
 const swProcessed = swSrc
-  .replace('%%CACHE_VERSION%%', `${version}-${mainHash}`)
+  .replace('%%CACHE_VERSION%%', `${version}-${cacheHash}`)
   .replace('%%ASSETS%%', JSON.stringify(assets))
   .replace('%%BASE_PATH%%', BASE_PATH);
 writeFileSync(join(dist, 'sw.js'), swProcessed);
@@ -75,6 +92,6 @@ cpSync(join(root, 'app'), join(dist, 'app'), { recursive: true });
 
 console.log(`Built ${version} (base: ${BASE_PATH}) → dist/`);
 console.log(`  ${mainFilename}`);
-console.log(`  sw.js (cache: ${version}-${mainHash})`);
+console.log(`  sw.js (cache: ${version}-${cacheHash})`);
 console.log(`  version.json`);
 console.log(`  index.html`);
