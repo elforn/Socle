@@ -49,6 +49,12 @@
   --color-action-dark:     #1C1C1E;
   --color-action-dark-text:#FFFFFF;
 
+  /* On-dark overlay helpers */
+  --color-overlay:         rgba(0, 0, 0, 0.40);   /* modal/sheet backdrop */
+  --color-on-dark:         rgba(255, 255, 255, 0.80); /* primary text on dark surfaces */
+  --color-on-dark-muted:   rgba(255, 255, 255, 0.60); /* secondary text on dark surfaces */
+  --color-on-dark-dim:     rgba(255, 255, 255, 0.12); /* subtle control on dark */
+
   /* ----------------------------------------------------------
      TYPOGRAPHY
      System font stack — fast, legible, native feel on mobile.
@@ -120,8 +126,10 @@
   /* ----------------------------------------------------------
      LAYOUT
      ---------------------------------------------------------- */
-  --nav-height:       64px;    /* bottom navigation bar */
-  --header-height:    56px;    /* top header */
+  --nav-height:            64px;    /* bottom navigation bar */
+  --tab-bar-height:        52px;    /* in-app tab bars (Goals / Lists) */
+  --header-height:         56px;    /* top header */
+  --header-strip-height:   3px;     /* year-header progress strip */
   --page-padding:     var(--space-4);
   --card-padding:     var(--space-4);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);

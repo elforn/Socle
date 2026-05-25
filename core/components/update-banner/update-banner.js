@@ -6,53 +6,78 @@ class UpdateBanner extends AppElement {
   template() {
     return `
       <style>
+        @keyframes slide-down {
+          from { transform: translateY(-100%); opacity: 0; }
+          to   { transform: translateY(0); opacity: 1; }
+        }
+
         :host {
+          display: block;
           position: fixed;
           inset-block-start: 0;
           inset-inline: 0;
-          z-index: 9999;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: var(--space-4);
-          padding-block-start: calc(var(--space-3) + var(--safe-area-top));
-          padding-block-end: var(--space-3);
-          padding-inline: var(--space-4);
+          z-index: 200;
           background: var(--color-action-dark);
           color: var(--color-action-dark-text);
-          box-shadow: var(--shadow-sheet);
+          font-family: var(--font-family);
+          animation: slide-down 0.25s ease-out;
         }
         :host([hidden]) { display: none; }
-        button {
-          background: none;
-          border: none;
-          color: inherit;
-          cursor: pointer;
-          font-size: var(--font-size-body);
-          min-block-size: var(--touch-target);
-          min-inline-size: var(--touch-target);
-          padding-inline: var(--space-3);
+
+        .bar {
           display: flex;
           align-items: center;
-          justify-content: center;
+          gap: var(--space-3);
+          padding-block: var(--space-2);
+          padding-inline: var(--page-padding);
         }
-        #reload {
-          border: 1px solid currentColor;
-          border-radius: var(--radius-sm);
-          padding-inline: var(--space-4);
+
+        span {
+          flex: 1;
+          font-size: var(--font-size-caption);
           font-weight: var(--font-weight-medium);
+          color: var(--color-on-dark);
         }
+
         .actions {
           display: flex;
           align-items: center;
           gap: var(--space-2);
           flex-shrink: 0;
         }
+
+        button {
+          border: none;
+          cursor: pointer;
+          font-family: var(--font-family);
+          font-size: var(--font-size-caption);
+          font-weight: var(--font-weight-semibold);
+          padding-block: var(--space-1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        #reload {
+          background: var(--color-accent);
+          color: var(--color-text-inverse);
+          border-radius: var(--radius-full);
+          padding-inline: var(--space-4);
+        }
+
+        #dismiss {
+          background: var(--color-on-dark-dim);
+          color: var(--color-on-dark-muted);
+          border-radius: var(--radius-full);
+          padding-inline: var(--space-3);
+        }
       </style>
-      <span>${t('update-banner.available')}</span>
-      <div class="actions">
-        <button id="reload">${t('update-banner.reload')}</button>
-        <button id="dismiss" aria-label="${t('update-banner.dismiss')}">&#x2715;</button>
+      <div class="bar">
+        <span>${t('update-banner.available')}</span>
+        <div class="actions">
+          <button id="reload">${t('update-banner.reload')}</button>
+          <button id="dismiss" aria-label="${t('update-banner.dismiss')}">&#x2715;</button>
+        </div>
       </div>
     `;
   }
@@ -60,7 +85,14 @@ class UpdateBanner extends AppElement {
   subscribe() {
     this.setAttribute('role', 'alert');
     this._onUpdate = visible => {
-      if (visible) this.removeAttribute('hidden');
+      if (visible) {
+        this.removeAttribute('hidden');
+        requestAnimationFrame(() => {
+          document.documentElement.style.setProperty(
+            '--update-banner-height', `${this.offsetHeight}px`
+          );
+        });
+      }
     };
     subscribe('updateAvailable', this._onUpdate);
 
@@ -71,7 +103,10 @@ class UpdateBanner extends AppElement {
           else location.reload();
         });
     };
-    this._onDismiss = () => this.setAttribute('hidden', '');
+    this._onDismiss = () => {
+      this.setAttribute('hidden', '');
+      document.documentElement.style.removeProperty('--update-banner-height');
+    };
 
     this.shadowRoot.querySelector('#reload').addEventListener('click', this._onReload);
     this.shadowRoot.querySelector('#dismiss').addEventListener('click', this._onDismiss);
