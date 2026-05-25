@@ -4,15 +4,17 @@ import { reducer } from './store/reducer.js';
 import '../_lib/core/router/app-router.js';
 import '../_lib/core/sw-manager/sw-manager.js';
 import '../_lib/core/components/update-banner/update-banner.js';
+import './pages/year-redirect.js';
 import './pages/home-page.js';
 import './pages/not-found-page.js';
 
-await boot({ dbName: 'socle-ref', reducer });
+await boot({ dbName: 'youryear', reducer });
 
-console.log('Socle reference app', __APP_VERSION__);
+console.log('YourYear', __APP_VERSION__);
 
 const router = document.querySelector('app-router');
 router.routes = [
-  { path: '/', component: 'home-page' },
-  { path: '*', component: 'not-found-page' },
+  { path: '/',       component: 'year-redirect' },
+  { path: '/:year',  component: 'home-page' },
+  { path: '*',       component: 'not-found-page' },
 ];

@@ -1,12 +1,12 @@
 {
   "name": "socle-reference-app",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "scripts": {
     "build": "node utils/build.js",
-    "serve": "npx serve dist --listen 3000",
-    "dev": "node utils/build.js && npx serve dist --listen 3000",
-    "dev:https": "node utils/build.js && npx serve dist --listen 3000 --ssl-cert localhost+1.pem --ssl-key localhost+1-key.pem",
+    "serve": "npx serve dist --listen 3000 --single",
+    "dev": "node utils/build.js && npx serve dist --listen 3000 --single",
+    "dev:https": "node utils/build.js && npx serve dist --listen 3000 --single --ssl-cert localhost+1.pem --ssl-key localhost+1-key.pem",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

@@ -1,7 +1,7 @@
 {
-  "name": "Socle Reference App",
-  "short_name": "Socle",
-  "description": "Socle PWA library reference application",
+  "name": "YourYear",
+  "short_name": "YourYear",
+  "description": "Set one yearly goal and track your progress",
   "start_url": "/",
   "lang": "en",
   "display": "standalone",
