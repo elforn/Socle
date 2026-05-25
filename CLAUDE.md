@@ -213,7 +213,7 @@ Normalised event object passed to all handlers:
 - hold-drag → `'none'` (set automatically by `Gestures.attach`)
 - drag → `'none'`
 
-**Implemented:** tap, long press, swipe, hold-drag, `Gestures.attach`. **Next:** drag-to-complete (full-width CTA pattern, see `ui.md`).
+**Implemented:** tap, long press, swipe, hold-drag, `Gestures.attach`.
 
 ### P2P (V2 — schema ready in V1)
 

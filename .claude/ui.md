@@ -209,7 +209,7 @@ The primary pattern for completing a strong action (mark done, submit score, con
 - Interaction: user drags handle right; handle follows finger; button fill progresses behind it
 - Completion: handle reaches right edge (within 8px threshold) → action fires → brief success animation
 - Release before completion: handle springs back to start (`--ease-spring` transition)
-- Haptic: `navigator.vibrate(10)` on drag start, `navigator.vibrate([50, 30, 50])` on completion
+- Haptic: `navigator.vibrate(10)` on drag start
 
 This replaces confirmation dialogs for the most frequent strong CTAs. Label must describe the action clearly ("Drag to end match", "Drag to submit score").
 
