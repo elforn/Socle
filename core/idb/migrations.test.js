@@ -36,6 +36,19 @@ describe('runMigrations', () => {
     db.close();
   });
 
+  it('creates the images object store', async () => {
+    const db = await openMigrated(freshName());
+    expect(db.objectStoreNames.contains('images')).toBe(true);
+    db.close();
+  });
+
+  it('images store uses id as keyPath', async () => {
+    const db = await openMigrated(freshName());
+    const keyPath = db.transaction('images', 'readonly').objectStore('images').keyPath;
+    expect(keyPath).toBe('id');
+    db.close();
+  });
+
   it('throws for an undefined migration version', () => {
     const db = { createObjectStore: () => {} };
     expect(() => runMigrations(db, 98, 99)).toThrow('No migration defined for schema version 99');

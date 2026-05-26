@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { boot, dispatch, subscribe, unsubscribe, getState, setState, reset } from './store.js';
+import { boot, dispatch, subscribe, unsubscribe, getState, setState, reset, attachBlob, getBlob, deleteBlob } from './store.js';
 
 let dbSeq = 0;
 function freshName() { return `test-store-${dbSeq++}`; }
@@ -196,5 +196,40 @@ describe('setState', () => {
     reset();
     await boot({ dbName: freshName(), reducer });
     expect(getState().updateAvailable).toBeUndefined();
+  });
+});
+
+describe('blob storage', () => {
+  beforeEach(async () => {
+    await boot({ dbName: freshName(), reducer });
+  });
+
+  it('attachBlob stores and getBlob retrieves a blob', async () => {
+    const blob = new Blob(['hello'], { type: 'text/plain' });
+    await attachBlob('img-1', blob);
+    const result = await getBlob('img-1');
+    expect(result).toBeInstanceOf(Blob);
+    const text = await result.text();
+    expect(text).toBe('hello');
+  });
+
+  it('getBlob returns null for a missing id', async () => {
+    const result = await getBlob('missing');
+    expect(result).toBeNull();
+  });
+
+  it('deleteBlob removes the blob', async () => {
+    const blob = new Blob(['data']);
+    await attachBlob('img-2', blob);
+    await deleteBlob('img-2');
+    const result = await getBlob('img-2');
+    expect(result).toBeNull();
+  });
+
+  it('throws when called before boot', async () => {
+    reset();
+    expect(() => attachBlob('x', new Blob())).toThrow('Store.attachBlob called before Store.boot');
+    await expect(getBlob('x')).rejects.toThrow('Store.getBlob called before Store.boot');
+    expect(() => deleteBlob('x')).toThrow('Store.deleteBlob called before Store.boot');
   });
 });

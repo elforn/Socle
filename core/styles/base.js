@@ -13,6 +13,8 @@ sheet.replaceSync(`
   *::after {
     box-sizing: inherit;
   }
+
+  [hidden] { display: none !important; }
 `);
 
 export { sheet as baseSheet };

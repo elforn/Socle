@@ -4,6 +4,9 @@ const migrations = [
     const store = db.createObjectStore('events', { keyPath: 'id' });
     store.createIndex('by_recordedAt', 'recordedAt');
   },
+  db => {
+    db.createObjectStore('images', { keyPath: 'id' });
+  },
 ];
 
 export function runMigrations(db, oldVersion, newVersion) {

@@ -1,4 +1,4 @@
-import { openDB, put, getAll } from '../idb/idb.js';
+import { openDB, put, get, del, getAll } from '../idb/idb.js';
 import { runMigrations, CURRENT_VERSION } from '../idb/migrations.js';
 
 let _db = null;
@@ -57,6 +57,22 @@ export function setState(key, value) {
 
 export function getState() {
   return _state;
+}
+
+export function attachBlob(id, blob) {
+  if (!_db) throw new Error('Store.attachBlob called before Store.boot');
+  return put(_db, 'images', { id, blob });
+}
+
+export async function getBlob(id) {
+  if (!_db) throw new Error('Store.getBlob called before Store.boot');
+  const record = await get(_db, 'images', id);
+  return record?.blob ?? null;
+}
+
+export function deleteBlob(id) {
+  if (!_db) throw new Error('Store.deleteBlob called before Store.boot');
+  return del(_db, 'images', id);
 }
 
 export function reset() {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { openDB, put, getAll } from './idb.js';
+import { openDB, put, get, del, getAll } from './idb.js';
 
 let dbSeq = 0;
 function freshName() { return `test-idb-${dbSeq++}`; }
@@ -69,5 +69,45 @@ describe('put and getAll', () => {
   it('put resolves with the stored key', async () => {
     const key = await put(db, 'items', { id: 'mykey', value: 'x' });
     expect(key).toBe('mykey');
+  });
+});
+
+describe('get', () => {
+  let db;
+  beforeEach(async () => {
+    db = await openDB(freshName(), 1, db => {
+      db.createObjectStore('items', { keyPath: 'id' });
+    });
+  });
+
+  it('retrieves a stored record by id', async () => {
+    await put(db, 'items', { id: 'a', value: 'hello' });
+    const result = await get(db, 'items', 'a');
+    expect(result).toEqual({ id: 'a', value: 'hello' });
+  });
+
+  it('returns null for a missing id', async () => {
+    const result = await get(db, 'items', 'missing');
+    expect(result).toBeNull();
+  });
+});
+
+describe('del', () => {
+  let db;
+  beforeEach(async () => {
+    db = await openDB(freshName(), 1, db => {
+      db.createObjectStore('items', { keyPath: 'id' });
+    });
+  });
+
+  it('removes a record by id', async () => {
+    await put(db, 'items', { id: 'a', value: 'hello' });
+    await del(db, 'items', 'a');
+    const results = await getAll(db, 'items');
+    expect(results).toHaveLength(0);
+  });
+
+  it('is a no-op for a missing id', async () => {
+    await expect(del(db, 'items', 'missing')).resolves.toBeUndefined();
   });
 });
