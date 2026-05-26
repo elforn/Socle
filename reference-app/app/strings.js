@@ -14,6 +14,7 @@ defineStrings({
   'goal-dialog.placeholder':  'What will you achieve this year?',
   'goal-dialog.save':         'Save',
   'goal-dialog.cancel':       'Cancel',
+  'goal-dialog.delete':       'Delete',
 
   'home-page.milestone-section': '3-Month Milestones',
   'home-page.wow-section':       '8-Week Wow',
@@ -35,6 +36,11 @@ defineStrings({
   'year-header.color':           'Year color',
   'year-header.theme':           'Theme',
   'year-header.theme-soon':      'Coming soon',
+  'year-header.language':        'Language',
+  'year-header.photo':           'Year photo',
+  'year-header.photo-add':       'Add photo',
+  'year-header.photo-change':    'Change photo',
+  'year-header.photo-remove':    'Remove photo',
 
   'tab-bar.goals':               'Goals',
   'tab-bar.lists':               'Lists',

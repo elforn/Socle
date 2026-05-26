@@ -113,6 +113,37 @@ describe('goal-dialog — save', () => {
   });
 });
 
+describe('goal-dialog — delete', () => {
+  it('delete button is hidden when opened with no goal', () => {
+    const el = mount();
+    el.open(null);
+    expect(el.shadowRoot.querySelector('#delete').hidden).toBe(true);
+  });
+
+  it('delete button is visible when opened with an existing goal', () => {
+    const el = mount();
+    el.open({ id: '1', title: 'My goal' });
+    expect(el.shadowRoot.querySelector('#delete').hidden).toBe(false);
+  });
+
+  it('dispatches goal-delete when delete is clicked', () => {
+    const el = mount();
+    el.open({ id: '1', title: 'My goal' });
+    const events = [];
+    el.addEventListener('goal-delete', e => events.push(e));
+    el.shadowRoot.querySelector('#delete').click();
+    expect(events).toHaveLength(1);
+  });
+
+  it('closes the dialog after delete', () => {
+    const el = mount();
+    el.open({ id: '1', title: 'My goal' });
+    const dialog = el.shadowRoot.querySelector('dialog');
+    el.shadowRoot.querySelector('#delete').click();
+    expect(dialog.close).toHaveBeenCalledOnce();
+  });
+});
+
 describe('goal-dialog — cancel', () => {
   it('dispatches goal-cancelled when cancel is clicked', () => {
     const el = mount();

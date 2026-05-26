@@ -40,6 +40,17 @@ export function reducer(state, event) {
     case 'wow:deleted':
       return { ...state, wow: { ...(state.wow ?? {}), [year]: remove(state.wow?.[year], id) } };
 
+    case 'year:image-set': {
+      const { imageId } = event.payload;
+      return { ...state, images: { ...(state.images ?? {}), [year]: imageId } };
+    }
+
+    case 'year:image-removed': {
+      const images = { ...(state.images ?? {}) };
+      delete images[year];
+      return { ...state, images };
+    }
+
     default:
       return state;
   }

@@ -386,3 +386,134 @@ test.describe('Goal fail / restore', () => {
     expect(pct).toBeGreaterThanOrEqual(0);
   });
 });
+
+test.describe('Goal delete via dialog', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`/${currentYear}`);
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+    await waitForPage(page);
+
+    await enableEditMode(page, '#capstone-edit-btn');
+    await openDialog(page, '#add-capstone');
+    await fillAndSaveDialog(page, 'Delete me via dialog');
+    await page.waitForFunction(() => {
+      const list = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot.querySelector('#capstone-list');
+      return list?.querySelectorAll('goal-item').length === 1;
+    });
+  });
+
+  test('dialog shows delete button when editing an existing goal', async ({ page }) => {
+    // Tap the goal bar to open the edit dialog
+    const barBounds = await page.evaluate(() => {
+      const bar = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item').shadowRoot
+        .querySelector('.bar');
+      return bar.getBoundingClientRect().toJSON();
+    });
+    await page.mouse.click(
+      barBounds.x + barBounds.width / 2,
+      barBounds.y + barBounds.height / 2
+    );
+
+    await page.waitForFunction(() => {
+      const d = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('goal-dialog')?.shadowRoot
+        ?.querySelector('dialog');
+      return d?.open;
+    });
+
+    const deleteHidden = await page.evaluate(() =>
+      document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('goal-dialog').shadowRoot
+        .querySelector('#delete').hidden
+    );
+    expect(deleteHidden).toBe(false);
+  });
+
+  test('clicking delete in the dialog removes the goal', async ({ page }) => {
+    const barBounds = await page.evaluate(() => {
+      const bar = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item').shadowRoot
+        .querySelector('.bar');
+      return bar.getBoundingClientRect().toJSON();
+    });
+    await page.mouse.click(
+      barBounds.x + barBounds.width / 2,
+      barBounds.y + barBounds.height / 2
+    );
+
+    await page.waitForFunction(() => {
+      const d = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('goal-dialog')?.shadowRoot
+        ?.querySelector('dialog');
+      return d?.open;
+    });
+
+    await page.evaluate(() => {
+      document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('goal-dialog').shadowRoot
+        .querySelector('#delete').click();
+    });
+
+    await page.waitForFunction(() => {
+      const list = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot.querySelector('#capstone-list');
+      return list?.querySelectorAll('goal-item').length === 0;
+    });
+
+    expect(await goalItemCount(page, '#capstone-list')).toBe(0);
+  });
+
+  test('dialog-deleted goal does not reappear after reload', async ({ page }) => {
+    const barBounds = await page.evaluate(() => {
+      const bar = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item').shadowRoot
+        .querySelector('.bar');
+      return bar.getBoundingClientRect().toJSON();
+    });
+    await page.mouse.click(
+      barBounds.x + barBounds.width / 2,
+      barBounds.y + barBounds.height / 2
+    );
+
+    await page.waitForFunction(() => {
+      const d = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('goal-dialog')?.shadowRoot
+        ?.querySelector('dialog');
+      return d?.open;
+    });
+
+    await page.evaluate(() => {
+      document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('goal-dialog').shadowRoot
+        .querySelector('#delete').click();
+    });
+
+    await page.waitForFunction(() => {
+      const list = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot.querySelector('#capstone-list');
+      return list?.querySelectorAll('goal-item').length === 0;
+    });
+
+    await page.reload();
+    await waitForPage(page);
+
+    await page.waitForFunction(() =>
+      document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('#capstone-list') !== null
+    );
+
+    expect(await goalItemCount(page, '#capstone-list')).toBe(0);
+  });
+});

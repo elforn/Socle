@@ -1,7 +1,12 @@
 import { AppElement } from '../../../_lib/core/app-element.js';
-import { t } from '../../../_lib/core/strings.js';
+import { Gestures } from '../../../_lib/modules/gestures/gestures.js';
+import { t, setLocale, getLocale } from '../../../_lib/core/strings.js';
+import * as Store from '../../../_lib/core/store/store.js';
 
-class YearHeader extends AppElement {
+const LOCALE_LABELS = { en: 'English', fr: 'Français', ca: 'Català' };
+const IMAGE_HEADER_HEIGHT = '200px';
+
+class YearHeader extends Gestures(AppElement) {
   set year(v) {
     this._year = Number(v);
     if (this.shadowRoot) this._updateYear();
@@ -32,12 +37,81 @@ class YearHeader extends AppElement {
           padding-block-start: calc(var(--space-2) + var(--safe-area-top));
           padding-block-end: 0;
           padding-inline: var(--page-padding);
-          transition: padding-block-start 0.2s ease;
+          transition: padding-block-start 0.2s ease, block-size 0.2s ease;
         }
 
         :host(.compact) {
           padding-block-start: var(--safe-area-top);
         }
+
+        /* ── Image mode ─────────────────────────────────────────────────── */
+
+        :host([data-has-image]:not(.compact)) {
+          block-size: var(--image-header-height, 200px);
+          padding-block-start: 0;
+          padding-inline: 0;
+        }
+
+        .header-bg {
+          display: none;
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+        }
+
+        :host([data-has-image]:not(.compact)) .header-bg {
+          display: block;
+        }
+
+        .header-image {
+          inline-size: 100%;
+          block-size: 100%;
+          object-fit: cover;
+          object-position: center;
+        }
+
+        .image-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            to bottom,
+            rgba(0,0,0,0.65) 0%,
+            rgba(0,0,0,0)    45%,
+            rgba(0,0,0,0)    55%,
+            rgba(0,0,0,0.65) 100%
+          );
+        }
+
+        :host([data-has-image]:not(.compact)) .top-row {
+          position: relative;
+          z-index: 1;
+          padding-block-start: calc(var(--space-2) + var(--safe-area-top));
+          padding-inline: var(--page-padding);
+        }
+
+        :host([data-has-image]:not(.compact)) h1,
+        :host([data-has-image]:not(.compact)) .nav-btn,
+        :host([data-has-image]:not(.compact)) .menu-btn {
+          color: white;
+        }
+
+        :host([data-has-image]:not(.compact)) .nav-btn:focus-visible,
+        :host([data-has-image]:not(.compact)) .menu-btn:focus-visible {
+          outline-color: white;
+        }
+
+        :host([data-has-image]:not(.compact)) .strip-bar {
+          position: absolute;
+          inset-block-end: 0;
+          inset-inline: 0;
+          background: rgba(255,255,255,0.2);
+        }
+
+        :host([data-has-image]:not(.compact)) .strip-fill {
+          background: rgba(255,255,255,0.6);
+        }
+
+        /* ── Layout ─────────────────────────────────────────────────────── */
 
         .top-row {
           display: flex;
@@ -49,7 +123,6 @@ class YearHeader extends AppElement {
         :host(.compact) .top-row {
           padding-block-end: 0;
         }
-
 
         .year-nav {
           display: flex;
@@ -116,7 +189,7 @@ class YearHeader extends AppElement {
           background: var(--color-accent);
         }
 
-        /* ── Menu ──────────────────────────────────────────────────────── */
+        /* ── Menu / sheets ──────────────────────────────────────────────── */
 
         dialog {
           position: fixed;
@@ -179,6 +252,10 @@ class YearHeader extends AppElement {
           cursor: default;
         }
 
+        .menu-item.destructive {
+          color: var(--color-danger, #d32f2f);
+        }
+
         .menu-section-label {
           font-size: var(--font-size-caption);
           font-weight: var(--font-weight-semibold);
@@ -198,7 +275,22 @@ class YearHeader extends AppElement {
           border-radius: var(--radius-full);
           padding: 2px var(--space-2);
         }
+
+        .badge.selected {
+          color: var(--color-accent);
+          background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+        }
+
+        .menu-item-value {
+          font-size: var(--font-size-body);
+          color: var(--color-text-muted);
+        }
       </style>
+
+      <div class="header-bg" aria-hidden="true">
+        <img class="header-image" id="header-img" alt="" aria-hidden="true">
+        <div class="image-overlay"></div>
+      </div>
 
       <div class="top-row">
         <nav class="year-nav" aria-label="${t('home-page.year-progress')}">
@@ -213,6 +305,8 @@ class YearHeader extends AppElement {
         <div class="strip-fill" id="strip-fill" style="width:${pct}%"></div>
       </div>
 
+      <input type="file" id="photo-input" accept="image/*" hidden>
+
       <dialog id="menu">
         <div class="menu-handle"></div>
         <p class="menu-section-label">${t('year-header.year-section')}</p>
@@ -220,13 +314,55 @@ class YearHeader extends AppElement {
           <span>${t('year-header.color')}</span>
           <span class="badge">${t('year-header.theme-soon')}</span>
         </div>
+        <button class="menu-item" id="year-photo-btn">
+          <span>${t('year-header.photo')}</span>
+          <span class="menu-item-value">›</span>
+        </button>
         <p class="menu-section-label">${t('year-header.app-section')}</p>
         <div class="menu-item muted">
           <span>${t('year-header.theme')}</span>
           <span class="badge">${t('year-header.theme-soon')}</span>
         </div>
+        <button class="menu-item" id="language-btn">
+          <span>${t('year-header.language')}</span>
+          <span class="menu-item-value">${LOCALE_LABELS[getLocale()]} ›</span>
+        </button>
+      </dialog>
+
+      <dialog id="photo-sheet">
+        <div class="menu-handle"></div>
+        <p class="menu-section-label">${t('year-header.photo')}</p>
+        <button class="menu-item" id="photo-add">
+          <span>${t('year-header.photo-add')}</span>
+        </button>
+        <button class="menu-item" id="photo-change" hidden>
+          <span>${t('year-header.photo-change')}</span>
+        </button>
+        <button class="menu-item destructive" id="photo-remove" hidden>
+          <span>${t('year-header.photo-remove')}</span>
+        </button>
+      </dialog>
+
+      <dialog id="lang-sheet">
+        <div class="menu-handle"></div>
+        <p class="menu-section-label">${t('year-header.language')}</p>
+        ${['en', 'fr', 'ca'].map(locale => {
+          const active = getLocale() === locale;
+          return `<button class="menu-item" data-locale="${locale}">
+            <span>${LOCALE_LABELS[locale]}</span>
+            ${active ? `<span class="badge selected">✓</span>` : ''}
+          </button>`;
+        }).join('')}
       </dialog>
     `;
+  }
+
+  onSwipe(e) {
+    const delta = e.direction === 'left' ? 1 : e.direction === 'right' ? -1 : 0;
+    if (!delta) return;
+    this.dispatchEvent(new CustomEvent('year-navigate', {
+      bubbles: true, composed: true, detail: { year: this._year + delta },
+    }));
   }
 
   subscribe() {
@@ -234,6 +370,7 @@ class YearHeader extends AppElement {
     this._stripFill = this.shadowRoot.querySelector('#strip-fill');
     this._menuDialog = this.shadowRoot.querySelector('#menu');
     this._compact = false;
+    this._imageUrl = null;
 
     this._onScroll = () => {
       const y = window.scrollY;
@@ -241,6 +378,12 @@ class YearHeader extends AppElement {
       else if (this._compact && y < 60)   { this._compact = false; this.classList.remove('compact'); }
     };
     window.addEventListener('scroll', this._onScroll, { passive: true });
+
+    this._onImages = images => {
+      this._imagesState = images;
+      this._updateImageFor(this._year);
+    };
+    Store.subscribe('images', this._onImages);
 
     this._updateYear();
 
@@ -266,16 +409,94 @@ class YearHeader extends AppElement {
     this._onBackdrop = e => {
       if (e.target === this._menuDialog) this._menuDialog.close();
     };
-    this._menuDialog.addEventListener('pointerup', this._onBackdrop);
+    this._menuDialog.addEventListener('click', this._onBackdrop);
 
+    // Photo sub-sheet
+    this._photoSheet = this.shadowRoot.querySelector('#photo-sheet');
+    const photoInput = this.shadowRoot.querySelector('#photo-input');
+
+    this._onYearPhotoBtn = () => {
+      this._menuDialog.close();
+      this._updatePhotoMenu(!!this._imagesState?.[this._year]);
+      this._photoSheet.showModal();
+    };
+    this.shadowRoot.querySelector('#year-photo-btn').addEventListener('click', this._onYearPhotoBtn);
+
+    this._onPhotoSheetBackdrop = e => {
+      if (e.target === this._photoSheet) this._photoSheet.close();
+    };
+    this._photoSheet.addEventListener('click', this._onPhotoSheetBackdrop);
+
+    const openPhotoPicker = () => {
+      this._photoSheet.close();
+      photoInput.click();
+    };
+    this._onPhotoAdd = openPhotoPicker;
+    this._onPhotoChange = openPhotoPicker;
+    this.shadowRoot.querySelector('#photo-add').addEventListener('click', this._onPhotoAdd);
+    this.shadowRoot.querySelector('#photo-change').addEventListener('click', this._onPhotoChange);
+
+    this._onPhotoRemove = async () => {
+      this._photoSheet.close();
+      const imageId = Store.getState().images?.[this._year];
+      await Store.dispatch('year:image-removed', { year: this._year });
+      if (imageId) Store.deleteBlob(imageId);
+    };
+    this.shadowRoot.querySelector('#photo-remove').addEventListener('click', this._onPhotoRemove);
+
+    this._onPhotoInput = async e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const imageId = crypto.randomUUID();
+      await Store.attachBlob(imageId, file);
+      Store.dispatch('year:image-set', { year: this._year, imageId });
+      e.target.value = '';
+    };
+    photoInput.addEventListener('change', this._onPhotoInput);
+
+    // Language
+    this._langDialog = this.shadowRoot.querySelector('#lang-sheet');
+
+    this._onLanguageBtn = () => {
+      this._menuDialog.close();
+      this._langDialog.showModal();
+    };
+    this.shadowRoot.querySelector('#language-btn').addEventListener('click', this._onLanguageBtn);
+
+    this._onLangBackdrop = e => {
+      if (e.target === this._langDialog) this._langDialog.close();
+    };
+    this._langDialog.addEventListener('click', this._onLangBackdrop);
+
+    this._onLangSelect = e => {
+      const btn = e.target.closest('[data-locale]');
+      if (btn && btn.dataset.locale !== getLocale()) {
+        setLocale(btn.dataset.locale);
+        location.reload();
+      }
+    };
+    this._langDialog.addEventListener('click', this._onLangSelect);
   }
 
   unsubscribe() {
+    Store.unsubscribe('images', this._onImages);
+    if (this._imageUrl) URL.revokeObjectURL(this._imageUrl);
+
     this.shadowRoot.querySelector('#prev')?.removeEventListener('click', this._onPrev);
     this.shadowRoot.querySelector('#next')?.removeEventListener('click', this._onNext);
     this.shadowRoot.querySelector('#menu-btn')?.removeEventListener('click', this._onMenuBtn);
     this._menuDialog?.removeEventListener('close', this._onMenuClose);
-    this._menuDialog?.removeEventListener('pointerup', this._onBackdrop);
+    this._menuDialog?.removeEventListener('click', this._onBackdrop);
+    this.shadowRoot.querySelector('#year-photo-btn')?.removeEventListener('click', this._onYearPhotoBtn);
+    this._photoSheet?.removeEventListener('click', this._onPhotoSheetBackdrop);
+    this.shadowRoot.querySelector('#photo-add')?.removeEventListener('click', this._onPhotoAdd);
+    this.shadowRoot.querySelector('#photo-change')?.removeEventListener('click', this._onPhotoChange);
+    this.shadowRoot.querySelector('#photo-remove')?.removeEventListener('click', this._onPhotoRemove);
+    this.shadowRoot.querySelector('#photo-input')?.removeEventListener('change', this._onPhotoInput);
+    document.documentElement.style.removeProperty('--year-header-height');
+    this.shadowRoot.querySelector('#language-btn')?.removeEventListener('click', this._onLanguageBtn);
+    this._langDialog?.removeEventListener('click', this._onLangBackdrop);
+    this._langDialog?.removeEventListener('click', this._onLangSelect);
     window.removeEventListener('scroll', this._onScroll);
   }
 
@@ -284,6 +505,48 @@ class YearHeader extends AppElement {
     if (this._yearEl) this._yearEl.textContent = String(year);
     const pct = yearProgress(year);
     if (this._stripFill) this._stripFill.style.width = `${pct}%`;
+    this._updateImageFor(year);
+  }
+
+  async _updateImageFor(year) {
+    const imageId = this._imagesState?.[year];
+    if (!imageId) {
+      this._clearImage();
+      return;
+    }
+    const blob = await Store.getBlob(imageId);
+    if (this._year !== year) return; // year changed while fetching
+    if (!blob) {
+      this._clearImage();
+      return;
+    }
+    if (this._imageUrl) URL.revokeObjectURL(this._imageUrl);
+    this._imageUrl = URL.createObjectURL(blob);
+    this.shadowRoot.querySelector('#header-img').src = this._imageUrl;
+    this.setAttribute('data-has-image', '');
+    document.documentElement.style.setProperty('--year-header-height', IMAGE_HEADER_HEIGHT);
+    this._updatePhotoMenu(true);
+  }
+
+  _clearImage() {
+    if (this._imageUrl) {
+      URL.revokeObjectURL(this._imageUrl);
+      this._imageUrl = null;
+    }
+    const img = this.shadowRoot?.querySelector('#header-img');
+    if (img) img.src = '';
+    this.removeAttribute('data-has-image');
+    document.documentElement.style.removeProperty('--year-header-height');
+    this._updatePhotoMenu(false);
+  }
+
+  _updatePhotoMenu(hasImage) {
+    const addBtn    = this.shadowRoot?.querySelector('#photo-add');
+    const changeBtn = this.shadowRoot?.querySelector('#photo-change');
+    const removeBtn = this.shadowRoot?.querySelector('#photo-remove');
+    if (addBtn)    addBtn.hidden    = hasImage;
+    if (changeBtn) changeBtn.hidden = !hasImage;
+    if (removeBtn) removeBtn.hidden = !hasImage;
   }
 }
 

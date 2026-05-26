@@ -4,7 +4,11 @@ import { t } from '../../../_lib/core/strings.js';
 class GoalDialog extends AppElement {
   open(goal = null) {
     this._input.value = goal?.title ?? '';
+    this._saveBtn.disabled = !this._input.value.trim();
+    if (this._deleteBtn) this._deleteBtn.hidden = !goal;
+    this._justOpened = true;
     this._dialog.showModal();
+    requestAnimationFrame(() => { this._justOpened = false; });
     this._input.select();
   }
 
@@ -105,9 +109,14 @@ class GoalDialog extends AppElement {
 
         .actions {
           display: flex;
-          justify-content: flex-end;
+          justify-content: space-between;
           gap: var(--space-2);
           margin-block-start: var(--space-4);
+        }
+
+        .actions-end {
+          display: flex;
+          gap: var(--space-2);
         }
 
         button {
@@ -124,6 +133,11 @@ class GoalDialog extends AppElement {
         button:focus-visible {
           outline: 2px solid var(--color-accent);
           outline-offset: 2px;
+        }
+
+        #delete {
+          background: none;
+          color: var(--color-danger);
         }
 
         #cancel {
@@ -151,18 +165,22 @@ class GoalDialog extends AppElement {
                autocomplete="off"
                maxlength="80" />
         <div class="actions">
-          <button id="cancel">${t('goal-dialog.cancel')}</button>
-          <button id="save" disabled>${t('goal-dialog.save')}</button>
+          <button id="delete" hidden>${t('goal-dialog.delete')}</button>
+          <div class="actions-end">
+            <button id="cancel">${t('goal-dialog.cancel')}</button>
+            <button id="save" disabled>${t('goal-dialog.save')}</button>
+          </div>
         </div>
       </dialog>
     `;
   }
 
   subscribe() {
-    this._dialog  = this.shadowRoot.querySelector('dialog');
-    this._input   = this.shadowRoot.querySelector('#input');
-    this._saveBtn = this.shadowRoot.querySelector('#save');
-    this._saved   = false;
+    this._dialog    = this.shadowRoot.querySelector('dialog');
+    this._input     = this.shadowRoot.querySelector('#input');
+    this._saveBtn   = this.shadowRoot.querySelector('#save');
+    this._deleteBtn = this.shadowRoot.querySelector('#delete');
+    this._saved     = false;
 
     this._onInput = () => {
       this._saveBtn.disabled = !this._input.value.trim();
@@ -180,6 +198,11 @@ class GoalDialog extends AppElement {
 
     this._onCancel = () => this._dialog.close();
 
+    this._onDelete = () => {
+      this.dispatchEvent(new CustomEvent('goal-delete', { bubbles: true, composed: true }));
+      this._dialog.close();
+    };
+
     this._onClose = () => {
       if (!this._saved) {
         this.dispatchEvent(new CustomEvent('goal-cancelled', { bubbles: true, composed: true }));
@@ -187,8 +210,11 @@ class GoalDialog extends AppElement {
       this._saved = false;
     };
 
+    // pointerup not click: the gesture that opened the dialog synthesises a click
+    // on the same frame; _justOpened guard clears via rAF so the next pointer
+    // release (genuine backdrop tap) is the first one that can dismiss.
     this._onBackdrop = (e) => {
-      if (e.target === this._dialog) this._dialog.close();
+      if (!this._justOpened && e.target === this._dialog) this._dialog.close();
     };
 
     this._onKeyDown = (e) => { if (e.key === 'Enter') this._onSave(); };
@@ -196,8 +222,9 @@ class GoalDialog extends AppElement {
     this._input.addEventListener('input',   this._onInput);
     this._input.addEventListener('keydown', this._onKeyDown);
     this._saveBtn.addEventListener('click', this._onSave);
+    this._deleteBtn.addEventListener('click', this._onDelete);
     this.shadowRoot.querySelector('#cancel').addEventListener('click', this._onCancel);
-    this._dialog.addEventListener('close',    this._onClose);
+    this._dialog.addEventListener('close', this._onClose);
     this._dialog.addEventListener('pointerup', this._onBackdrop);
   }
 
@@ -205,8 +232,9 @@ class GoalDialog extends AppElement {
     this._input?.removeEventListener('input',   this._onInput);
     this._input?.removeEventListener('keydown', this._onKeyDown);
     this._saveBtn?.removeEventListener('click', this._onSave);
+    this._deleteBtn?.removeEventListener('click', this._onDelete);
     this.shadowRoot.querySelector('#cancel')?.removeEventListener('click', this._onCancel);
-    this._dialog?.removeEventListener('close',    this._onClose);
+    this._dialog?.removeEventListener('close', this._onClose);
     this._dialog?.removeEventListener('pointerup', this._onBackdrop);
   }
 }

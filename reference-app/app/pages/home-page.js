@@ -6,6 +6,8 @@ import '../components/year-header/year-header.js';
 import '../components/goal-item/goal-item.js';
 import '../components/goal-dialog/goal-dialog.js';
 
+// capstone maps to 'goal' because capstone is the primary goal type; the event
+// types were named before the three-section structure existed.
 const EVENT_PREFIX = { capstone: 'goal', milestone: 'milestone', wow: 'wow' };
 
 class HomePage extends AppElement {
@@ -19,7 +21,7 @@ class HomePage extends AppElement {
 
         main {
           padding: 0 var(--page-padding);
-          padding-block-start: calc(var(--update-banner-height, 0px) + var(--safe-area-top) + var(--space-2) + var(--touch-target) + var(--space-1) + var(--header-strip-height) + var(--space-5));
+          padding-block-start: calc(var(--update-banner-height, 0px) + var(--year-header-height, calc(var(--safe-area-top) + var(--space-2) + var(--touch-target) + var(--space-1) + var(--header-strip-height))) + var(--space-5));
           padding-block-end: calc(var(--tab-bar-height) + var(--safe-area-bottom) + var(--space-4));
         }
 
@@ -111,11 +113,15 @@ class HomePage extends AppElement {
           inset-block-end: 0;
           inset-inline-start: 0;
           inset-inline-end: 0;
-          display: flex;
           background: var(--color-surface);
           border-block-start: 0.5px solid var(--color-border);
           padding-block-end: var(--safe-area-bottom);
           z-index: 50;
+        }
+
+        #tab-bar div[role="tablist"] {
+          display: flex;
+          inline-size: 100%;
         }
 
         .tab-btn {
@@ -244,7 +250,9 @@ class HomePage extends AppElement {
       this._capstoneEdit = !this._capstoneEdit;
       capstoneSection.classList.toggle('edit', this._capstoneEdit);
       capstoneEditBtn.textContent = this._capstoneEdit ? t('home-page.done') : t('home-page.edit');
-      this._capstoneList.querySelectorAll('goal-item').forEach(el => { el.editMode = this._capstoneEdit; });
+      const cItems = [...this._capstoneList.querySelectorAll('goal-item')];
+      cItems.forEach((el, i) => { el.editMode = this._capstoneEdit; });
+      if (this._capstoneEdit) cItems.forEach((el, i) => el.peekHint(i * 80));
     };
     capstoneEditBtn.addEventListener('click', this._onCapstoneEdit);
 
@@ -252,7 +260,9 @@ class HomePage extends AppElement {
       this._milestoneEdit = !this._milestoneEdit;
       milestoneSection.classList.toggle('edit', this._milestoneEdit);
       milestoneEditBtn.textContent = this._milestoneEdit ? t('home-page.done') : t('home-page.edit');
-      this._milestoneList.querySelectorAll('goal-item').forEach(el => { el.editMode = this._milestoneEdit; });
+      const mItems = [...this._milestoneList.querySelectorAll('goal-item')];
+      mItems.forEach((el, i) => { el.editMode = this._milestoneEdit; });
+      if (this._milestoneEdit) mItems.forEach((el, i) => el.peekHint(i * 80));
     };
     milestoneEditBtn.addEventListener('click', this._onMilestoneEdit);
 
@@ -260,7 +270,9 @@ class HomePage extends AppElement {
       this._wowEdit = !this._wowEdit;
       wowSection.classList.toggle('edit', this._wowEdit);
       wowEditBtn.textContent = this._wowEdit ? t('home-page.done') : t('home-page.edit');
-      this._wowList.querySelectorAll('goal-item').forEach(el => { el.editMode = this._wowEdit; });
+      const wItems = [...this._wowList.querySelectorAll('goal-item')];
+      wItems.forEach((el, i) => { el.editMode = this._wowEdit; });
+      if (this._wowEdit) wItems.forEach((el, i) => el.peekHint(i * 80));
     };
     wowEditBtn.addEventListener('click', this._onWowEdit);
 
@@ -373,6 +385,14 @@ class HomePage extends AppElement {
       Store.dispatch(`${prefix}:title-set`, { year: String(this._year), id, title: e.detail.title });
     };
     this.shadowRoot.addEventListener('goal-saved', this._onGoalSaved);
+
+    this._onDialogDelete = () => {
+      const prefix = EVENT_PREFIX[this._editingSection];
+      if (this._editingGoal) {
+        Store.dispatch(`${prefix}:deleted`, { year: String(this._year), id: this._editingGoal.id });
+      }
+    };
+    this._dialog.addEventListener('goal-delete', this._onDialogDelete);
   }
 
   unsubscribe() {
@@ -405,6 +425,7 @@ class HomePage extends AppElement {
     this.shadowRoot.querySelector('#add-wow')?.removeEventListener('click', this._onAddWow);
 
     this.shadowRoot.removeEventListener('goal-saved', this._onGoalSaved);
+    this._dialog?.removeEventListener('goal-delete', this._onDialogDelete);
   }
 
   _renderList(container, items, editMode = false) {

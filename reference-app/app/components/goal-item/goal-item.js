@@ -13,6 +13,7 @@ class GoalItem extends Gestures(AppElement) {
   set editMode(v) {
     this._editMode = Boolean(v);
     this.classList.toggle('edit-mode', this._editMode);
+    if (this._bar) this._closeReveal();
     if (this.shadowRoot) this._updateActionBtn();
   }
 
@@ -53,7 +54,6 @@ class GoalItem extends Gestures(AppElement) {
           block-size: var(--goal-item-height, 40px);
           background: var(--color-surface);
           border: 0.5px solid var(--color-border);
-          border-radius: var(--radius-md);
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -139,6 +139,16 @@ class GoalItem extends Gestures(AppElement) {
         :host(.celebrating) {
           overflow: visible;
           animation: goal-ring 700ms ease-out forwards;
+        }
+
+        @keyframes peek-hint {
+          0%   { transform: translateX(0); }
+          50%  { transform: translateX(-12px); }
+          100% { transform: translateX(0); }
+        }
+
+        :host(.peek-hint) .bar {
+          animation: peek-hint 350ms var(--peek-delay, 0ms) ease-out both;
         }
 
         .sr-only {
@@ -255,7 +265,12 @@ class GoalItem extends Gestures(AppElement) {
     this._emitProgress();
   }
 
+  get _canSwipe() {
+    return this._editMode || this._failed || this._pct < 100;
+  }
+
   onSwipeMove(e) {
+    if (!this._canSwipe) return;
     this._bar.style.transition = 'none';
     const base   = this._revealed ? -REVEAL_WIDTH : 0;
     const offset = Math.max(-REVEAL_WIDTH, Math.min(0, base + e.dx));
@@ -264,7 +279,7 @@ class GoalItem extends Gestures(AppElement) {
 
   onSwipe(e) {
     this._bar.style.transition = '';
-    if (e.direction === 'left') {
+    if (e.direction === 'left' && this._canSwipe) {
       this._bar.style.transform = `translateX(-${REVEAL_WIDTH}px)`;
       this._revealed = true;
     } else {
@@ -279,6 +294,15 @@ class GoalItem extends Gestures(AppElement) {
     this.dispatchEvent(new CustomEvent('goal-tap', {
       bubbles: true, composed: true, detail: { goal: this._goal },
     }));
+  }
+
+  peekHint(delay = 0) {
+    if (!this._canSwipe) return;
+    this.style.setProperty('--peek-delay', `${delay}ms`);
+    this.classList.remove('peek-hint');
+    void this.offsetWidth; // force reflow so removing+re-adding the class restarts the animation
+    this.classList.add('peek-hint');
+    setTimeout(() => this.classList.remove('peek-hint'), delay + 450);
   }
 
   _closeReveal() {

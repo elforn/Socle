@@ -163,6 +163,29 @@ describe('goal-item — keyboard', () => {
   });
 });
 
+describe('goal-item — swipe availability (_canSwipe)', () => {
+  it('allows swipe on incomplete goal in view mode', () => {
+    const el = mount({ id: 'g1', title: 'Run', percentage: 50 });
+    expect(el._canSwipe).toBe(true);
+  });
+
+  it('disallows swipe on completed goal in view mode', () => {
+    const el = mount({ id: 'g1', title: 'Run', percentage: 100 });
+    expect(el._canSwipe).toBe(false);
+  });
+
+  it('allows swipe on completed goal in edit mode', () => {
+    const el = mount({ id: 'g1', title: 'Run', percentage: 100 });
+    el.editMode = true;
+    expect(el._canSwipe).toBe(true);
+  });
+
+  it('allows swipe on failed goal in view mode', () => {
+    const el = mount({ id: 'g1', title: 'Run', percentage: -1 });
+    expect(el._canSwipe).toBe(true);
+  });
+});
+
 describe('goal-item — hold drag', () => {
   it('emits goal-progress on hold-drag end', async () => {
     const el = mount({ id: 'g1', title: 'Run', percentage: 0 });

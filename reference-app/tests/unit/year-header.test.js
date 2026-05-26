@@ -3,21 +3,21 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import '../../app/strings.js';
 import '../../app/components/year-header/year-header.js';
 
-function stubDialog(el) {
-  const dialog = el.shadowRoot.querySelector('dialog');
-  dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
-  dialog.close     = vi.fn(() => {
-    dialog.removeAttribute('open');
-    dialog.dispatchEvent(new Event('close'));
+function stubAllDialogs(el) {
+  el.shadowRoot.querySelectorAll('dialog').forEach(dialog => {
+    dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
+    dialog.close     = vi.fn(() => {
+      dialog.removeAttribute('open');
+      dialog.dispatchEvent(new Event('close'));
+    });
   });
-  return dialog;
 }
 
 function mount(year = 2026) {
   const el = document.createElement('year-header');
   document.body.appendChild(el);
   el.year = year;
-  stubDialog(el);
+  stubAllDialogs(el);
   return el;
 }
 
@@ -85,9 +85,9 @@ describe('year-header — navigation', () => {
 describe('year-header — menu', () => {
   it('opens menu dialog on menu button click', () => {
     const el = mount();
-    const dialog = el.shadowRoot.querySelector('#menu');
+    const menu = el.shadowRoot.querySelector('#menu');
     el.shadowRoot.querySelector('#menu-btn').click();
-    expect(dialog.showModal).toHaveBeenCalledOnce();
+    expect(menu.showModal).toHaveBeenCalledOnce();
   });
 
   it('shows year section in menu', () => {
@@ -120,5 +120,56 @@ describe('year-header — compact mode', () => {
     Object.defineProperty(window, 'scrollY', { value: 10, configurable: true });
     window.dispatchEvent(new Event('scroll'));
     expect(el.classList.contains('compact')).toBe(false);
+  });
+});
+
+describe('year-header — photo sub-sheet', () => {
+  it('opens photo sub-sheet when year photo menu item is clicked', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#menu-btn').click();
+    el.shadowRoot.querySelector('#year-photo-btn').click();
+    const sheet = el.shadowRoot.querySelector('#photo-sheet');
+    expect(sheet.showModal).toHaveBeenCalledOnce();
+  });
+
+  it('shows add-photo button and hides change/remove when no image is set', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#menu-btn').click();
+    el.shadowRoot.querySelector('#year-photo-btn').click();
+    const sheet = el.shadowRoot.querySelector('#photo-sheet');
+    expect(sheet.querySelector('#photo-add').hidden).toBe(false);
+    expect(sheet.querySelector('#photo-change').hidden).toBe(true);
+    expect(sheet.querySelector('#photo-remove').hidden).toBe(true);
+  });
+
+  it('shows change/remove and hides add when image is set for the year', () => {
+    const el = mount(2026);
+    el._imagesState = { 2026: 'some-uuid' };
+    el.shadowRoot.querySelector('#menu-btn').click();
+    el.shadowRoot.querySelector('#year-photo-btn').click();
+    const sheet = el.shadowRoot.querySelector('#photo-sheet');
+    expect(sheet.querySelector('#photo-add').hidden).toBe(true);
+    expect(sheet.querySelector('#photo-change').hidden).toBe(false);
+    expect(sheet.querySelector('#photo-remove').hidden).toBe(false);
+  });
+});
+
+describe('year-header — language sub-sheet', () => {
+  it('opens language sub-sheet when language menu item is clicked', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#menu-btn').click();
+    el.shadowRoot.querySelector('#language-btn').click();
+    const sheet = el.shadowRoot.querySelector('#lang-sheet');
+    expect(sheet.showModal).toHaveBeenCalledOnce();
+  });
+
+  it('renders EN, FR, and CA locale options', () => {
+    const el = mount();
+    const locales = Array.from(
+      el.shadowRoot.querySelectorAll('#lang-sheet [data-locale]')
+    ).map(btn => btn.dataset.locale);
+    expect(locales).toContain('en');
+    expect(locales).toContain('fr');
+    expect(locales).toContain('ca');
   });
 });
