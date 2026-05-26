@@ -288,9 +288,119 @@ setState('updateAvailable', true);
 
 Returns the current state snapshot. Use in tests and for debugging. Do not use in production component code — use `subscribe()` instead.
 
+#### `attachBlob(id, blob)`
+
+Writes `{ id, blob }` to the `images` object store. Use for binary data (photos, files) that must not go through the event log. Returns a Promise.
+
+The `images` store is separate from `events` — blobs are not replayed on boot and are not part of the event log. Pair with a domain event that records the blob id so the relationship is auditable:
+
+```js
+const id = crypto.randomUUID();
+await Store.attachBlob(id, file);
+await Store.dispatch('year:image-set', { year: '2026', imageId: id });
+```
+
+Throws if called before `boot`.
+
+#### `getBlob(id)`
+
+Reads a blob record from the `images` store by id. Returns a Promise that resolves to the `blob` value, or `null` if not found. Throws if called before `boot`.
+
+#### `deleteBlob(id)`
+
+Removes a blob from the `images` store by id. Returns a Promise. Throws if called before `boot`.
+
 #### `reset()`
 
 Clears all module state. **Test isolation only — never call in production code.**
+
+## Strings and locale
+
+`core/strings.js` is a flat key registry that enables user-visible strings to be externalised from components and translated. It is the foundation for multi-language support without introducing any runtime dependency.
+
+### Basic usage
+
+In `_lib/` components, every user-visible string comes from `t()`:
+
+```js
+import { t } from '../../core/strings.js';
+
+template() {
+  return `<button>${t('update.reload')}</button>`;
+}
+```
+
+Register English defaults in `app/strings.js`, which must be the **first import in `app/main.js`** so strings are available before any component renders:
+
+```js
+// app/strings.js
+import { defineStrings } from '../_lib/core/strings.js';
+
+defineStrings({
+  'update.reload':  'Reload',
+  'update.dismiss': 'Dismiss',
+});
+```
+
+### Multiple languages
+
+`defineStrings(obj, locale)` accepts an optional locale parameter. Register all locale packs in `app/main.js` after `app/strings.js`:
+
+```js
+// app/main.js (imports are hoisted — order of import statements sets registration order)
+import './strings.js';          // English defaults — must come first
+import './locales/fr.js';       // French
+import './locales/ca.js';       // Catalan
+```
+
+```js
+// app/locales/fr.js
+import { defineStrings } from '../_lib/core/strings.js';
+
+defineStrings({
+  'update.reload':  'Recharger',
+  'update.dismiss': 'Ignorer',
+}, 'fr');
+```
+
+### Switching locale
+
+```js
+import { setLocale, getLocale } from '../_lib/core/strings.js';
+
+// Read persisted locale (falls back to 'en')
+const current = getLocale();
+
+// Switch and persist to localStorage, then reload so all components re-render
+setLocale('fr');
+location.reload();
+```
+
+`setLocale` writes to `localStorage`. `getLocale` reads from `localStorage` and defaults to `'en'`. On reload, `app/main.js` imports `strings.js` before anything renders — the active locale is already set when the first component connects.
+
+`t(key)` resolves: active locale → `'en'` → key. It never returns an empty string.
+
+### API reference
+
+#### `defineStrings(obj, locale?)`
+
+Registers string key/value pairs for a locale. Defaults to `'en'`. Call multiple times to register multiple locales. Merges into the existing registry — later calls for the same locale override earlier keys.
+
+#### `t(key)`
+
+Returns the string for `key` in the active locale. Falls back to English, then to the key itself if no match is found.
+
+#### `setLocale(locale)`
+
+Sets the active locale and persists it to `localStorage`. Falls back to `'en'` if the locale has no registered strings.
+
+#### `getLocale()`
+
+Returns the active locale from `localStorage`, defaulting to `'en'`.
+
+#### `reset()`
+
+Clears all registered strings and resets the active locale to `'en'`. **Test isolation only.**
 
 ## Service Worker
 

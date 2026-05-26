@@ -141,6 +141,9 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - `unsubscribe(key, cb)` — removes the callback. No-op if not registered.
 - `getState()` — returns the current state snapshot. For debugging and test assertions.
 - `reset()` — clears all module state. Test isolation only — never call in production code.
+- `attachBlob(id, blob)` — writes `{ id, blob }` to the `images` object store. For binary data (photos, files) that must not go through the event log.
+- `getBlob(id)` — reads a blob record from `images` by id. Returns `null` if not found.
+- `deleteBlob(id)` — removes a blob from `images` by id.
 - `deviceId` is an app concept, not a library concept. Apps pass it into `boot()` for P2P contexts. For single-device apps, omit it — the store defaults `deviceId` to `null` on every event.
 
 ### IDB / Data Model
@@ -156,7 +159,7 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - **The boot sequence must be isolated behind a single function.** Nothing calls IDB directly at boot except this function. This makes the V1→V2 transition a one-line change.
 - Schema versioning from day one. Migration functions run inside `boot()` before state is replayed and before any UI renders. Not in SW activate — migrations are data-layer concerns, not service-worker concerns.
 - A failed migration must throw — it will be caught and halt app startup visibly, never silently corrupt data.
-- The IDB wrapper is implemented in `core/idb/idb.js` — Promise-based and minimal (~35 lines). Exports only `openDB`, `put`, `getAll`. No `idb` library.
+- The IDB wrapper is implemented in `core/idb/idb.js` — Promise-based and minimal. Exports `openDB`, `put`, `get`, `getAll`, `del`. No `idb` library.
 
 ### Service Worker
 
@@ -230,18 +233,24 @@ Two modes, both should be elegant:
 
 The data model (append-only event log with `deviceId`) is designed for this from V1. The P2P module is not scaffolded unless selected in the CLI, but the data structure never changes.
 
-### Multilingual Support (V4 — habits to build from V1)
+### Multilingual Support (V1 foundation built; Intl wrappers remain V4)
 
-Full i18n is a V4 feature. Two habits must be followed from day one to make V4 non-breaking:
+Basic multi-locale support is implemented in V1. Two habits are non-negotiable from day one:
 
-1. **No hardcoded strings in `_lib/` components.** The V1 strings system is `core/strings.js`: a flat key registry. `_lib/` components call `t('namespace.key')` for every user-visible string. Apps register English defaults at startup by calling `defineStrings({ 'namespace.key': 'English text' })` in `app/strings.js`, which must be the **first import in `app/main.js`** — static imports are hoisted, so strings must be registered before any component's `connectedCallback` fires.
-2. **CSS logical properties only** (already required in Coding Standards). `margin-inline-start`, `padding-block-end`, `border-inline-end` — never directional (`left`, `right`, `top`, `bottom`) in layout properties. RTL layout becomes a single `dir="rtl"` attribute on the root.
+1. **No hardcoded strings in `_lib/` components.** `core/strings.js` is a flat key registry. `_lib/` components call `t('namespace.key')` for every user-visible string. Apps register defaults at startup in `app/strings.js` — the **first import in `app/main.js`** — using `defineStrings(obj, locale = 'en')`. The `locale` param lets apps register translations for other locales at startup too.
+2. **CSS logical properties only** (already required in Coding Standards). RTL layout becomes a single `dir="rtl"` attribute on the root.
 
-When V4 arrives, the i18n module will provide:
-- A locale store (selected language, persisted in IDB)
-- String resolution with fallback to a base language
-- `Intl.DateTimeFormat` and `Intl.NumberFormat` wrappers (no library — the platform provides this)
-- Dynamic language switching without reload
+**V1 locale system (`core/strings.js`):**
+- `defineStrings(obj, locale = 'en')` — registers strings for a locale. Call multiple times for multiple locales.
+- `setLocale(locale)` — switches the active locale. Persists choice to `localStorage`. Falls back to `'en'` if the locale has no registered strings.
+- `getLocale()` — reads active locale from `localStorage`, defaults to `'en'`.
+- `t(key)` — resolves: active locale → `'en'` → key (never silent empty string).
+- Language switching triggers `location.reload()` — the new locale is read from `localStorage` on next boot.
+- App locale packs live at `app/locales/<locale>.js` and are imported in `app/main.js`.
+
+**Still deferred to V4:**
+- `Intl.DateTimeFormat` / `Intl.NumberFormat` wrappers so dates and numbers respond to locale changes
+- More sophisticated fallback chains (current: active → en → key is sufficient for now)
 
 ---
 
@@ -315,6 +324,7 @@ This is the contract between the library and the user project. The update comman
 - **Every key feature has a test before the feature is considered done.** Not full TDD, but no unfinished feature without coverage.
 - **Fail loudly.** Silent failures and fallbacks that hide errors are not acceptable, especially in the data layer.
 - **Fixed-position components must account for safe area insets.** Any element using `position: fixed` with `inset-block-start: 0` must use `padding-block-start: calc(var(--space-N) + var(--safe-area-top))` to avoid overlapping device notches or dynamic islands. `--safe-area-top` resolves to `0px` on flat screens — zero cost.
+- **`[hidden]` must always win in shadow DOM.** Component CSS using `display: flex` or similar on list items will silently override the UA `[hidden] { display: none }` inside a shadow root. `core/styles/base.js` includes `[hidden] { display: none !important; }` which every shadow root inherits via `adoptedStyleSheets`. Never override `[hidden]` in component CSS.
 - **Solve real problems, not imagined ones.** Do not add configuration or fallback behaviour for problems that have not been observed in practice.
 
 ---

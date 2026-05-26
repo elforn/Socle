@@ -40,9 +40,14 @@ Check the file system against the build order defined in CLAUDE.md and report:
 7. **Reference app features (YourYear)**
    - Check: `reference-app/app/pages/year-redirect.js`, `home-page.js`, `not-found-page.js`
    - Check: `reference-app/app/components/goal-item/`, `goal-dialog/`, `year-header/`
-   - Check: `reference-app/app/store/reducer.js` handles `GOAL_SET`, `GOAL_PROGRESS_SET`, `GOAL_FAIL`
-   - Check: `reference-app/tests/e2e/goals.spec.js`, `persistence.spec.js` cover creation, deletion, progress, fail/restore
+   - Check: `reference-app/app/store/reducer.js` handles `goal:set`, `goal:progress-set`, `goal:fail`, `goal:deleted`, `capstone:set`, `capstone:progress-set`, `capstone:fail`, `capstone:deleted`, `year:image-set`, `year:image-removed`
+   - Check: `reference-app/app/strings.js` (all string keys), `reference-app/app/locales/fr.js`, `reference-app/app/locales/ca.js` (key parity)
+   - Check: `core/strings.js` exports `t`, `defineStrings`, `setLocale`, `getLocale`, `reset`
+   - Check: `reference-app/tests/e2e/goals.spec.js` covers creation, deletion (swipe + dialog), progress, fail/restore
+   - Check: `reference-app/tests/e2e/persistence.spec.js` covers goal title and progress
    - Check: `reference-app/tests/e2e/navigation.spec.js` covers year routing and scroll compression
+   - Check: `reference-app/tests/e2e/i18n.spec.js` covers locale switching (FR, CA), persistence, reset
+   - Check: `reference-app/tests/e2e/year-photo.spec.js` covers upload, menu state, persistence, remove, year scoping
 
 8. **CLI scaffolding tool**
    - Check: `cli/index.js`, prompts for module selection

@@ -6,54 +6,61 @@ const waitForHomePage = page => page.waitForFunction(() =>
 
 /*
  * Persistence tests verify that your app's data survives a page reload.
- * The tests below use the scaffolded home-page as a starting point.
- * Replace or extend them with assertions specific to your domain.
  *
  * Pattern for testing domain state persistence:
- *   1. Perform an action that writes to the store
+ *   1. Perform an action that writes to the store (via UI or page.evaluate)
  *   2. Confirm the UI reflects the change
  *   3. Reload the page
  *   4. Confirm the UI still reflects the change
  *
- * For domain state that is not directly visible in the UI, use page.evaluate()
- * to read from the shadow DOM or to dispatch events directly. Example:
+ * Shadow DOM traversal — components are nested behind shadow roots:
+ *   document.querySelector('app-router').shadowRoot
+ *     .querySelector('home-page').shadowRoot
+ *     .querySelector('#your-element')
  *
- *   await page.evaluate(() => {
- *     document.querySelector('home-page')?.shadowRoot
- *       ?.querySelector('#goals')
- *       ?.dispatchEvent(new CustomEvent('your-event', { bubbles: true, composed: true, detail: { ... } }));
- *   });
+ * For components using the Gestures mixin, use page.mouse with bounding box
+ * coordinates — page.locator().click() does not fire the pointer events the
+ * mixin listens to:
+ *
+ *   const box = await page.evaluate(() =>
+ *     document.querySelector('app-router').shadowRoot
+ *       .querySelector('home-page').shadowRoot
+ *       .querySelector('#target').getBoundingClientRect()
+ *   );
+ *   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
  */
 
 test.describe('Data persistence', () => {
-  test('item count persists across page reload', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     await waitForHomePage(page);
-
-    await page.locator('home-page #add').click();
-    await expect(page.locator('home-page #count')).toHaveText('1');
-
-    await page.reload();
-    await waitForHomePage(page);
-    await expect(page.locator('home-page #count')).toHaveText('1');
   });
 
-  test('multiple items accumulate and persist across reload', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
-    await waitForHomePage(page);
-
-    await page.locator('home-page #add').click();
-    await page.locator('home-page #add').click();
-    await page.locator('home-page #add').click();
-    await expect(page.locator('home-page #count')).toHaveText('3');
-
+  // Replace this test with a domain-specific assertion.
+  // Example: create an item, reload, assert it is still present.
+  test('app shell renders after reload', async ({ page }) => {
     await page.reload();
     await waitForHomePage(page);
-    await expect(page.locator('home-page #count')).toHaveText('3');
+    await expect(page.locator('app-router')).toBeAttached();
   });
 
-  // Add domain-specific persistence tests here.
-  // See the comment block above for the recommended pattern.
+  // Domain persistence test template — fill in with your store actions and selectors:
+  //
+  // test('item persists across reload', async ({ page }) => {
+  //   // 1. Trigger a store write via the UI or page.evaluate
+  //   await page.evaluate(() => {
+  //     document.querySelector('app-router').shadowRoot
+  //       .querySelector('home-page').shadowRoot
+  //       .querySelector('#add-btn').click();
+  //   });
+  //   // 2. Confirm the UI reflects the change
+  //   await page.waitForFunction(() => ...);
+  //   // 3. Reload
+  //   await page.reload();
+  //   await waitForHomePage(page);
+  //   // 4. Confirm data is still there
+  //   const item = await page.evaluate(() => ...);
+  //   expect(item).toBeDefined();
+  // });
 });

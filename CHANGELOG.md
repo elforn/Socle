@@ -9,6 +9,33 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `core/strings.js` — multi-locale support: `setLocale(locale)` and `getLocale()` added alongside `defineStrings(obj, locale='en')`; locale persisted in `localStorage`; `t(key)` resolves active locale → `'en'` → key
+- `core/store/store.js` — `attachBlob(id, blob)`, `getBlob(id)`, `deleteBlob(id)` for binary data (photos, files) stored in a separate `images` object store outside the event log
+- `core/idb/idb.js` — `get(db, storeName, id)` and `del(db, storeName, id)` added to the wrapper
+- `core/idb/migrations.js` — schema v2: `images` object store (`keyPath: 'id'`) for blob storage
+- `core/styles/base.js` — `[hidden] { display: none !important; }` added to the global adopted stylesheet so component CSS using `display: flex` cannot silently override the hidden attribute in shadow DOM
+- YourYear reference app — year photo: upload, change, and remove per year; stored as a blob in IDB; displayed as header background with dark gradient overlays for contrast; text turns white when image is present
+- YourYear reference app — language picker: EN, FR, CA locale options in the year-header menu; selection persists across reload; locale packs at `app/locales/fr.js` and `app/locales/ca.js`
+- YourYear reference app — `goal-dialog` delete button: visible when editing an existing goal; dispatches `goal-delete` event; home-page handles deletion without touching swipe-reveal UI
+- E2E tests — `year-photo.spec.js`: upload, menu state, persistence across reload, remove, year scoping
+- E2E tests — `i18n.spec.js`: locale list, FR/CA rendering, persistence across reload, switch back to EN
+- E2E tests — goal delete via dialog: delete from edit dialog, delete persists on reload, deleted goal no longer in list
+- Scaffold E2E templates updated — `navigation.spec.js` uses `page.goto()` for all navigation (removed old `dispatchEvent` pattern); `persistence.spec.js` and `offline.spec.js` replace broken stub selectors with commented domain templates
+- Unit tests — `year-header.test.js`: photo sub-sheet state, language sub-sheet; `goal-dialog.test.js`: delete button visibility, delete event dispatch
+- `/test` command updated with E2E section — shadow DOM traversal pattern, `page.mouse` for gesture components, when to write E2E vs unit tests
+
+### Changed
+- `goal-item` — swipe-to-delete now also available in edit mode (previously only in non-edit mode for completed goals); closing reveal on `editMode` change is unconditional (previously only closed on exit from edit)
+- `goal-item` — `peekHint()` reflow trick (`void el.offsetWidth`) ensures animation restarts correctly even on the first item
+- `goal-dialog` — opened via `pointerup` from a gesture; uses `_justOpened` + `requestAnimationFrame` guard to prevent the same pointer event chain from immediately triggering backdrop dismissal
+- `year-header` — photo menu state determined at open time (not lazily) so Add/Change/Remove reflects current IDB state immediately
+- `docs/architecture.md` — Store API reference updated with blob operations; new Strings and locale section with multi-locale usage guide and API reference
+
+### Fixed
+- Shadow DOM `[hidden]` override — component CSS `display: flex` on list items silently overrode `[hidden]` attribute; fixed globally in `core/styles/base.js`
+- Photo menu — all three options (Add, Change, Remove) were always visible regardless of whether a photo was assigned; now shows only the relevant options
+
+### Added
 - YourYear reference app — yearly goals PWA demonstrating the full library stack: year-scoped routing, event-sourced store, hold-drag gestures, offline-first, SW update banner
 - `year-redirect` page — redirects `/` to `/${currentYear}` via `navigate()`
 - `year-header` UI component — year label with prev/next arrows; gains `.compact` class on scroll past 80px, loses it below 60px (hysteresis)
