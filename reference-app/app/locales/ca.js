@@ -42,7 +42,12 @@ defineStrings({
   'year-header.photo-change':    'Canvia la foto',
   'year-header.photo-remove':    'Elimina la foto',
 
-  'tab-bar.goals':               'Objectius',
-  'tab-bar.lists':               'Llistes',
-  'tab-bar.nav':                 'Navegació principal',
+  'sync.export-year':            'Exporta {year}',
+  'sync.export-all':             'Exporta tots els anys',
+  'sync.import':                 'Importa',
+  'sync.import-confirm':         'Importats {events} esdeveniments i {images} imatges. L\'aplicació es recarregarà per aplicar-los. Continuar?',
+  'sync.import-cancel':          'Cancel·la',
+  'sync.import-reload':          'Recarrega',
+  'sync.import-close':           'Tanca',
+  'sync.import-error':           "Fitxer d'exportació invàlid o incompatible.",
 }, 'ca');

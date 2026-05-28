@@ -42,7 +42,12 @@ defineStrings({
   'year-header.photo-change':    'Change photo',
   'year-header.photo-remove':    'Remove photo',
 
-  'tab-bar.goals':               'Goals',
-  'tab-bar.lists':               'Lists',
-  'tab-bar.nav':                 'Main navigation',
+  'sync.export-year':            'Export {year}',
+  'sync.export-all':             'Export all years',
+  'sync.import':                 'Import',
+  'sync.import-confirm':         'Imported {events} events and {images} images. The app will reload to apply them. Continue?',
+  'sync.import-cancel':          'Cancel',
+  'sync.import-reload':          'Reload',
+  'sync.import-close':           'Close',
+  'sync.import-error':           'Invalid or incompatible export file.',
 });

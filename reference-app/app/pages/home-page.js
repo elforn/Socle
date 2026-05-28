@@ -20,17 +20,13 @@ class HomePage extends AppElement {
         }
 
         main {
-          padding: 0 var(--page-padding);
-          padding-block-start: calc(var(--update-banner-height, 0px) + var(--year-header-height, calc(var(--safe-area-top) + var(--space-2) + var(--touch-target) + var(--space-1) + var(--header-strip-height))) + var(--space-5));
-          padding-block-end: calc(var(--tab-bar-height) + var(--safe-area-bottom) + var(--space-4));
-        }
-
-        .tab-panel {
-          display: none;
+          display: flex;
           flex-direction: column;
           gap: var(--space-4);
+          padding: 0 var(--page-padding);
+          padding-block-start: calc(var(--update-banner-height, 0px) + var(--year-header-height, calc(var(--safe-area-top) + var(--space-2) + var(--touch-target) + var(--space-1) + var(--header-strip-height))) + var(--space-5));
+          padding-block-end: calc(var(--safe-area-bottom) + var(--space-4));
         }
-        .tab-panel.active { display: flex; }
 
         .section-heading {
           font-size: var(--font-size-caption);
@@ -106,89 +102,38 @@ class HomePage extends AppElement {
           outline-offset: 2px;
         }
 
-        /* ── Tab bar ─────────────────────────────────────────── */
-
-        #tab-bar {
-          position: fixed;
-          inset-block-end: 0;
-          inset-inline-start: 0;
-          inset-inline-end: 0;
-          background: var(--color-surface);
-          border-block-start: 0.5px solid var(--color-border);
-          padding-block-end: var(--safe-area-bottom);
-          z-index: 50;
-        }
-
-        #tab-bar div[role="tablist"] {
-          display: flex;
-          inline-size: 100%;
-        }
-
-        .tab-btn {
-          flex: 1;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding-block: var(--space-3);
-          font-family: var(--font-family);
-          font-size: var(--font-size-caption);
-          font-weight: var(--font-weight-medium);
-          color: var(--color-text-muted);
-        }
-
-        .tab-btn.active {
-          color: var(--color-accent);
-          font-weight: var(--font-weight-semibold);
-        }
-
-        .tab-btn:focus-visible {
-          outline: 2px solid var(--color-accent);
-          outline-offset: 2px;
-        }
       </style>
 
       <year-header id="header"></year-header>
 
       <main>
-        <div id="goals-panel" class="tab-panel active" role="tabpanel" aria-labelledby="tab-goals">
-          <section id="capstone-section" class="list-section empty" aria-label="${t('home-page.capstone-section')}">
-            <div class="section-header">
-              <h2 class="section-heading">${t('home-page.capstone-section')}</h2>
-              <button class="edit-btn" id="capstone-edit-btn">${t('home-page.edit')}</button>
-            </div>
-            <div id="capstone-list" class="item-list" role="list"></div>
-            <button class="add-row" id="add-capstone">+ ${t('goal-item.add-capstone')}</button>
-          </section>
+        <section id="capstone-section" class="list-section empty" aria-label="${t('home-page.capstone-section')}">
+          <div class="section-header">
+            <h2 class="section-heading">${t('home-page.capstone-section')}</h2>
+            <button class="edit-btn" id="capstone-edit-btn">${t('home-page.edit')}</button>
+          </div>
+          <div id="capstone-list" class="item-list" role="list"></div>
+          <button class="add-row" id="add-capstone">+ ${t('goal-item.add-capstone')}</button>
+        </section>
 
-          <section id="milestone-section" class="list-section empty" aria-label="${t('home-page.milestone-section')}">
-            <div class="section-header">
-              <h2 class="section-heading">${t('home-page.milestone-section')}</h2>
-              <button class="edit-btn" id="milestone-edit-btn">${t('home-page.edit')}</button>
-            </div>
-            <div id="milestone-list" class="item-list" role="list"></div>
-            <button class="add-row" id="add-milestone">+ ${t('goal-item.add-milestone')}</button>
-          </section>
+        <section id="milestone-section" class="list-section empty" aria-label="${t('home-page.milestone-section')}">
+          <div class="section-header">
+            <h2 class="section-heading">${t('home-page.milestone-section')}</h2>
+            <button class="edit-btn" id="milestone-edit-btn">${t('home-page.edit')}</button>
+          </div>
+          <div id="milestone-list" class="item-list" role="list"></div>
+          <button class="add-row" id="add-milestone">+ ${t('goal-item.add-milestone')}</button>
+        </section>
 
-          <section id="wow-section" class="list-section empty" aria-label="${t('home-page.wow-section')}">
-            <div class="section-header">
-              <h2 class="section-heading">${t('home-page.wow-section')}</h2>
-              <button class="edit-btn" id="wow-edit-btn">${t('home-page.edit')}</button>
-            </div>
-            <div id="wow-list" class="item-list" role="list"></div>
-            <button class="add-row" id="add-wow">+ ${t('goal-item.add-wow')}</button>
-          </section>
-        </div>
-
-        <div id="lists-panel" class="tab-panel" role="tabpanel" aria-labelledby="tab-lists">
-        </div>
+        <section id="wow-section" class="list-section empty" aria-label="${t('home-page.wow-section')}">
+          <div class="section-header">
+            <h2 class="section-heading">${t('home-page.wow-section')}</h2>
+            <button class="edit-btn" id="wow-edit-btn">${t('home-page.edit')}</button>
+          </div>
+          <div id="wow-list" class="item-list" role="list"></div>
+          <button class="add-row" id="add-wow">+ ${t('goal-item.add-wow')}</button>
+        </section>
       </main>
-
-      <nav id="tab-bar" aria-label="${t('tab-bar.nav')}">
-        <div role="tablist" aria-label="${t('tab-bar.nav')}">
-          <button class="tab-btn active" id="tab-goals" role="tab" aria-selected="true" aria-controls="goals-panel">${t('tab-bar.goals')}</button>
-          <button class="tab-btn" id="tab-lists" role="tab" aria-selected="false" aria-controls="lists-panel">${t('tab-bar.lists')}</button>
-        </div>
-      </nav>
 
       <goal-dialog id="dialog"></goal-dialog>
     `;
@@ -214,28 +159,6 @@ class HomePage extends AppElement {
 
     this._onYearNavigate = e => navigate(`/${e.detail.year}`);
     this._header.addEventListener('year-navigate', this._onYearNavigate);
-
-    // ── Tab switching ─────────────────────────────────────────────────────
-
-    const goalsPanel = this.shadowRoot.querySelector('#goals-panel');
-    const listsPanel = this.shadowRoot.querySelector('#lists-panel');
-    const tabGoals   = this.shadowRoot.querySelector('#tab-goals');
-    const tabLists   = this.shadowRoot.querySelector('#tab-lists');
-
-    this._onTabGoals = () => {
-      goalsPanel.classList.add('active');   listsPanel.classList.remove('active');
-      tabGoals.classList.add('active');     tabLists.classList.remove('active');
-      tabGoals.setAttribute('aria-selected', 'true');
-      tabLists.setAttribute('aria-selected', 'false');
-    };
-    this._onTabLists = () => {
-      listsPanel.classList.add('active');   goalsPanel.classList.remove('active');
-      tabLists.classList.add('active');     tabGoals.classList.remove('active');
-      tabLists.setAttribute('aria-selected', 'true');
-      tabGoals.setAttribute('aria-selected', 'false');
-    };
-    tabGoals.addEventListener('click', this._onTabGoals);
-    tabLists.addEventListener('click', this._onTabLists);
 
     // ── Per-section edit ──────────────────────────────────────────────────
 
@@ -401,9 +324,6 @@ class HomePage extends AppElement {
     Store.unsubscribe('wow',       this._onWow);
 
     this._header?.removeEventListener('year-navigate', this._onYearNavigate);
-
-    this.shadowRoot.querySelector('#tab-goals')?.removeEventListener('click', this._onTabGoals);
-    this.shadowRoot.querySelector('#tab-lists')?.removeEventListener('click', this._onTabLists);
 
     this.shadowRoot.querySelector('#capstone-edit-btn')?.removeEventListener('click', this._onCapstoneEdit);
     this.shadowRoot.querySelector('#milestone-edit-btn')?.removeEventListener('click', this._onMilestoneEdit);

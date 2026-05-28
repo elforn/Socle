@@ -173,3 +173,33 @@ describe('year-header — language sub-sheet', () => {
     expect(locales).toContain('ca');
   });
 });
+
+describe('year-header — sync section', () => {
+  it('renders export this year button', () => {
+    const el = mount(2026);
+    expect(el.shadowRoot.querySelector('#export-year-btn')).not.toBeNull();
+  });
+
+  it('export year button label includes the year', () => {
+    const el = mount(2026);
+    const span = el.shadowRoot.querySelector('#export-year-btn span');
+    expect(span.textContent).toContain('2026');
+  });
+
+  it('export year button label updates when year prop changes', () => {
+    const el = mount(2026);
+    el.year = 2027;
+    const span = el.shadowRoot.querySelector('#export-year-btn span');
+    expect(span.textContent).toContain('2027');
+  });
+
+  it('renders export all years button', () => {
+    const el = mount();
+    expect(el.shadowRoot.querySelector('#export-all-btn')).not.toBeNull();
+  });
+
+  it('renders import button', () => {
+    const el = mount();
+    expect(el.shadowRoot.querySelector('#import-btn')).not.toBeNull();
+  });
+});

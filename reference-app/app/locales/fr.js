@@ -42,7 +42,12 @@ defineStrings({
   'year-header.photo-change':    'Changer la photo',
   'year-header.photo-remove':    'Supprimer la photo',
 
-  'tab-bar.goals':               'Objectifs',
-  'tab-bar.lists':               'Listes',
-  'tab-bar.nav':                 'Navigation principale',
+  'sync.export-year':            "Exporter {year}",
+  'sync.export-all':             'Exporter toutes les années',
+  'sync.import':                 'Importer',
+  'sync.import-confirm':         'Importé {events} événements et {images} images. L\'application va recharger pour les appliquer. Continuer ?',
+  'sync.import-cancel':          'Annuler',
+  'sync.import-reload':          'Recharger',
+  'sync.import-close':           'Fermer',
+  'sync.import-error':           'Fichier d\'export invalide ou incompatible.',
 }, 'fr');

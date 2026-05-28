@@ -2,6 +2,7 @@ import { AppElement } from '../../../_lib/core/app-element.js';
 import { Gestures } from '../../../_lib/modules/gestures/gestures.js';
 import { t, setLocale, getLocale } from '../../../_lib/core/strings.js';
 import * as Store from '../../../_lib/core/store/store.js';
+import { exportData, importData, downloadExport, readImportFile } from '../../../_lib/modules/sync/sync.js';
 
 const LOCALE_LABELS = { en: 'English', fr: 'Français', ca: 'Català' };
 const IMAGE_HEADER_HEIGHT = '200px';
@@ -38,6 +39,9 @@ class YearHeader extends Gestures(AppElement) {
           padding-block-end: 0;
           padding-inline: var(--page-padding);
           transition: padding-block-start 0.2s ease, block-size 0.2s ease;
+          --image-overlay-edge: rgba(0,0,0,0.65);
+          --image-strip-bg:     rgba(255,255,255,0.2);
+          --image-strip-fill:   rgba(255,255,255,0.6);
         }
 
         :host(.compact) {
@@ -75,10 +79,10 @@ class YearHeader extends Gestures(AppElement) {
           inset: 0;
           background: linear-gradient(
             to bottom,
-            rgba(0,0,0,0.65) 0%,
-            rgba(0,0,0,0)    45%,
-            rgba(0,0,0,0)    55%,
-            rgba(0,0,0,0.65) 100%
+            var(--image-overlay-edge) 0%,
+            transparent               45%,
+            transparent               55%,
+            var(--image-overlay-edge) 100%
           );
         }
 
@@ -104,11 +108,11 @@ class YearHeader extends Gestures(AppElement) {
           position: absolute;
           inset-block-end: 0;
           inset-inline: 0;
-          background: rgba(255,255,255,0.2);
+          background: var(--image-strip-bg);
         }
 
         :host([data-has-image]:not(.compact)) .strip-fill {
-          background: rgba(255,255,255,0.6);
+          background: var(--image-strip-fill);
         }
 
         /* ── Layout ─────────────────────────────────────────────────────── */
@@ -285,6 +289,50 @@ class YearHeader extends Gestures(AppElement) {
           font-size: var(--font-size-body);
           color: var(--color-text-muted);
         }
+
+        .confirm-message {
+          margin: 0;
+          padding-inline: var(--space-5);
+          padding-block: var(--space-4);
+          font-size: var(--font-size-body);
+          line-height: 1.5;
+          color: var(--color-text-primary);
+        }
+
+        .confirm-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: var(--space-2);
+          padding-inline: var(--space-4);
+          padding-block-end: var(--space-3);
+        }
+
+        .confirm-btn {
+          min-block-size: var(--touch-target);
+          padding-inline: var(--space-4);
+          background: var(--color-surface-raised);
+          border: none;
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          font-family: var(--font-family);
+          font-size: var(--font-size-body);
+          font-weight: var(--font-weight-medium);
+          color: var(--color-text-primary);
+        }
+
+        .confirm-btn.accent {
+          background: var(--color-accent);
+          color: var(--color-text-primary);
+        }
+
+        .confirm-btn:focus-visible {
+          outline: 2px solid var(--color-accent);
+          outline-offset: 2px;
+        }
+
+        .confirm-btn.accent:focus-visible {
+          outline-color: var(--color-text-primary);
+        }
       </style>
 
       <div class="header-bg" aria-hidden="true">
@@ -306,6 +354,19 @@ class YearHeader extends Gestures(AppElement) {
       </div>
 
       <input type="file" id="photo-input" accept="image/*" hidden>
+      <input type="file" id="import-input" accept=".json" hidden>
+
+      <dialog id="import-confirm" aria-modal="true">
+        <div class="menu-handle"></div>
+        <p id="import-message" class="confirm-message" role="alert"></p>
+        <div id="import-success-actions" class="confirm-actions" hidden>
+          <button id="import-reload" class="confirm-btn accent">${t('sync.import-reload')}</button>
+          <button id="import-cancel" class="confirm-btn">${t('sync.import-cancel')}</button>
+        </div>
+        <div id="import-error-actions" class="confirm-actions" hidden>
+          <button id="import-close" class="confirm-btn">${t('sync.import-close')}</button>
+        </div>
+      </dialog>
 
       <dialog id="menu">
         <div class="menu-handle"></div>
@@ -318,6 +379,10 @@ class YearHeader extends Gestures(AppElement) {
           <span>${t('year-header.photo')}</span>
           <span class="menu-item-value">›</span>
         </button>
+        <button class="menu-item" id="export-year-btn">
+          <span>${t('sync.export-year', { year })}</span>
+          <span class="menu-item-value">↓</span>
+        </button>
         <p class="menu-section-label">${t('year-header.app-section')}</p>
         <div class="menu-item muted">
           <span>${t('year-header.theme')}</span>
@@ -326,6 +391,14 @@ class YearHeader extends Gestures(AppElement) {
         <button class="menu-item" id="language-btn">
           <span>${t('year-header.language')}</span>
           <span class="menu-item-value">${LOCALE_LABELS[getLocale()]} ›</span>
+        </button>
+        <button class="menu-item" id="export-all-btn">
+          <span>${t('sync.export-all')}</span>
+          <span class="menu-item-value">↓</span>
+        </button>
+        <button class="menu-item" id="import-btn">
+          <span>${t('sync.import')}</span>
+          <span class="menu-item-value">↑</span>
         </button>
       </dialog>
 
@@ -439,7 +512,7 @@ class YearHeader extends Gestures(AppElement) {
     this._onPhotoRemove = async () => {
       this._photoSheet.close();
       const imageId = Store.getState().images?.[this._year];
-      await Store.dispatch('year:image-removed', { year: this._year });
+      await Store.dispatch('year:image-removed', { year: String(this._year) });
       if (imageId) Store.deleteBlob(imageId);
     };
     this.shadowRoot.querySelector('#photo-remove').addEventListener('click', this._onPhotoRemove);
@@ -447,12 +520,70 @@ class YearHeader extends Gestures(AppElement) {
     this._onPhotoInput = async e => {
       const file = e.target.files?.[0];
       if (!file) return;
+      const oldImageId = Store.getState().images?.[this._year];
       const imageId = crypto.randomUUID();
       await Store.attachBlob(imageId, file);
-      Store.dispatch('year:image-set', { year: this._year, imageId });
+      await Store.dispatch('year:image-set', { year: String(this._year), imageId });
+      if (oldImageId) Store.deleteBlob(oldImageId);
       e.target.value = '';
     };
     photoInput.addEventListener('change', this._onPhotoInput);
+
+    // Export / import
+    this._importConfirm = this.shadowRoot.querySelector('#import-confirm');
+    const importInput   = this.shadowRoot.querySelector('#import-input');
+
+    this._onExportYear = async () => {
+      this._menuDialog.close();
+      const year = this._year;
+      const data = await exportData({ eventFilter: e => String(e.payload?.year) === String(year) });
+      const ts   = new Date().toISOString().replace(/\D/g, '').slice(0, 12);
+      downloadExport(data, `${ts}_youryear-${year}.json`);
+    };
+    this.shadowRoot.querySelector('#export-year-btn').addEventListener('click', this._onExportYear);
+
+    this._onExportAll = async () => {
+      this._menuDialog.close();
+      const data = await exportData();
+      const ts   = new Date().toISOString().replace(/\D/g, '').slice(0, 12);
+      downloadExport(data, `${ts}_youryear-all.json`);
+    };
+    this.shadowRoot.querySelector('#export-all-btn').addEventListener('click', this._onExportAll);
+
+    this._onImportBtn = () => {
+      this._menuDialog.close();
+      importInput.click();
+    };
+    this.shadowRoot.querySelector('#import-btn').addEventListener('click', this._onImportBtn);
+
+    this._onImportInput = async e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = '';
+      const msgEl     = this.shadowRoot.querySelector('#import-message');
+      const successEl = this.shadowRoot.querySelector('#import-success-actions');
+      const errorEl   = this.shadowRoot.querySelector('#import-error-actions');
+      try {
+        const raw    = await readImportFile(file);
+        const result = await importData(raw);
+        msgEl.textContent = t('sync.import-confirm', { events: result.eventsAdded, images: result.imagesAdded });
+        successEl.hidden = false;
+        errorEl.hidden   = true;
+      } catch {
+        msgEl.textContent = t('sync.import-error');
+        successEl.hidden  = true;
+        errorEl.hidden    = false;
+      }
+      this._importConfirm.showModal();
+    };
+    importInput.addEventListener('change', this._onImportInput);
+
+    this._onImportCancel = () => this._importConfirm.close();
+    this._onImportReload = () => location.reload();
+    this._onImportClose  = () => this._importConfirm.close();
+    this.shadowRoot.querySelector('#import-cancel').addEventListener('click', this._onImportCancel);
+    this.shadowRoot.querySelector('#import-reload').addEventListener('click', this._onImportReload);
+    this.shadowRoot.querySelector('#import-close').addEventListener('click', this._onImportClose);
 
     // Language
     this._langDialog = this.shadowRoot.querySelector('#lang-sheet');
@@ -494,6 +625,13 @@ class YearHeader extends Gestures(AppElement) {
     this.shadowRoot.querySelector('#photo-remove')?.removeEventListener('click', this._onPhotoRemove);
     this.shadowRoot.querySelector('#photo-input')?.removeEventListener('change', this._onPhotoInput);
     document.documentElement.style.removeProperty('--year-header-height');
+    this.shadowRoot.querySelector('#export-year-btn')?.removeEventListener('click', this._onExportYear);
+    this.shadowRoot.querySelector('#export-all-btn')?.removeEventListener('click', this._onExportAll);
+    this.shadowRoot.querySelector('#import-btn')?.removeEventListener('click', this._onImportBtn);
+    this.shadowRoot.querySelector('#import-input')?.removeEventListener('change', this._onImportInput);
+    this.shadowRoot.querySelector('#import-cancel')?.removeEventListener('click', this._onImportCancel);
+    this.shadowRoot.querySelector('#import-reload')?.removeEventListener('click', this._onImportReload);
+    this.shadowRoot.querySelector('#import-close')?.removeEventListener('click', this._onImportClose);
     this.shadowRoot.querySelector('#language-btn')?.removeEventListener('click', this._onLanguageBtn);
     this._langDialog?.removeEventListener('click', this._onLangBackdrop);
     this._langDialog?.removeEventListener('click', this._onLangSelect);
@@ -505,6 +643,8 @@ class YearHeader extends Gestures(AppElement) {
     if (this._yearEl) this._yearEl.textContent = String(year);
     const pct = yearProgress(year);
     if (this._stripFill) this._stripFill.style.width = `${pct}%`;
+    const exportYearSpan = this.shadowRoot?.querySelector('#export-year-btn span');
+    if (exportYearSpan) exportYearSpan.textContent = t('sync.export-year', { year });
     this._updateImageFor(year);
   }
 
