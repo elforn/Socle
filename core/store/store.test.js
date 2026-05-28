@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { boot, dispatch, subscribe, unsubscribe, getState, setState, reset, attachBlob, getBlob, deleteBlob } from './store.js';
+import { boot, dispatch, subscribe, unsubscribe, getState, setState, reset, attachBlob, getBlob, deleteBlob, getAllEvents, getAllBlobs, importEvents } from './store.js';
 
 let dbSeq = 0;
 function freshName() { return `test-store-${dbSeq++}`; }
@@ -228,8 +228,81 @@ describe('blob storage', () => {
 
   it('throws when called before boot', async () => {
     reset();
-    expect(() => attachBlob('x', new Blob())).toThrow('Store.attachBlob called before Store.boot');
+    await expect(attachBlob('x', new Blob())).rejects.toThrow('Store.attachBlob called before Store.boot');
     await expect(getBlob('x')).rejects.toThrow('Store.getBlob called before Store.boot');
-    expect(() => deleteBlob('x')).toThrow('Store.deleteBlob called before Store.boot');
+    await expect(deleteBlob('x')).rejects.toThrow('Store.deleteBlob called before Store.boot');
+  });
+});
+
+describe('importEvents', () => {
+  it('writes events as-is to IDB, readable on next boot', async () => {
+    const name = freshName();
+    await boot({ dbName: name, reducer });
+    const foreign = [
+      { id: 'evt-1', deviceId: 'other', recordedAt: 1000, occurredAt: 1000, type: 'item:added', payload: { title: 'imported' } },
+    ];
+    await importEvents(foreign);
+    reset();
+    await boot({ dbName: name, reducer });
+    expect(getState().items[0].title).toBe('imported');
+  });
+
+  it('is idempotent — importing the same event twice does not duplicate', async () => {
+    const name = freshName();
+    await boot({ dbName: name, reducer });
+    const evt = { id: 'evt-x', deviceId: null, recordedAt: 1000, occurredAt: 1000, type: 'item:added', payload: { title: 'x' } };
+    await importEvents([evt]);
+    await importEvents([evt]);
+    reset();
+    await boot({ dbName: name, reducer });
+    expect(getState().items).toHaveLength(1);
+  });
+
+  it('throws when called before boot', async () => {
+    reset();
+    await expect(importEvents([])).rejects.toThrow('Store.importEvents called before Store.boot');
+  });
+});
+
+describe('getAllEvents', () => {
+  it('returns all dispatched events sorted by recordedAt', async () => {
+    const name = freshName();
+    await boot({ dbName: name, reducer });
+    await dispatch('item:added', { title: 'a' });
+    await dispatch('item:added', { title: 'b' });
+    const events = await getAllEvents();
+    expect(events).toHaveLength(2);
+    expect(events[0].recordedAt).toBeLessThanOrEqual(events[1].recordedAt);
+  });
+
+  it('returns empty array when no events exist', async () => {
+    await boot({ dbName: freshName(), reducer });
+    expect(await getAllEvents()).toEqual([]);
+  });
+
+  it('throws when called before boot', async () => {
+    reset();
+    await expect(getAllEvents()).rejects.toThrow('Store.getAllEvents called before Store.boot');
+  });
+});
+
+describe('getAllBlobs', () => {
+  it('returns all stored blobs', async () => {
+    await boot({ dbName: freshName(), reducer });
+    await attachBlob('b1', new Blob(['x'], { type: 'text/plain' }));
+    await attachBlob('b2', new Blob(['y'], { type: 'text/plain' }));
+    const blobs = await getAllBlobs();
+    expect(blobs).toHaveLength(2);
+    expect(blobs.map(b => b.id).sort()).toEqual(['b1', 'b2']);
+  });
+
+  it('returns empty array when no blobs exist', async () => {
+    await boot({ dbName: freshName(), reducer });
+    expect(await getAllBlobs()).toEqual([]);
+  });
+
+  it('throws when called before boot', async () => {
+    reset();
+    await expect(getAllBlobs()).rejects.toThrow('Store.getAllBlobs called before Store.boot');
   });
 });

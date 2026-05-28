@@ -45,6 +45,21 @@ describe('defineStrings / t', () => {
     setLocale('fr');
     expect(t('totally.missing')).toBe('totally.missing');
   });
+
+  it('substitutes params into {placeholders}', () => {
+    defineStrings({ 'foo.tpl': 'Hello {name}, you have {count} items' });
+    expect(t('foo.tpl', { name: 'Alice', count: 3 })).toBe('Hello Alice, you have 3 items');
+  });
+
+  it('leaves unreplaced placeholder when param is missing', () => {
+    defineStrings({ 'foo.tpl': 'Export {year}' });
+    expect(t('foo.tpl', {})).toBe('Export {year}');
+  });
+
+  it('returns string unchanged when params is omitted', () => {
+    defineStrings({ 'foo.plain': 'No placeholders' });
+    expect(t('foo.plain')).toBe('No placeholders');
+  });
 });
 
 describe('setLocale / getLocale', () => {

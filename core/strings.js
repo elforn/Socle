@@ -19,8 +19,10 @@ export function getLocale() {
   return 'en';
 }
 
-export function t(key) {
-  return _locales[_active]?.[key] ?? _locales.en?.[key] ?? key;
+export function t(key, params) {
+  const str = _locales[_active]?.[key] ?? _locales.en?.[key] ?? key;
+  if (!params) return str;
+  return str.replace(/\{(\w+)\}/g, (_, k) => params[k] ?? `{${k}}`);
 }
 
 export function reset() {

@@ -12,8 +12,7 @@ export async function boot({ dbName, version = CURRENT_VERSION, reducer, deviceI
   _deviceId = deviceId;
   _db = await openDB(dbName, version, runMigrations);
   const events = await getAll(_db, 'events');
-  events.sort((a, b) => a.recordedAt - b.recordedAt || (a.deviceId > b.deviceId ? 1 : -1));
-  _state = events.reduce(reducer, {});
+  _state = _sortEvents(events).reduce(reducer, {});
 }
 
 function _uuid() {
@@ -59,7 +58,7 @@ export function getState() {
   return _state;
 }
 
-export function attachBlob(id, blob) {
+export async function attachBlob(id, blob) {
   if (!_db) throw new Error('Store.attachBlob called before Store.boot');
   return put(_db, 'images', { id, blob });
 }
@@ -70,9 +69,24 @@ export async function getBlob(id) {
   return record?.blob ?? null;
 }
 
-export function deleteBlob(id) {
+export async function deleteBlob(id) {
   if (!_db) throw new Error('Store.deleteBlob called before Store.boot');
   return del(_db, 'images', id);
+}
+
+export async function importEvents(events) {
+  if (!_db) throw new Error('Store.importEvents called before Store.boot');
+  for (const event of events) await put(_db, 'events', event);
+}
+
+export async function getAllEvents() {
+  if (!_db) throw new Error('Store.getAllEvents called before Store.boot');
+  return _sortEvents(await getAll(_db, 'events'));
+}
+
+export async function getAllBlobs() {
+  if (!_db) throw new Error('Store.getAllBlobs called before Store.boot');
+  return getAll(_db, 'images');
 }
 
 export function reset() {
@@ -81,6 +95,10 @@ export function reset() {
   _reducer = null;
   _deviceId = null;
   _subs.clear();
+}
+
+function _sortEvents(events) {
+  return events.sort((a, b) => a.recordedAt - b.recordedAt || (a.deviceId > b.deviceId ? 1 : -1));
 }
 
 function _notify(oldState, newState) {

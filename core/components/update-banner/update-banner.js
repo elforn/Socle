@@ -60,7 +60,7 @@ class UpdateBanner extends AppElement {
 
         #reload {
           background: var(--color-accent);
-          color: var(--color-text-inverse);
+          color: var(--color-text-primary);
           border-radius: var(--radius-full);
           padding-inline: var(--space-4);
         }
