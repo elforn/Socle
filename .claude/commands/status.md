@@ -48,6 +48,9 @@ Check the file system against the build order defined in CLAUDE.md and report:
    - Check: `reference-app/tests/e2e/navigation.spec.js` covers year routing and scroll compression
    - Check: `reference-app/tests/e2e/i18n.spec.js` covers locale switching (FR, CA), persistence, reset
    - Check: `reference-app/tests/e2e/year-photo.spec.js` covers upload, menu state, persistence, remove, year scoping
+   - Check: `reference-app/app/icons/icon.svg` exists (PWA installability prerequisite)
+   - Check: `reference-app/manifest.json` has non-empty `icons` array, `scope`, `theme_color`, `background_color`
+   - Check: `reference-app/tests/e2e/install.spec.js` has automated Playwright tests (not just a skipped test)
 
 8. **CLI scaffolding tool**
    - Check: `cli/index.js`, prompts for module selection

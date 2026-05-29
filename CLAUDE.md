@@ -87,7 +87,7 @@ my-app/
   - Stamps asset filenames with a content hash
   - Generates `version.json`
   - Enumerates all files under `_lib/` and `app/` to build the SW pre-cache asset list. Follows symlinks via `statSync` — required because reference-app's `_lib/core` and `_lib/modules` are symlinks; the dereferenced copies in `dist/` are real files.
-  - Reads `_lib/core/sw.js` and injects `CACHE_VERSION` + full asset list → `dist/sw.js`
+  - Reads `_lib/core/sw.js` and injects `CACHE_VERSION` + full asset list → `dist/sw.js`. The `CACHE_VERSION` hash includes `manifest.json` and `index.html` in addition to `main.js` and all files under `_lib/` and `app/` — changes to the manifest or HTML shell automatically invalidate the cache and trigger the SW update flow. Omitting either file from the hash means manifest/theme_color changes produce an identical SW and are never picked up by the update mechanism.
   - Replaces `__APP_VERSION__` token in `app/main.js` → hashed output in `dist/`
   - Rewrites import paths in `main.js` for the `dist/` layout: `'../_lib/` → `'./_lib/`, and all other app-relative imports (`'./anything`) → `'./app/anything` using the regex `/'\.\/(?!_lib\/)/g` — catches any new app-relative imports automatically without needing to add new rules per directory
   - Copies `_lib/` and `app/` into `dist/` so the output is self-contained — ES modules resolve relative imports at runtime with no bundler, so everything they reference must be physically present in `dist/`. Uses `dereference: true` so the reference-app's symlinked `_lib/` is copied as real files; harmless no-op in scaffolded apps where `_lib/` is already real files

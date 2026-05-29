@@ -113,22 +113,63 @@ test('schema migration runs cleanly on version bump', async ({ page }) => {
 
 ## Scenario: `install`
 
-Note: The PWA install prompt (`beforeinstallprompt`) cannot be reliably triggered in Playwright.
-Do not attempt to automate it. Instead, document the manual test checklist:
+Write 3 automated tests in `e2e/install.spec.js`:
+
+1. `manifest.json` is reachable and has `name`, `short_name`, `start_url`, `display`, and a non-empty `icons` array with a truthy `src` and `sizes`
+2. The first icon's `src` resolves to HTTP 200 (resolve relative to `baseURL`)
+3. The SW registration state after `page.goto(baseURL)` is one of `activating`, `activated`, `installing`, or `installed`
+
+```js
+test('manifest.json is reachable and has required installability fields', async ({ page, baseURL }) => {
+  const res = await page.request.get(`${baseURL}/manifest.json`);
+  expect(res.status()).toBe(200);
+  const manifest = await res.json();
+  expect(manifest.name).toBeTruthy();
+  expect(manifest.short_name).toBeTruthy();
+  expect(manifest.start_url).toBeTruthy();
+  expect(manifest.display).toMatch(/^(standalone|fullscreen|minimal-ui)$/);
+  expect(Array.isArray(manifest.icons)).toBe(true);
+  expect(manifest.icons.length).toBeGreaterThan(0);
+  const icon = manifest.icons[0];
+  expect(icon.src).toBeTruthy();
+  expect(icon.sizes).toBeTruthy();
+});
+
+test('icon declared in manifest is reachable', async ({ page, baseURL }) => {
+  const res = await page.request.get(`${baseURL}/manifest.json`);
+  const manifest = await res.json();
+  const iconUrl = new URL(manifest.icons[0].src, baseURL).href;
+  const iconRes = await page.request.get(iconUrl);
+  expect(iconRes.status()).toBe(200);
+});
+
+test('service worker registers successfully', async ({ page, baseURL }) => {
+  await page.goto(baseURL);
+  const swState = await page.evaluate(async () => {
+    if (!('serviceWorker' in navigator)) return 'unsupported';
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sw = reg?.active ?? reg?.installing ?? reg?.waiting;
+    return sw?.state ?? 'none';
+  });
+  expect(['activating', 'activated', 'installing', 'installed']).toContain(swState);
+});
+```
+
+Retain the manual install checklist as comments below the automated tests — the `beforeinstallprompt` event cannot be reliably triggered in Playwright:
 
 ```
-Manual PWA install checklist:
-[ ] App served over HTTPS (or localhost)
-[ ] manifest.json present and valid (check DevTools > Application > Manifest)
-[ ] SW registered and active
-[ ] Install prompt appears in browser on second visit (Chrome)
-[ ] Installed app opens without browser chrome
-[ ] Splash screen displays correctly
-[ ] App icon correct on home screen
+// Manual PWA install checklist (run in Chrome or Firefox before every release):
+// [ ] App is served over HTTPS (or localhost for local testing)
+// [ ] manifest.json — DevTools > Application > Manifest, no errors shown
+// [ ] Service worker active — DevTools > Application > Service Workers
+// [ ] Install prompt appears in Chrome on second visit (address bar icon)
+// [ ] Installed app opens in standalone mode (no browser chrome)
+// [ ] App icon correct on home screen / app launcher
+// [ ] Splash screen displays correctly on Android (background_color)
+// [ ] App fully functional offline when installed (no network, full reload)
+// [ ] Update banner appears after deploying a new build and reopening
+// [ ] Tapping Reload on the update banner applies the new version correctly
 ```
-
-Write this checklist as a comment block in `e2e/install.spec.js` with a single skipped test
-as a reminder that this exists.
 
 ---
 
@@ -138,4 +179,4 @@ Run through each scenario above in order. Create separate spec files:
 - `e2e/offline.spec.js`
 - `e2e/update-flow.spec.js`
 - `e2e/persistence.spec.js`
-- `e2e/install.spec.js` (manual checklist only)
+- `e2e/install.spec.js` (3 automated checks + manual checklist)
