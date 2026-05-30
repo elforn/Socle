@@ -305,16 +305,17 @@ Every scaffolded project contains `_lib/lib-version.json`:
 }
 ```
 
-This is the contract between the library and the user project. The update command reads it to determine what to replace and what changelog to show.
+This is the contract between the library and the user project. The update command reads it to determine which version is installed and which modules to replace.
 
 ### Update flow (CLI command: `npx socle update`)
 
 1. Read `_lib/lib-version.json` for current version and installed modules
-2. Fetch changelog between current version and latest from GitHub
-3. Run `git diff _lib/` — if any `_lib/` files are locally modified, list them and ask for explicit confirmation before overwriting. Never silently overwrite modified files.
-4. Replace `_lib/` files only. `app/` is never touched.
-5. If the update includes a new IDB schema version, flag it clearly: the developer must run `/migration` to review and apply it.
-6. Update `lib-version.json`.
+2. Compare against the CLI's own version — if equal, print "already up to date" and exit
+3. Run `git diff --name-only _lib/` — if any `_lib/` files are locally modified, list them and ask for explicit confirmation before overwriting. Never silently overwrite modified files.
+4. Read the current `--color-accent` value from `_lib/core/styles/tokens.css` and preserve it.
+5. Replace `_lib/core/` and each installed module. `app/` is never touched.
+6. Re-apply the preserved accent colour to the updated `tokens.css`.
+7. Update `lib-version.json` version field.
 
 ### Core API stability policy
 

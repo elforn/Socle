@@ -53,7 +53,10 @@ Check the file system against the build order defined in CLAUDE.md and report:
    - Check: `reference-app/tests/e2e/install.spec.js` has automated Playwright tests (not just a skipped test)
 
 8. **CLI scaffolding tool**
-   - Check: `cli/index.js`, prompts for module selection
+   - Check: `cli/index.js` exists — `npx socle <app-name>` scaffold command
+   - Check: `cli/index.js` — `npx socle update` command present
+   - Check: `cli/index.test.js` exists with unit and integration tests
+   - Check: root `package.json` has `bin: { "socle": "./cli/index.js" }`
 
 9. **P2P module (V2)**
    - Check: `modules/p2p/` — expected to not exist yet
