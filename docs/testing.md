@@ -252,4 +252,4 @@ Either location is fine. Co-locating is convenient for UI components; `tests/uni
 
 ---
 
-[← Gestures](gestures.md) · [Next: Claude Code →](claude.md)
+[← Gestures](gestures.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Claude Code →](claude.md)

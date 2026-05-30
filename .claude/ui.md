@@ -305,4 +305,4 @@ Before any UI component is considered complete:
 
 ---
 
-[← Accessibility](../docs/a11y.md)
+[← Accessibility](../docs/a11y.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs)

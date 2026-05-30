@@ -146,4 +146,4 @@ transition: transform var(--duration-normal) var(--ease-out);
 
 ---
 
-[← Claude Code](claude.md) · [Next: Accessibility →](a11y.md)
+[← Claude Code](claude.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Accessibility →](a11y.md)

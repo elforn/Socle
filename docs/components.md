@@ -246,4 +246,4 @@ Available after first `connectedCallback`. An open `ShadowRoot` with `baseSheet`
 
 ---
 
-[← SW update flow](sw-update-flow.md) · [Next: Gestures →](gestures.md)
+[← SW update flow](sw-update-flow.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Gestures →](gestures.md)

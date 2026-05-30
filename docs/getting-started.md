@@ -328,4 +328,4 @@ This replaces `_lib/` only. Your `app/` code is never touched. If the update inc
 
 ---
 
-[← Back to README](../README.md) · [Next: Architecture →](architecture.md)
+[← Back to README](../README.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Architecture →](architecture.md)

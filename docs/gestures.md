@@ -334,4 +334,4 @@ unsubscribe() {
 
 ---
 
-[← Building components](components.md) · [Next: Testing →](testing.md)
+[← Building components](components.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Testing →](testing.md)

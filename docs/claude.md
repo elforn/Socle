@@ -153,4 +153,4 @@ After updating, run `/status` to check whether any new library features need wir
 
 ---
 
-[← Testing](testing.md) · [Next: Theming →](theming.md)
+[← Testing](testing.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Theming →](theming.md)

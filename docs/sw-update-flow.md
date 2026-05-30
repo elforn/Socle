@@ -203,4 +203,4 @@ The automated E2E test (`tests/e2e/update-flow.spec.js`) covers the banner's UI 
 
 ---
 
-[← Architecture](architecture.md) · [Next: Building components →](components.md)
+[← Architecture](architecture.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Building components →](components.md)
