@@ -210,9 +210,10 @@ async function runScaffold(dirArg) {
   console.log(`\nYour app is ready in ./${dirName}\n`);
   console.log('Next steps:');
   console.log(`  cd ${dirName}`);
+  console.log('  npm install');
   console.log(`  git init && git add . && git commit -m "chore: scaffold from socle ${version}"`);
-  console.log('  node utils/build.js');
-  console.log('  npx serve dist --single');
+  console.log('  npm run build');
+  console.log('  npm run serve');
 }
 
 async function runUpdate() {
