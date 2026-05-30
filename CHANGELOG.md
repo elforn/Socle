@@ -9,6 +9,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- CLI — `cli/index.js`: `npx socle <app-name>` scaffolds a new app; prompts for app name, short name, description, GitHub username, sync module selection, and accent colour; copies `scaffold/`, `core/`, and selected `modules/` into a self-contained project directory with all `%%TOKEN%%` placeholders substituted
+- CLI — `npx socle update`: checks for locally modified `_lib/` files (requires git), prompts for confirmation before overwriting, replaces `_lib/core/` and installed modules from the library source, preserves the project's customised `--color-accent` value across the update
+- `package.json` — `bin: { "socle": "./cli/index.js" }` wires the CLI entry point for `npx` distribution
+- `docs/updating.md` — new doc covering the `_lib/` update flow, `lib-version.json` schema, and what is and isn't replaced by `npx socle update`
+
+### Fixed
+- `scaffold/package.json`, `reference-app/package.json` — `dev:https` script now uses `--listen tcp:0.0.0.0:3000` instead of `--listen 3000`; the previous form bound only to loopback, blocking access from mobile devices on the local network
+
+### Added
 - PWA installability — `reference-app/app/icons/icon.svg`: YourYear icon, a 300° progress arc with a gap at the bottom centre; dark background (#1C1C1E), orange stroke (#E8824A); designed to remain readable at 48×48px
 - PWA installability — `scaffold/app/icons/icon.svg`: rotated arc (gap at top, light background #F2F1EE, charcoal stroke #2C2C2C) — open bowl metaphor for a project ready to be built
 - `reference-app/manifest.json` — `icons` array with SVG icon at 192×192 and 512×512, purpose `any maskable`; `scope: "/"` added; `theme_color` and `background_color` set to `#1C1C1E`
