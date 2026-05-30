@@ -4,6 +4,15 @@ Every scaffolded Socle project includes a set of Claude Code slash commands in `
 
 This guide covers how to set up Claude for your specific app, what each command does, and the order to use them.
 
+## Contents
+
+- [First run — describe your app](#first-run--describe-your-app)
+- [Workflow](#workflow)
+- [Contributing a component back to the library](#contributing-a-component-back-to-the-library)
+- [Command reference](#command-reference)
+- [Keeping `CLAUDE.md` current](#keeping-claudemd-current)
+- [Updating the library](#updating-the-library)
+
 ---
 
 ## First run — describe your app
@@ -60,12 +69,15 @@ Run these in order — each one gates the next:
 ```
 /test <filepath>      ← write or complete tests for the file
 /a11y <filepath>      ← audit for accessibility (Tier 1 blocking, Tier 2 advisory)
+/i18n <filepath>      ← if app uses strings.js: audit for hardcoded strings
 /review <filepath>    ← complexity, standards, maintainability
 /docs feature <name>  ← update README and docs
 /commit               ← commit at a logical checkpoint
 ```
 
-A feature is not done until all five pass.
+`/i18n` is conditional — skip it if your app is single-language with no `app/strings.js`. If you do use `defineStrings()`, run `/i18n` on every component that shows user-visible text.
+
+A feature is not done until all applicable steps pass.
 
 ### Before shipping
 
@@ -108,13 +120,14 @@ This runs eligibility checks (no domain concepts, no `app/` imports, tests prese
 | `/migration` | Scaffolds an IDB schema migration with test |
 | `/test` | Writes or completes tests for a file |
 | `/a11y` | Audits a component for accessibility (Tier 1 blocking) |
-| `/review` | Reviews a file for complexity, standards, and maintainability |
 | `/i18n` | Audits a file for hardcoded user-visible strings |
+| `/review` | Reviews a file for complexity, standards, and maintainability |
 | `/docs` | Updates README, changelog, or feature docs |
 | `/test-pwa` | Writes Playwright tests for offline, update flow, and persistence |
 | `/status` | Reports what is built, what is missing, and what to work on next |
 | `/commit` | Creates a git commit at a logical checkpoint |
-| `/contribute` | Packages a component for contribution to the library |
+| `/contribution-scan` | Scans `app/components/` to identify components worth contributing to the library |
+| `/contribute` | Packages a specific component for contribution to the library |
 
 ---
 
@@ -137,3 +150,7 @@ npx socle update
 This replaces `_lib/` only. Your `app/` code and `CLAUDE.md` are never touched. If the update includes a new IDB schema version, the command flags it and you run `/migration` to review and apply it.
 
 After updating, run `/status` to check whether any new library features need wiring up in your app.
+
+---
+
+[← Testing](testing.md) · [Next: Theming →](theming.md)
