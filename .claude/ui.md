@@ -3,6 +3,29 @@
 Read this before building any UI component. It defines every visual and interaction decision.
 All values come from `core/styles/tokens.css`. Never hardcode.
 
+## Contents
+
+- [Overall feel](#overall-feel)
+- [What we never do](#what-we-never-do)
+- [Colour usage](#colour-usage)
+- [Typography](#typography)
+- [Cards](#cards)
+- [List rows](#list-rows)
+- [Status pills](#status-pills)
+- [Navigation](#navigation)
+- [Page header](#page-header)
+- [Sheets and overlays](#sheets-and-overlays)
+- [Empty states](#empty-states)
+- [Buttons](#buttons)
+- [Swipe to delete / contextual swipe](#swipe-to-delete--contextual-swipe)
+- [Long-press swipe — strong CTA](#long-press-swipe--strong-cta)
+- [Tab filter / segmented control](#tab-filter--segmented-control)
+- [Horizontal date scroller](#horizontal-date-scroller)
+- [Section count badge](#section-count-badge)
+- [Drag-to-complete button](#drag-to-complete-button)
+- [Toast / snackbar](#toast--snackbar)
+- [Charts](#charts)
+
 ---
 
 ## Overall Feel
@@ -279,3 +302,7 @@ Before any UI component is considered complete:
 - [ ] No hover-only interaction — works on touch
 - [ ] Colour not the only indicator of state — label always present
 - [ ] Dark full-width button used at most once on any screen
+
+---
+
+[← Accessibility](../docs/a11y.md)

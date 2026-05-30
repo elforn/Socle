@@ -4,6 +4,16 @@ Socle apps are offline-first and update silently in the background. When a new v
 
 This guide covers how the update system works, how to customise the banner, and how the strings system lets you translate it.
 
+## Contents
+
+- [How updates work](#how-updates-work)
+- [The `<sw-manager>` service component](#the-sw-manager-service-component)
+- [The `<update-banner>` UI component](#the-update-banner-ui-component)
+- [Ephemeral state and `setState`](#ephemeral-state-and-setstate)
+- [Strings and `t()`](#strings-and-t)
+- [Build script — asset pre-caching](#build-script--asset-pre-caching)
+- [Manual verification checklist](#manual-verification-checklist)
+
 ---
 
 ## How updates work
@@ -190,3 +200,7 @@ Before every release, run through this checklist in Chrome or Firefox:
 ```
 
 The automated E2E test (`tests/e2e/update-flow.spec.js`) covers the banner's UI behaviour. The full two-build cycle above must be verified manually.
+
+---
+
+[← Architecture](architecture.md) · [Next: Building components →](components.md)

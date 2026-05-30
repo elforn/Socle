@@ -1,5 +1,19 @@
 # Architecture
 
+## Contents
+
+- [Monorepo layout](#monorepo-layout)
+- [The `_lib/` boundary](#the-_lib-boundary)
+- [Build system](#build-system)
+- [Router](#router)
+- [Store and IDB](#store-and-idb)
+- [Strings and locale](#strings-and-locale)
+- [Sync module](#sync-module-modulessync)
+- [Service Worker](#service-worker)
+- [Reference app](#reference-app)
+
+---
+
 ## Monorepo layout
 
 ```
@@ -508,3 +522,7 @@ For the full update flow — `<sw-manager>`, `<update-banner>`, skip-waiting, an
 `reference-app/` is structured identically to a scaffolded user project, with one difference: `_lib/` is a symlink to the monorepo's `core/` and `modules/` directories rather than a copy. Library code changes are reflected immediately without a sync step.
 
 The reference app proves every library feature works end-to-end before it is considered complete. If a feature cannot be demonstrated meaningfully in the reference app, it is not done.
+
+---
+
+[← Getting started](getting-started.md) · [Next: SW update flow →](sw-update-flow.md)

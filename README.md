@@ -12,21 +12,24 @@ You run the CLI, choose your modules, and get a project where you own every line
 - Append-only event log as the data model — audit trail, undo, and P2P sync readiness from day one
 - Web Components throughout — Shadow DOM, adoptedStyleSheets, a reactive store, no virtual DOM
 - History API router with SW navigation intercept — no hash URLs, no full reloads
-- Gesture library — tap, long press, swipe, drag, drag-to-complete, and more
+- Gesture library — tap, long press, swipe, hold-drag, and more
+- Multilingual support — locale registry, `t()` helper, locale switching with persistence
 - CSS token system — retheme any app by changing two variables
 - Copy-into-project distribution — you own `_lib/`, update it on your terms
 
 ## Quick start
 
+The CLI is not yet published to npm. Run it directly from GitHub:
+
 ```bash
-npx socle my-app
+npx github:magp/Socle my-app
 ```
 
-The CLI asks which modules you need, scaffolds a project into `./my-app`, and writes a `_lib/` folder you never edit directly. Your code lives in `app/`.
+The CLI prompts for your app name, short name, modules, and accent colour, then creates `./my-app/` with everything wired up. Your code lives in `app/`. The library lives in `_lib/` and is updated separately.
 
 ```
 my-app/
-  _lib/         ← library code, updated by CLI
+  _lib/         ← library code, updated by `npx socle update`
   app/          ← your components, pages, and store
   utils/
     build.js
@@ -35,8 +38,9 @@ my-app/
 
 ```bash
 cd my-app
+npm install
 node utils/build.js
-# open dist/ in Firefox or Chrome
+npx serve dist --single
 ```
 
 ## Docs
@@ -66,9 +70,28 @@ node utils/build.js
 
 ## Reference app
 
-`reference-app/` — a yearly goals app with lists of things to achieve. Demonstrates offline operation, event sourcing, gesture interactions, routing, and the SW update flow. Single-user, no P2P.
+`reference-app/` in the monorepo is a yearly goals app that exercises every library feature: offline operation, event sourcing, gestures, routing, SW update flow, multilingual support, photo attachments, and data sync. It is not scaffolded by the CLI — it lives inside the library repository and its `_lib/` is a symlink to `core/` and `modules/`, so library changes are reflected immediately.
 
-The reference app's `_lib/` is a symlink to the monorepo's `core/` and `modules/` directories — library changes are reflected immediately without a sync step. Every library feature must be exercised in the reference app before it is considered complete.
+Every library feature must be exercised in the reference app before it is considered complete.
+
+## Development
+
+Clone the monorepo to work on the library or run the reference app:
+
+```bash
+git clone git@github.com:magp/Socle.git
+cd Socle
+npm install
+```
+
+```bash
+npm run dev:https    # https://localhost:3000 + https://<LAN-IP>:3000
+npm test             # unit + E2E — full test suite
+npm run test:unit    # unit tests only (library, CLI, reference-app)
+npm run test:e2e     # Playwright E2E against the reference app
+```
+
+See [Getting started](docs/getting-started.md) for mobile testing and HTTPS cert setup.
 
 ## Browser support
 
@@ -84,9 +107,10 @@ Firefox and Chrome on Android and desktop. iOS Safari is not supported — users
 | SW lifecycle — offline caching, update flow, update banner | ✅ Complete |
 | Claude Code integration — slash commands, /setup-claude | ✅ Complete |
 | Gesture library — tap, long press, swipe, hold-drag | ✅ Complete |
+| Multilingual support — locale registry, t(), locale switching | ✅ Complete |
+| CLI — scaffold and update commands | ✅ Complete |
 | Gesture library — drag-to-reorder | 📋 Planned |
 | P2P sync | 📋 Planned V2 |
-| Multilingual support | 📋 Planned V4 |
 
 ## Contributing
 

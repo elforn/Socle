@@ -2,6 +2,18 @@
 
 All UI in a Socle app is built from Web Components that extend `AppElement`. This guide covers the base class, the component tiers, and the patterns you will use every time you build a component.
 
+## Contents
+
+- [Component tiers](#component-tiers)
+- [AppElement](#appelement)
+- [Shadow DOM](#shadow-dom)
+- [Styles and tokens](#styles-and-tokens)
+- [The render lifecycle](#the-render-lifecycle)
+- [subscribe and unsubscribe](#subscribe-and-unsubscribe)
+- [Registering a component](#registering-a-component)
+- [Styling patterns](#styling-patterns)
+- [API reference](#api-reference)
+
 ---
 
 ## Component tiers
@@ -231,3 +243,7 @@ unsubscribe() {
 #### `this.shadowRoot`
 
 Available after first `connectedCallback`. An open `ShadowRoot` with `baseSheet` already adopted.
+
+---
+
+[← SW update flow](sw-update-flow.md) · [Next: Gestures →](gestures.md)

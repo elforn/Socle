@@ -4,6 +4,20 @@ The gesture library provides touch-optimised interactions for Web Components usi
 
 Gestures are added to a component via a class mixin. There is no separate setup — you override the handlers you need and the mixin handles everything else.
 
+## Contents
+
+- [Quick start](#quick-start)
+- [Two-layer model](#two-layer-model)
+- [Implemented gestures](#implemented-gestures)
+- [Gesture event object](#gesture-event-object)
+- [Gesture coordination](#gesture-coordination)
+- [touch-action summary](#touch-action-summary)
+- [Keyboard alternatives](#keyboard-alternatives)
+- [Testing components with gestures](#testing-components-with-gestures)
+- [API reference](#api-reference)
+
+---
+
 ## Quick start
 
 ```js
@@ -317,3 +331,7 @@ unsubscribe() {
 ```
 
 **Notes** — child gestures are independent of the host's gesture state. `e.stopPropagation()` is called on `pointerdown` to prevent the parent from also starting a gesture sequence on the same event.
+
+---
+
+[← Building components](components.md) · [Next: Testing →](testing.md)
