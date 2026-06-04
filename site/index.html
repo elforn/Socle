@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socle — Build offline-first mobile apps</title>
+  <meta name="description"
+    content="A code generator and pattern library for offline-first, mobile-first PWAs. No runtime dependencies. Fully yours.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 3px;
+    }
+
+    :root {
+      --bg: #FAFAF8;
+      --surface: #FFFFFF;
+      --text: #1C1C1E;
+      --text-sec: #8A8A8E;
+      --border: #E4E0DA;
+      --mid: #EEEAE4;
+      --accent: #E8824A;
+      --font: 'Onest', sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+      --max: 1100px;
+      --px: clamp(1.25rem, 5vw, 3.5rem);
+    }
+
+    html {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: radial-gradient(circle, rgba(28, 28, 30, 0.16) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* Layout */
+    .w {
+      max-width: var(--max);
+      margin-inline: auto;
+      padding-inline: var(--px);
+    }
+
+    /* Nav */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250, 250, 248, 0.9);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-row {
+      max-width: var(--max);
+      margin-inline: auto;
+      padding-inline: var(--px);
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .nav-brand svg {
+      width: 34px;
+      height: 34px;
+    }
+
+    .nav-brand-name {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+    }
+
+    .nav-links a {
+      font-size: 0.875rem;
+      font-weight: 400;
+      color: var(--text-sec);
+      text-decoration: none;
+      transition: color 0.12s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    @media (max-width: 600px) {
+      .nav-links {
+        display: none;
+      }
+    }
+
+    /* Hero */
+    .hero {
+      padding-block: clamp(5rem, 13vw, 9rem) clamp(4rem, 9vw, 7rem);
+      text-align: center;
+    }
+
+    .hero-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-block-end: 1.25rem;
+    }
+
+    .hero-name {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 600;
+      letter-spacing: -0.04em;
+    }
+
+    /* Cursor */
+    .cursor {
+      display: inline-block;
+      font-size: clamp(2.5rem, 7vw, 4.75rem);
+      font-weight: 300;
+      color: var(--accent);
+      position: relative;
+      top: -0.10em;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    /* CLI strip */
+    .cli-strip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      background: #1C1C1E;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      margin-block: 1.5rem 2.25rem;
+      font-family: var(--mono);
+      font-size: 0.9375rem;
+      letter-spacing: 0;
+    }
+    .cli-prompt {
+      color: var(--accent);
+      font-weight: 600;
+      user-select: none;
+    }
+    .cli-cmd {
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+      width: 0ch;
+      color: #F5F2EE;
+      animation: type-cmd 1.4s steps(28) 0.8s forwards;
+    }
+    @keyframes type-cmd {
+      from { width: 0ch; }
+      to   { width: 28ch; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cursor { animation: none; opacity: 0; }
+      .cli-cmd { animation: none; width: auto; }
+    }
+
+    h1 {
+      font-size: clamp(2.125rem, 5.5vw, 3.375rem);
+      font-weight: 300;
+      line-height: 1.16;
+      letter-spacing: -0.025em;
+      max-width: 800px;
+      margin-inline: auto;
+      margin-block-end: 1.125rem;
+    }
+
+    .hero-sub {
+      font-size: 1.0625rem;
+      color: var(--text-sec);
+      line-height: 1.65;
+      max-width: 500px;
+      margin-inline: auto;
+      margin-block-end: 2.75rem;
+    }
+
+    .ctas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.875rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+      padding: 0.6875rem 1.375rem;
+      font-family: var(--font);
+      font-size: 0.9375rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: opacity 0.12s, transform 0.12s, border-color 0.12s;
+    }
+
+    .btn-fill {
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid transparent;
+    }
+
+    .btn-fill:hover {
+      opacity: 0.87;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      border-color: #B8B4AE;
+      transform: translateY(-1px);
+    }
+
+    /* Section chrome */
+    section {
+      border-top: 1px solid var(--border);
+      scroll-margin-top: 58px;
+    }
+
+    .sec-pad {
+      padding-block: clamp(3.5rem, 8vw, 6.5rem);
+    }
+
+    .sec-head {
+      margin-block-end: 2.75rem;
+    }
+
+    .sec-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-block-end: 0.625rem;
+    }
+
+    .sec-title {
+      font-size: clamp(1.375rem, 3vw, 1.875rem);
+      font-weight: 300;
+      letter-spacing: -0.025em;
+      margin-block-end: 0.5rem;
+    }
+
+    .sec-desc {
+      font-size: 0.9375rem;
+      color: var(--text-sec);
+      line-height: 1.65;
+      max-width: 520px;
+    }
+
+    /* Philosophy */
+    #philosophy {
+      background: var(--mid);
+      border-top: none;
+    }
+
+    .phil-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .phil-row {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .phil-card {
+      flex: 0 0 calc(25% - 0.75rem);
+      min-width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.625rem 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .phil-card {
+        flex: 0 0 calc(50% - 0.5rem);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .phil-card {
+        flex: 0 0 100%;
+      }
+    }
+
+    .phil-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-block-end: 0.5625rem;
+    }
+
+    .phil-desc {
+      font-size: 0.8125rem;
+      color: var(--text-sec);
+      line-height: 1.72;
+    }
+
+    .phil-desc code {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      background: var(--bg);
+      padding: 0.1em 0.35em;
+      border-radius: 3px;
+      color: var(--text);
+    }
+
+    /* Features */
+    #features { background: var(--bg); }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+
+    @media (max-width: 900px) {
+      .feat-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .feat-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 380px) {
+      .feat-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feat {
+      padding: 1.125rem 1.125rem 1.125rem 1.25rem;
+      background: var(--surface);
+      border-inline-start: 2px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+    }
+
+    .feat.dim {
+      border-inline-start-color: var(--border);
+      opacity: 0.55;
+    }
+
+    .feat-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-block-end: 0.3rem;
+    }
+
+    .feat-desc {
+      font-size: 0.75rem;
+      color: var(--text-sec);
+      line-height: 1.65;
+    }
+
+    .feat-desc code {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      background: var(--bg);
+      padding: 0.1em 0.3em;
+      border-radius: 3px;
+      color: var(--text);
+    }
+
+    .badge {
+      display: inline-block;
+      margin-block-start: 0.375rem;
+      font-size: 0.625rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-sec);
+      border: 1px solid var(--border);
+      padding: 0.15em 0.55em;
+      border-radius: 99px;
+    }
+
+    /* Components & Roadmap */
+    .cr-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+    }
+
+    @media (max-width: 680px) {
+      .cr-cols {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .cr-col-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-sec);
+      margin-block-end: 1.5rem;
+    }
+
+    .cg {
+      margin-block-end: 1.75rem;
+    }
+
+    .cg-title {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-sec);
+      padding-block-end: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-block-end: 0.875rem;
+    }
+
+    .cg-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .cg-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .cg-list li::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      position: relative;
+      top: -0.1em;
+    }
+
+    .cg-list li span {
+      color: var(--text-sec);
+      font-size: 0.8125rem;
+    }
+
+    .roadmap-items {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .ri-name {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      margin-block-end: 0.25rem;
+    }
+
+    .ri-desc {
+      font-size: 0.8125rem;
+      color: var(--text-sec);
+      line-height: 1.65;
+    }
+
+    /* Get Started — dark band */
+    #get-started {
+      background: #1C1C1E;
+      border-top: none;
+    }
+
+    #get-started .sec-label {
+      color: var(--accent);
+    }
+
+    #get-started .sec-title {
+      color: #F5F2EE;
+    }
+
+    #get-started .sec-desc {
+      color: rgba(245, 242, 238, 0.5);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem 2.5rem;
+    }
+
+    @media (max-width: 800px) {
+      .steps {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+    }
+
+    .step-num {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .step-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #F5F2EE;
+      margin-block-end: 0.25rem;
+    }
+
+    .step-desc {
+      font-size: 0.875rem;
+      color: rgba(245, 242, 238, 0.5);
+      line-height: 1.7;
+      margin-block-end: 0.75rem;
+    }
+
+    .step-desc:last-child {
+      margin-block-end: 0;
+    }
+
+    .step-desc code {
+      font-family: var(--mono);
+      font-size: 0.8125rem;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+      color: #F5F2EE;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    pre {
+      background: rgba(255, 255, 255, 0.05);
+      color: #F5F2EE;
+      font-family: var(--mono);
+      font-size: 0.8125rem;
+      line-height: 1.65;
+      padding: 0.875rem 1.125rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    /* Docs strip */
+    .docs-strip {
+      border-top: 1px solid var(--border);
+      padding-block: 2.25rem;
+    }
+
+    .docs-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .docs-row-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      text-decoration: none;
+      margin-inline-end: 0.75rem;
+      white-space: nowrap;
+      transition: color 0.12s;
+    }
+
+    .docs-row-label:hover {
+      color: var(--accent);
+    }
+
+    .docs-link {
+      font-size: 0.875rem;
+      color: var(--text-sec);
+      text-decoration: none;
+      padding: 0.375rem 0.5rem;
+      border-radius: 5px;
+      transition: color 0.12s, background 0.12s;
+    }
+
+    .docs-link:hover {
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    .docs-sep {
+      color: var(--border);
+      font-size: 0.875rem;
+    }
+
+    /* Footer */
+    footer {
+      background: #1C1C1E;
+      border-top: none;
+      padding-block: 1.75rem 2rem;
+      text-align: center;
+    }
+
+    .foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+      color: rgba(245,242,238,0.55);
+    }
+
+    .foot a {
+      color: rgba(245,242,238,0.55);
+      text-decoration: none;
+      transition: color 0.12s;
+    }
+
+    .foot a:hover {
+      color: rgba(245,242,238,0.85);
+    }
+
+    .foot-sep {
+      color: rgba(245,242,238,0.15);
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav aria-label="Main">
+    <div class="nav-row">
+      <a href="#" class="nav-brand">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
+          <rect x="126" y="92" width="260" height="213" rx="16" fill="#C8C4BE" />
+          <rect x="126" y="92" width="260" height="36" rx="16" fill="#E8824A" />
+          <rect x="64" y="305" width="385" height="68" rx="13" fill="#C8C4BE" />
+        </svg>
+        <span class="nav-brand-name">Socle</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#philosophy">Philosophy</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#components">Components</a></li>
+        <li><a href="#get-started">Get started</a></li>
+        <li><a href="https://github.com/magp/Socle" target="_blank" rel="noopener">GitHub ↗</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- Hero -->
+    <header class="hero">
+      <div class="w">
+        <div class="hero-brand">
+          <span class="hero-name">Socle</span><span class="cursor" aria-hidden="true">|</span>
+        </div>
+        <h1>Build offline-first mobile apps.</h1>
+        <div class="cli-strip" aria-label="Install command: npx github:magp/Socle my-app">
+          <span class="cli-prompt" aria-hidden="true">$</span>
+          <code class="cli-cmd">npx github:magp/Socle my-app</code>
+        </div>
+        <div class="ctas">
+          <a href="#get-started" class="btn btn-fill">Get started ↓</a>
+          <a href="https://github.com/magp/Socle" target="_blank" rel="noopener" class="btn btn-outline">GitHub ↗</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Philosophy -->
+    <section id="philosophy">
+      <div class="w sec-pad">
+        <div class="sec-head">
+          <p class="sec-label">Philosophy</p>
+          <h2 class="sec-title">A foundation worth building on.</h2>
+          <p class="sec-desc">Available everywhere, always, and instantly — with data that stays on the device. No account required. No server in the way.</p>
+        </div>
+        <div class="phil-rows">
+          <div class="phil-row">
+            <div class="phil-card">
+              <h3 class="phil-title">Offline first</h3>
+              <p class="phil-desc">Works after the first load with no network. Service Worker, cache-first strategy, and
+                update flow are included and configured from day one.</p>
+            </div>
+            <div class="phil-card">
+              <h3 class="phil-title">Mobile first</h3>
+              <p class="phil-desc">Built for touch from day one: safe areas, gesture library, deferred SW updates that
+                never interrupt a session. Installable as a PWA to the home screen.</p>
+            </div>
+            <div class="phil-card">
+              <h3 class="phil-title">User data stays theirs</h3>
+              <p class="phil-desc">Data lives in IndexedDB on the user's device. No server, no accounts, ever. Users
+                export or import data as needed — the library ships the tools to do it.</p>
+            </div>
+            <div class="phil-card">
+              <h3 class="phil-title">Built to last</h3>
+              <p class="phil-desc">Vanilla HTML, CSS, and JS. No framework version churn, no tool configuration drift.
+                What you write today works in ten years.</p>
+            </div>
+          </div>
+          <div class="phil-row">
+            <div class="phil-card">
+              <h3 class="phil-title">No runtime dependencies</h3>
+              <p class="phil-desc">Code is copied into your project. You own it, read it, modify it. No upstream to
+                break you, no supply chain risk, no abstraction you can't see through.</p>
+            </div>
+            <div class="phil-card">
+              <h3 class="phil-title">Copy, don't import</h3>
+              <p class="phil-desc"><code>_lib/</code> is yours. <code>npx socle update</code> replaces it; your
+                <code>app/</code> code is never touched. Review every change, update on your terms.</p>
+            </div>
+            <div class="phil-card">
+              <h3 class="phil-title">Only what you need</h3>
+              <p class="phil-desc">Optional modules — gestures, sync, images, dialogs — are selected at scaffold time
+                and copied in. No dead code shipped, no tree-shaking required.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+      <div class="w sec-pad">
+        <div class="sec-head">
+          <p class="sec-label">Features</p>
+          <h2 class="sec-title">Build the app. Not the infrastructure.</h2>
+          <p class="sec-desc">Everything underneath is tested and ready to extend — so you can focus on what makes your app unique.</p>
+        </div>
+        <div class="feat-grid">
+          <div class="feat">
+            <p class="feat-name">PWA</p>
+            <p class="feat-desc">Installable to home screen, manifest, Service Worker, offline caching — all included.
+            </p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Web Components</p>
+            <p class="feat-desc"><code>AppElement</code> base class, Shadow DOM, three tiers: Page, UI, and Service.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Gesture library</p>
+            <p class="feat-desc">Tap, long press, swipe, hold-drag. Mixin for host elements,
+              <code>Gestures.attach</code> for sub-elements.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Deferred updates</p>
+            <p class="feat-desc">User taps to apply SW updates. Session never interrupted automatically.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Router</p>
+            <p class="feat-desc">History API, SW navigation intercept, animated page transitions, no hash URLs.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Two store models</p>
+            <p class="feat-desc">Event log — full history, P2P-ready. Simple key-value state — coming soon.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Data migrations</p>
+            <p class="feat-desc">Schema versioning and migration runner at boot, before any UI renders.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Multilingual</p>
+            <p class="feat-desc">Locale registry, <code>t()</code> helper, locale switching with
+              <code>localStorage</code> persistence.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">CSS token system</p>
+            <p class="feat-desc">Retheme any app by changing two custom properties. RTL-ready logical properties
+              throughout.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Build &amp; deploy</p>
+            <p class="feat-desc">Content-hashed assets, <code>version.json</code>, GitHub Actions deploy workflow —
+              included.</p>
+          </div>
+          <div class="feat">
+            <p class="feat-name">Claude Code skills</p>
+            <p class="feat-desc">Slash commands to scope, build, test, review, and contribute back to the library.</p>
+          </div>
+          <div class="feat dim">
+            <p class="feat-name">P2P data exchange</p>
+            <p class="feat-desc">WebRTC / WS local network sync, hub mode for competition apps.</p>
+            <span class="badge">Coming soon</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Components & Roadmap -->
+    <section id="components">
+      <div class="w sec-pad">
+        <div class="sec-head">
+          <p class="sec-label">Components</p>
+          <h2 class="sec-title">Available now &amp; coming soon</h2>
+        </div>
+        <div class="cr-cols">
+          <div>
+            <p class="cr-col-label">Available now</p>
+            <div class="cg">
+              <p class="cg-title">Core — always included</p>
+              <ul class="cg-list">
+                <li>AppElement <span>— base class, Shadow DOM, render lifecycle</span></li>
+                <li>Router <span>— History API, SW intercept, page animations</span></li>
+                <li>Store &amp; IDB <span>— reactive state, event log, IndexedDB wrapper</span></li>
+                <li>Service Worker <span>— offline caching, cache-first strategy</span></li>
+                <li>Update Banner <span>— user-triggered SW reload notification</span></li>
+                <li>Strings / i18n <span>— locale registry, t() helper</span></li>
+              </ul>
+            </div>
+            <div class="cg">
+              <p class="cg-title">Optional modules</p>
+              <ul class="cg-list">
+                <li>Gestures <span>— tap, long press, swipe, hold-drag</span></li>
+                <li>Toast <span>— toast() function + &lt;toast-manager&gt;</span></li>
+                <li>Images <span>— canvas-based JPEG compression</span></li>
+                <li>Sync <span>— export / import app data as JSON</span></li>
+                <li>Modal Dialog <span>— responsive modal / bottom-sheet</span></li>
+                <li>App Header <span>— sticky header with safe-area support</span></li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <p class="cr-col-label">Coming soon</p>
+            <div class="roadmap-items">
+              <div>
+                <p class="ri-name">Simple store</p>
+                <p class="ri-desc">Plain key-value state — no event log. For apps that don't need full history or P2P
+                  sync readiness.</p>
+              </div>
+              <div>
+                <p class="ri-name">P2P sync</p>
+                <p class="ri-desc">WebRTC / WebSocket local network sync. Hub mode for competition apps where one device
+                  collects from many.</p>
+              </div>
+              <div>
+                <p class="ri-name">More UI components</p>
+                <p class="ri-desc">Lists, drag-to-reorder, pull to refresh, and additional UI primitives.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Get Started -->
+    <section id="get-started">
+      <div class="w sec-pad">
+        <div class="sec-head">
+          <p class="sec-label">Get started</p>
+          <h2 class="sec-title">One command does everything</h2>
+          <p class="sec-desc">The CLI installs the library, prompts for your setup, and generates a fully working app —
+            no separate install step required.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <p class="step-num">Step 01</p>
+            <p class="step-title">Scaffold &amp; install</p>
+            <p class="step-desc">Run the CLI directly from GitHub — no global install required. It prompts for your app
+              name, optional modules, and accent colour, then creates <code>./my-app/</code> with everything wired up.
+            </p>
+            <pre><code>npx github:magp/Socle my-app</code></pre>
+          </div>
+          <div class="step">
+            <p class="step-num">Step 02</p>
+            <p class="step-title">Build &amp; run locally</p>
+            <p class="step-desc">Your code lives in <code>app/</code>. The library lives in <code>_lib/</code>. The
+              build script hashes assets, generates the Service Worker, and writes <code>dist/</code>.</p>
+            <pre><code>cd my-app
+npm install
+node utils/build.js
+npx serve dist --single</code></pre>
+          </div>
+          <div class="step">
+            <p class="step-num">Step 03</p>
+            <p class="step-title">Deploy to GitHub Pages</p>
+            <p class="step-desc">Push to <code>main</code>. The included GitHub Actions workflow builds and deploys
+              <code>dist/</code> automatically. Enable Pages in your repo settings once — every push ships thereafter.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Docs strip -->
+  <nav class="docs-strip" aria-label="Documentation links">
+    <div class="w">
+      <div class="docs-row">
+        <a href="https://github.com/magp/Socle/blob/main/README.md#docs" target="_blank" rel="noopener"
+          class="docs-row-label">DOCS</a>
+        <a href="https://github.com/magp/Socle/blob/main/docs/getting-started.md" target="_blank" rel="noopener"
+          class="docs-link">Getting Started</a>
+        <span class="docs-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/magp/Socle/blob/main/docs/architecture.md" target="_blank" rel="noopener"
+          class="docs-link">Architecture</a>
+        <span class="docs-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/magp/Socle/blob/main/docs/components.md" target="_blank" rel="noopener"
+          class="docs-link">Components</a>
+        <span class="docs-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/magp/Socle/blob/main/docs/gestures.md" target="_blank" rel="noopener"
+          class="docs-link">Gestures</a>
+        <span class="docs-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/magp/Socle/blob/main/docs/testing.md" target="_blank" rel="noopener"
+          class="docs-link">Testing</a>
+        <span class="docs-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/magp/Socle/blob/main/docs/theming.md" target="_blank" rel="noopener"
+          class="docs-link">Theming</a>
+      </div>
+    </div>
+  </nav>
+
+  <footer>
+    <div class="w">
+      <p class="foot">
+        <span>Mozilla Public Licence 2.0</span>
+        <span class="foot-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/magp/Socle" target="_blank" rel="noopener">GitHub</a>
+        <span class="foot-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/magp/Socle#docs" target="_blank" rel="noopener">Docs</a>
+      </p>
+    </div>
+  </footer>
+
+</body>
+
+</html>
