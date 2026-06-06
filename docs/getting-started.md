@@ -81,21 +81,15 @@ Service workers only register on HTTPS or `localhost`. If you test at `http://19
 
 ### One-time setup
 
-Install [mkcert](https://github.com/FiloSottile/mkcert) and create a local CA:
+Run from your project root (requires [mkcert](https://github.com/FiloSottile/mkcert) — install it first with `brew install mkcert` or equivalent):
 
 ```bash
-brew install mkcert   # or: choco install mkcert / apt install mkcert
-mkcert -install       # adds the CA to your desktop browser trust store
+npx socle cert
 ```
 
-Generate a cert for your machine's LAN IP (find it with `ipconfig getifaddr en0` on Mac):
+This prompts for shared certs (`~/.socle-certs/`, reused across projects) or project-specific certs (generated in the current directory), then adds a `dev:https` script to your `package.json`. The Android CA walkthrough runs automatically if you enter a LAN IP.
 
-```bash
-cd my-app
-mkcert localhost 192.168.1.x   # replace with your actual LAN IP
-```
-
-This creates `localhost+1.pem` and `localhost+1-key.pem` in the project root. Both are gitignored automatically.
+New apps don't have `dev:https` by default — run `npx socle cert` once per project to opt in.
 
 ### Start the HTTPS dev server
 

@@ -185,6 +185,18 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - `importEvents(events)` — writes a batch of pre-formed event objects to IDB as-is, without dispatching or updating in-memory state. Idempotent — duplicate IDs are silently skipped. Throws if called before `boot`.
 - `deviceId` is an app concept, not a library concept. Apps pass it into `boot()` for P2P contexts. For single-device apps, omit it — the store defaults `deviceId` to `null` on every event.
 
+### Simple store (`core/store/store-simple.js`)
+
+An alternative to the event-log store for apps that don't need history, undo, or export. Selected at scaffold time via CLI (`Simple state` option). Not the default — use the event-log store unless you have a clear reason not to.
+
+State is a plain object persisted as a single JSON snapshot in IDB. There is no reducer, no migrations system, and no event log. `setState` writes to IDB on every call (fire-and-forget).
+
+**API:**
+- `boot({ dbName, initialState? })` — opens IDB, reads the persisted snapshot, merges over `initialState`. `await` before anything else in `main.js`.
+- `setState(key, value)` — updates in-memory state, notifies subscribers, and persists the full snapshot to IDB. **Survives reload** — unlike `setState` in the event-log store.
+- `subscribe(key, cb)` / `unsubscribe(key, cb)` / `getState()` / `attachBlob` / `getBlob` / `deleteBlob` / `reset()` — identical to the event-log store.
+- No `dispatch`, `getAllEvents`, `getAllBlobs`, `importEvents` — these are event-log-only concepts. The sync module cannot be used with the simple store.
+
 ### IDB / Data Model
 
 - **Append-only event log** as primary storage. This is non-negotiable.
@@ -263,17 +275,17 @@ Normalised event object passed to all handlers:
 
 ### Sync module (`modules/sync/`)
 
-Exports and imports app data as a JSON file. Designed for manual backup and cross-device transfer — not real-time P2P sync (that is V2).
+Exports and imports app data as a binary backup file. Designed for manual backup and cross-device transfer — not real-time P2P sync (that is V2). **Requires the event-log store** — the simple store has no event log to export.
 
-Export produces a single JSON blob containing all events and all blobs (base64-encoded) from the store. Export can be scoped to a specific year by passing a filter function. Blobs are only included when their id appears as `payload.imageId` in a filtered event — orphaned blobs are excluded automatically.
+Export produces a gzip-compressed binary file (`.youryear` / app-specific extension). The format is detected by a 4-byte `SCLE` magic header so legacy `.json` exports remain importable. Export can be scoped to a specific year by passing a filter function. Blobs are only included when their id appears in a filtered event — orphaned blobs are excluded automatically.
 
-Import reads the JSON file, writes events via `importEvents()` (idempotent), and writes blobs via `attachBlob()`. Returns `{ eventsAdded, imagesAdded }` counts — callers show these to the user.
+Import reads the file, detects format from magic bytes, writes events via `importEvents()` (idempotent — duplicate IDs skipped), and writes blobs via `attachBlob()`. Returns `{ eventsAdded, imagesAdded }` counts — callers show these to the user.
 
 **Public API:**
-- `exportData(options?)` — returns `{ events, blobs }` filtered by `options.filter(event)` if provided. Blobs are base64 strings in the export payload.
-- `importData(payload)` — writes events and blobs from an export payload. Returns `{ eventsAdded, imagesAdded }`.
-- `downloadExport(filename, payload)` — triggers browser download of the export as a `.json` file.
-- `readImportFile()` — opens a file picker, reads the selected `.json` file, and returns the parsed payload.
+- `exportData(options?)` — returns `Uint8Array` (SCLE-prefixed gzip binary). Accepts optional `options.eventFilter(event)` to scope the export.
+- `importData(input)` — accepts `Uint8Array` (binary) or a plain object (legacy JSON). Returns `{ eventsAdded, imagesAdded }`.
+- `downloadExport(uint8, filename)` — triggers browser download. First arg is the `Uint8Array` from `exportData`; second is the full filename including extension.
+- `readImportFile(file)` — reads a `File` object, detects format by magic bytes, returns `Uint8Array` (binary) or parsed object (legacy JSON).
 
 All four functions are async. `exportData` and `importData` require `Store.boot()` to have been called first.
 
@@ -397,15 +409,14 @@ A second reference app (fencing competition scorer) is planned for V2 after P2P 
 npm run dev:https    # https://localhost:3000 + https://<LAN-IP>:3000
 ```
 
-Run from `reference-app/`. `dev:https` requires a locally-trusted cert (`localhost+1.pem` + `localhost+1-key.pem`). Service workers only register on HTTPS or `localhost` — always use `dev:https` when testing offline mode or SW behaviour on a real device.
+Run from `reference-app/`. `dev:https` requires a locally-trusted cert (`local.pem` + `local-key.pem`). Service workers only register on HTTPS or `localhost` — always use `dev:https` when testing offline mode or SW behaviour on a real device.
 
-To generate the cert (one-time per machine):
+To generate the cert (one-time per project, requires [mkcert](https://github.com/FiloSottile/mkcert)):
 ```bash
-brew install mkcert && mkcert -install
-cd reference-app && mkcert localhost <LAN-IP>
+cd reference-app && npx socle cert
 ```
 
-Android devices also need the mkcert root CA installed once: `mkcert -CAROOT` → copy `rootCA.pem` to device → Settings → Security → Install certificate → CA certificate.
+Choose shared (`~/.socle-certs/`, reused across projects) or project-specific (generates `local.pem` + `local-key.pem` in the current directory). The Android CA install walkthrough runs automatically if you enter a LAN IP.
 
 Cert files (`*.pem`, `*.key`, `*.crt`) are gitignored — never commit them.
 

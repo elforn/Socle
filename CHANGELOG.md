@@ -9,6 +9,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `core/store/store-simple.js` — simple state store: plain object snapshot persisted to IDB on every `setState` call, no event log, no reducer, no migrations. Selected at scaffold time via CLI. Implements the same `subscribe`/`unsubscribe`/`getState`/`attachBlob`/`getBlob`/`deleteBlob`/`reset` API as the event-log store plus sync-compatible `getAllEvents`/`getAllBlobs`/`importEvents` methods so the sync module works with both stores.
+- `modules/sync/` — binary export/import format: SCLE magic (4 bytes, uncompressed) + gzip-compressed payload containing events JSON and raw image bytes. Replaces the previous JSON format. ~33% smaller than base64 JSON; peak import memory holds one image at a time instead of all. Legacy `.json` exports remain importable — format is detected by magic bytes.
+- `modules/sync/` — sync module now compatible with both the event-log store and the simple store. Simple-store exports produce a `simple:state` event wrapping the current state snapshot; import restores it to IDB without touching in-memory state (reload required, same contract as event-log import).
+- `cli/index.js` — `npx socle cert`: interactive cert wizard that asks whether to use shared certs (`~/.socle-certs/`) or project-specific certs, runs `mkcert`, and adds a `dev:https` script to the project's `package.json`. HTTPS is now opt-in — new scaffolded apps start without `dev:https` and gain it by running this command.
+- `cli/index.js` — `ensureDevHttps(pkgPath)`: exported helper that adds a `dev:https` script derived from the existing `dev` script; idempotent; used by the cert wizard.
+
+### Changed
+- `modules/sync/sync.js` — `exportData()` now returns `Uint8Array` instead of a JSON-serialisable object. `downloadExport()` first arg is now `Uint8Array`. `readImportFile()` returns `Uint8Array` for binary files or a parsed object for legacy JSON. `importData()` accepts either.
+- `scaffold/package.json`, `reference-app/package.json` — `dev:https` removed from scaffold default; new apps add it via `npx socle cert`. Reference app keeps the script (cert was already set up).
+- `reference-app/app/components/year-header/year-header.js` — file input accept changed to `.youryear,.json`; export filenames use `.youryear` extension.
+
+### Added
 - `core/router/app-router.js` — page entry fade-in: `<app-router>` adds a `.enter` class to every newly mounted page element; the class triggers a `_routerFadeIn` keyframe (opacity 0→1) using `--duration-normal` and `--ease-out` tokens via an adopted stylesheet on the router shadow root
 - `core/styles/tokens.css` — `--color-accent-subtle: rgba(232, 130, 74, 0.10)` added for hover and selected surface tints; `--font-family` changed from system stack to `'Onest', 'Helvetica Neue', Arial, sans-serif` (humanist grotesque, variable Latin, ~16 KB, optimised for low-DPI mobile); `--font-size-subheading` bumped from 17px to 18px
 - `reference-app/index.html`, `scaffold/index.html` — Google Fonts `<link>` for Onest variable font (`wght@100..900`); body gains a subtle radial gradient (`rgba(232,130,74,0.06)` at top centre) and an SVG noise texture overlay at 4% opacity for depth

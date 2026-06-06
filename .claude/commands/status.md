@@ -58,16 +58,23 @@ Check the file system against the build order defined in CLAUDE.md and report:
    - Check: `cli/index.test.js` exists with unit and integration tests
    - Check: root `package.json` has `bin: { "socle": "./cli/index.js" }`
 
-9. **Simple webpage for the library**
-   - Check: `docs/` or a dedicated webpage directory — expected to not exist yet
+9. **Scaffolded App — deployed reference app showcasing all library features**
+   - Check: sync module integrated in reference app (`year-header.js` imports from `_lib/modules/sync/`)
+   - Check: toast module integrated in reference app (`home-page.js` imports from `_lib/modules/toast/`)
+   - Check: `reference-app/tests/e2e/sync.spec.js` covers export/import flow
+   - Check: `reference-app/tests/e2e/toast.spec.js` covers toast notifications
+   - Check: `reference-app/.github/workflows/deploy.yml` exists (GitHub Pages deploy)
 
-10. **Simple store**
+10. **Simple webpage for the library**
+    - Check: `site/` directory with `index.html` — library landing page
+
+11. **Simple store**
     - Check: `core/store/store-simple.js` or equivalent — expected to not exist yet
 
-11. **P2P module (V2)**
+12. **P2P module (V2)**
     - Check: `modules/p2p/` — expected to not exist yet
 
-12. **Additional UI components (toast, lists, etc.)**
+13. **Additional UI components (toast, lists, etc.)**
     - Check: `modules/toast/`, `modules/ui/` — expected to not exist yet or stub only
 
 ### Output format

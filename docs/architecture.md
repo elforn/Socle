@@ -6,7 +6,7 @@
 - [The `_lib/` boundary](#the-_lib-boundary)
 - [Build system](#build-system)
 - [Router](#router)
-- [Store and IDB](#store-and-idb)
+- [Store and IDB](#store-and-idb) — [event-log store](#event-log-store) · [simple store](#simple-store)
 - [Strings and locale](#strings-and-locale)
 - [Sync module](#sync-module-modulessync)
 - [Service Worker](#service-worker)
@@ -157,7 +157,20 @@ The SW intercept is active after the first visit, once the SW has installed and 
 
 ## Store and IDB
 
-The Store is the single source of truth for all app state. Components never touch IndexedDB directly — every write goes through `Store.dispatch()`, every read comes via `Store.subscribe()`.
+The Store is the single source of truth for all app state. Components never touch IndexedDB directly — all reads come via `Store.subscribe()`. The CLI lets you pick one of two store variants at scaffold time:
+
+| Store | IDB model | Use when |
+|-------|-----------|----------|
+| **Event log** (default) | Append-only event log, state replayed on boot | You need history, undo, P2P sync, or export |
+| **Simple** | Single JSON snapshot, saved on every write | CRUD app, no audit trail needed, simpler mental model |
+
+Both variants export the same `subscribe`, `unsubscribe`, `getState`, `attachBlob`, `getBlob`, `deleteBlob`, and `reset` API. They differ in how state is written and persisted.
+
+---
+
+### Event-log store
+
+The event-log store records every state change as an immutable event in IndexedDB. State is derived by replaying the log through your reducer on every boot. Use this when you need history, undo, data export, or future P2P sync.
 
 ### Data model — append-only event log
 
@@ -340,6 +353,73 @@ Writes an array of pre-formed event objects directly to the `events` store, bypa
 
 Clears all module state. **Test isolation only — never call in production code.**
 
+---
+
+### Simple store
+
+The simple store trades the event log for a plain object snapshot persisted to IDB on every `setState` call. There is no reducer, no replay, and no migration system — the IDB schema is created once on first boot with a single `state` object store.
+
+Choose the simple store when your app is a straightforward CRUD tool with no need for history, undo, cross-device sync, or export of event history. If you're unsure, use the event-log store — you can always drop the log, but you can't reconstruct one retroactively.
+
+The sync module works with both stores. For the simple store, `exportData()` serialises the full in-memory state snapshot as a single `simple:state` event; `importData()` restores it. Binary files, images, and the `.youryear` file format are identical across both stores.
+
+#### Boot
+
+```js
+import { boot } from '../_lib/core/store/store.js';
+
+await boot({ dbName: 'my-app', initialState: { items: [] } });
+```
+
+`boot()` opens (or creates) the IDB database, reads the persisted snapshot, and merges it over `initialState`. Keys present in the snapshot overwrite `initialState`; keys missing from the snapshot keep the `initialState` default. `await` it before anything else in `main.js`.
+
+`boot()` options:
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `dbName` | yes | IDB database name — use your app name |
+| `initialState` | no | Default state used on first run (before any writes) |
+
+#### setState
+
+```js
+import { setState } from '../_lib/core/store/store.js';
+
+setState('items', [...currentItems, newItem]);
+```
+
+Updates a top-level state key, notifies subscribers, and persists the entire state to IDB. Unlike `setState` in the event-log store, this write **survives a page reload**.
+
+#### subscribe / unsubscribe
+
+Identical to the event-log store — see above.
+
+#### API reference
+
+##### `boot({ dbName, initialState? })`
+
+Opens IDB, loads the persisted snapshot, and sets initial state. Must be `await`ed in `main.js` before any component renders.
+
+##### `setState(key, value)`
+
+Updates a top-level state key and persists the full state snapshot to IDB. Notifies subscribers synchronously. Returns `undefined` (the IDB write is fire-and-forget).
+
+##### `getState()`
+
+Returns the current state snapshot. Use in tests and event handlers. Do not use in component render paths — use `subscribe()` instead.
+
+##### `subscribe(key, cb)` / `unsubscribe(key, cb)`
+
+Same as the event-log store.
+
+##### `attachBlob(id, blob)` / `getBlob(id)` / `deleteBlob(id)`
+
+Same as the event-log store. Blobs are stored in a separate `images` object store and are not part of the state snapshot.
+
+##### `reset()`
+
+Clears all module state. **Test isolation only — never call in production code.**
+
 ## Strings and locale
 
 `core/strings.js` is a flat key registry that enables user-visible strings to be externalised from components and translated. It is the foundation for multi-language support without introducing any runtime dependency.
@@ -437,17 +517,21 @@ Clears all registered strings and resets the active locale to `'en'`. **Test iso
 
 ## Sync module (`modules/sync/`)
 
-The sync module provides JSON-based export and import of the full app dataset — events and binary attachments. It is optional: scaffolded apps include it only if selected at `npx socle` time.
+The sync module exports and imports the full app dataset — events and binary attachments — as a compressed binary file. It is optional: scaffolded apps include it only if selected at `npx socle` time. Works with both the event-log store and the simple store.
+
+### File format
+
+Exported files use a custom binary format (`.youryear` / app-specific extension). The first 4 bytes are the uncompressed ASCII magic `SCLE`; the remainder is a gzip-compressed binary payload containing the event log and all blobs. Format is detected by magic bytes, not by file extension — legacy `.json` exports remain importable regardless of what the file picker shows.
 
 ### Export
 
-`exportData()` reads all events and all blobs from the store and serialises them to a JSON-safe structure. Blobs are converted to data URLs so the output is a single self-contained file.
+`exportData()` returns a `Uint8Array`. Pass it to `downloadExport()` with the desired filename.
 
 ```js
 import { exportData, downloadExport } from './_lib/modules/sync/sync.js';
 
 const data = await exportData();
-downloadExport(data, 'myapp-all.json');
+downloadExport(data, 'myapp-all.youryear');
 ```
 
 To export only a subset of events, pass an `eventFilter`:
@@ -456,41 +540,41 @@ To export only a subset of events, pass an `eventFilter`:
 const data = await exportData({
   eventFilter: e => String(e.payload?.year) === '2026',
 });
-downloadExport(data, '2026-only.json');
+downloadExport(data, '2026-only.youryear');
 ```
 
-Year-scoped export automatically includes only the blobs referenced by the filtered events — it does not export blobs from other years.
+Year-scoped export automatically includes only the blobs referenced by the filtered events.
 
 ### Import
 
-`importData()` merges an exported payload into the current IDB database. Events and images that already exist (matched by `id`) are silently skipped — import is idempotent. After a successful import the app must reload for the new events to affect state.
+`readImportFile()` detects the format from magic bytes and returns either a `Uint8Array` (binary) or a parsed object (legacy JSON). Pass the result to `importData()`.
 
 ```js
 import { readImportFile, importData } from './_lib/modules/sync/sync.js';
 
-const raw  = await readImportFile(file);      // parses uploaded .json file
-const result = await importData(raw);         // { eventsAdded, imagesAdded }
+const raw    = await readImportFile(file);   // Uint8Array or parsed JSON object
+const result = await importData(raw);        // { eventsAdded, imagesAdded }
 ```
 
-`importData` throws if `socleVersion` in the payload does not match the library version.
+`importData()` is idempotent — events and blobs whose `id` already exists are silently skipped. The app must reload after import for new events to affect state.
 
 ### API reference
 
 #### `exportData({ eventFilter? })`
 
-Returns a Promise resolving to `{ socleVersion, exportedAt, events, images }`. If `eventFilter` is provided, only matching events are included and blob export is scoped to blobs referenced by those events.
+Returns a `Promise<Uint8Array>` — the gzip-compressed binary payload with SCLE magic prefix. If `eventFilter` is provided, only matching events are included and blob export is scoped to blobs referenced by those events.
 
-#### `importData(data)`
+#### `importData(input)`
 
-Merges `data.events` and `data.images` into IDB. Skips any event or blob whose `id` already exists. Returns `{ eventsAdded, imagesAdded }`. Throws if `data.socleVersion` does not match the current library version.
+Accepts a `Uint8Array` (binary format) or a plain object (legacy JSON). Merges events and blobs into IDB, skipping duplicates. Returns `{ eventsAdded, imagesAdded }`.
 
-#### `downloadExport(data, filename)`
+#### `downloadExport(uint8, filename)`
 
-Serialises `data` to JSON and triggers a browser file download with the given filename.
+Triggers a browser file download. `uint8` is the `Uint8Array` from `exportData()`; `filename` is the full filename including extension (the library does not dictate the extension — it is app-specific).
 
 #### `readImportFile(file)`
 
-Reads a `File` object (from a file input) and returns a Promise resolving to the parsed JSON payload. Throws on invalid JSON.
+Reads a `File` object (from a file input). Returns a `Promise<Uint8Array>` for binary files or a `Promise<object>` for legacy JSON files. Throws on invalid JSON or unreadable file.
 
 ---
 
