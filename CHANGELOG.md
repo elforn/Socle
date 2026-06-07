@@ -10,6 +10,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.1] — 2026-06-08
+
+### Fixed
+- `cli/index.js` — `updateLib()` now re-applies the `store-simple.js` → `store.js` rename for simple-store apps after updating `_lib/core`. Previously the event-log `store.js` silently overwrote the renamed simple store file, breaking apps that selected the simple store at scaffold time.
+- `cli/index.js` — added `_semverLt()` utility and a version-gated migration block structure in `updateLib()` for future releases.
+
+### Added
+- `.claude/commands/upgrade.md` — new `/upgrade` library skill: guides the library developer through implementing migration handling in `updateLib()` before each release (automated changes + manual steps printed at end of `npx socle update`). Library-only; never copied to scaffold.
+
+---
+
 ## [0.9.0] — 2026-06-07
 
 ### Added

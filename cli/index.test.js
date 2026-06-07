@@ -190,11 +190,13 @@ describe('scaffoldApp', () => {
       expect(main).toContain('reducer');
     });
 
-    it('event-log: _lib/core/store has store.js but not store-simple.js', () => {
+    it('event-log: _lib/core/store has store.js and store.test.js but not store-simple.*', () => {
       const dest = makeTmpDir();
       scaffoldApp({ ...BASE_OPTIONS, storeType: 'event-log' }, dest);
       expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.js'))).toBe(true);
+      expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.test.js'))).toBe(true);
       expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.js'))).toBe(false);
+      expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.test.js'))).toBe(false);
     });
 
     it('event-log: app/store/reducer.js exists', () => {
@@ -227,11 +229,13 @@ describe('scaffoldApp', () => {
       expect(main).not.toContain('reducer });');
     });
 
-    it('simple: _lib/core/store has store.js (renamed from store-simple) but not store-simple.js', () => {
+    it('simple: _lib/core/store has store.js and store.test.js (renamed from store-simple.*) but not store-simple.*', () => {
       const dest = makeTmpDir();
       scaffoldApp({ ...BASE_OPTIONS, storeType: 'simple' }, dest);
       expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.js'))).toBe(true);
+      expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.test.js'))).toBe(true);
       expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.js'))).toBe(false);
+      expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.test.js'))).toBe(false);
     });
 
     it('simple: app/store/reducer.js does not exist', () => {
@@ -309,6 +313,41 @@ describe('updateLib', () => {
     const css = readFileSync(join(dest, '_lib', 'core', 'styles', 'tokens.css'), 'utf8');
     expect(css).toContain('--color-accent: #ABCDEF;');
   });
+
+  it('re-applies store-simple.* → store.* rename after update for simple-store apps', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp({ ...BASE_OPTIONS, storeType: 'simple' }, dest);
+
+    const lvPath = join(dest, '_lib', 'lib-version.json');
+    const lv = JSON.parse(readFileSync(lvPath, 'utf8'));
+    lv.version = '0.0.1';
+    writeFileSync(lvPath, JSON.stringify(lv, null, 2));
+
+    await updateLib(dest, () => Promise.resolve('y'));
+
+    expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.js'))).toBe(true);
+    expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.test.js'))).toBe(true);
+    expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.js'))).toBe(false);
+    expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.test.js'))).toBe(false);
+  });
+
+  it('removes store-simple.* after update for event-log apps', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp({ ...BASE_OPTIONS, storeType: 'event-log' }, dest);
+
+    const lvPath = join(dest, '_lib', 'lib-version.json');
+    const lv = JSON.parse(readFileSync(lvPath, 'utf8'));
+    lv.version = '0.0.1';
+    writeFileSync(lvPath, JSON.stringify(lv, null, 2));
+
+    await updateLib(dest, () => Promise.resolve('y'));
+
+    expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.js'))).toBe(true);
+    expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.test.js'))).toBe(true);
+    expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.js'))).toBe(false);
+    expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.test.js'))).toBe(false);
+  });
+
 });
 
 // ── unit: findModuleImports ───────────────────────────────────────────────────

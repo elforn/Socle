@@ -68,6 +68,7 @@ the last generation run — this table is the record of every decision made.
 | `update-meta.md` | No | Exclude | Audits Socle's own CLAUDE.md and command files — library development only. |
 | `gesture.md` | No | Exclude | Gestures come from `_lib/`, app devs don't write gesture implementations. |
 | `generate-claude.md` | No | Exclude | This is a library development tool only. |
+| `upgrade.md` | No | Exclude | Prepares migration handling in the CLI for a new library release — library development only. |
 | `contribute.md` | Yes | Include as-is | Written specifically for app developers. References library GitHub URL — update before generating. |
 
 ---

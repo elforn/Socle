@@ -66,6 +66,16 @@ function readAccentColor(tokensPath) {
   return m ? m[1].trim() : null;
 }
 
+function _semverLt(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] < pb[i]) return true;
+    if (pa[i] > pb[i]) return false;
+  }
+  return false;
+}
+
 export function findModuleImports(appDir, moduleName) {
   const pattern = `_lib/modules/${moduleName}/`;
   const results = [];
@@ -438,16 +448,19 @@ export function scaffoldApp(options, destDir) {
   fs.mkdirSync(path.join(destDir, '_lib', 'modules'), { recursive: true });
   fs.cpSync(CORE_DIR, path.join(destDir, '_lib', 'core'), { recursive: true });
 
-  // Remove the store variant that wasn't selected; for simple, rename store-simple.js → store.js
+  // Remove the store variant that wasn't selected; for simple, rename store-simple.* → store.*
   // so that other core files (sw-manager, update-banner) keep importing 'store.js' unchanged.
   if (storeType === 'simple') {
-    const storeJs     = path.join(destDir, '_lib', 'core', 'store', 'store.js');
-    const storeSimple = path.join(destDir, '_lib', 'core', 'store', 'store-simple.js');
-    if (fs.existsSync(storeJs)) fs.unlinkSync(storeJs);
-    if (fs.existsSync(storeSimple)) fs.renameSync(storeSimple, storeJs);
+    const storeDir = path.join(destDir, '_lib', 'core', 'store');
+    for (const [from, to] of [['store-simple.js', 'store.js'], ['store-simple.test.js', 'store.test.js']]) {
+      if (fs.existsSync(path.join(storeDir, to))) fs.unlinkSync(path.join(storeDir, to));
+      if (fs.existsSync(path.join(storeDir, from))) fs.renameSync(path.join(storeDir, from), path.join(storeDir, to));
+    }
   } else {
-    const storeSimple = path.join(destDir, '_lib', 'core', 'store', 'store-simple.js');
-    if (fs.existsSync(storeSimple)) fs.unlinkSync(storeSimple);
+    for (const f of ['store-simple.js', 'store-simple.test.js']) {
+      const p = path.join(destDir, '_lib', 'core', 'store', f);
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    }
   }
 
   // Simple store: remove reducer.js (no event log, no reducer needed)
@@ -505,6 +518,20 @@ export async function updateLib(projectDir, ask) {
   console.log('\nUpdating _lib/...');
   fs.rmSync(path.join(projectDir, '_lib', 'core'), { recursive: true, force: true });
   fs.cpSync(CORE_DIR, path.join(projectDir, '_lib', 'core'), { recursive: true });
+
+  if (current.store === 'simple') {
+    const storeDir = path.join(projectDir, '_lib', 'core', 'store');
+    for (const [from, to] of [['store-simple.js', 'store.js'], ['store-simple.test.js', 'store.test.js']]) {
+      if (fs.existsSync(path.join(storeDir, to))) fs.unlinkSync(path.join(storeDir, to));
+      if (fs.existsSync(path.join(storeDir, from))) fs.renameSync(path.join(storeDir, from), path.join(storeDir, to));
+    }
+  } else if (current.store === 'event-log') {
+    for (const f of ['store-simple.js', 'store-simple.test.js']) {
+      const p = path.join(projectDir, '_lib', 'core', 'store', f);
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    }
+  }
+
   console.log('  ✔ _lib/core updated');
 
   for (const mod of current.modules.filter(m => m !== 'core')) {
@@ -517,6 +544,10 @@ export async function updateLib(projectDir, ask) {
   }
 
   if (preservedAccent) patchAccentColor(tokensPath, preservedAccent);
+
+  // ── version migrations ──────────────────────────────────────────────────────
+  // v0.9.1 — no app-layer migration required (store rename fix is automated above)
+  // ── end migrations ──────────────────────────────────────────────────────────
 
   fs.writeFileSync(libVersionPath, JSON.stringify({ ...current, version: latest }, null, 2) + '\n');
   console.log(`  ✔ lib-version.json updated to ${latest}`);
