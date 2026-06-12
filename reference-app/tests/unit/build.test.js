@@ -5,8 +5,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const APP_ROOT = join(__dirname, '../..');
-const DIST = join(APP_ROOT, 'dist');
+const APP_ROOT  = join(__dirname, '../..');
+const DIST      = join(APP_ROOT, 'dist');
 
 function runBuild(env = {}) {
   execFileSync('node', [join(APP_ROOT, 'utils/build.js')], {
@@ -26,13 +26,12 @@ function mainFilename() {
 const { version } = JSON.parse(readFileSync(join(APP_ROOT, 'package.json'), 'utf8'));
 
 describe('build — default (BASE_PATH=/)', () => {
-  beforeAll(() => {
-    rmSync(DIST, { recursive: true, force: true });
-    runBuild();
-  });
+  beforeAll(() => runBuild());
 
-  it('produces a hashed main.js in dist/', () => {
-    expect(mainFilename()).toMatch(/^main\.[a-f0-9]{8}\.js$/);
+  it('produces a hashed main.js and source map in dist/', () => {
+    const fn = mainFilename();
+    expect(fn).toMatch(/^main\.[a-f0-9]{8}\.js$/);
+    expect(existsSync(join(DIST, `${fn}.map`))).toBe(true);
   });
 
   it('produces sw.js, version.json, index.html, manifest.json', () => {
@@ -47,21 +46,32 @@ describe('build — default (BASE_PATH=/)', () => {
     expect(() => new Date(v.buildTime).toISOString()).not.toThrow();
   });
 
-  it('replaces __APP_VERSION__ token in main.js output', () => {
+  it('main.js bundle contains version string and no __APP_VERSION__ token', () => {
     const content = readDist(mainFilename());
     expect(content).not.toContain('__APP_VERSION__');
-    expect(content).toContain(`'${version}'`);
+    expect(content).toContain(version);
   });
 
-  it('rewrites import paths in main.js for dist/ layout', () => {
+  it('main.js bundle has no _lib/ import paths — all resolved by bundler', () => {
     const content = readDist(mainFilename());
-    expect(content).not.toContain("'../_lib/");
-    expect(content).toContain("'./_lib/");
-    expect(content).toContain("'./app/store/");
-    expect(content).toContain("'./app/pages/");
-    // General invariant: no bare app-relative imports remain after rewriting
-    const unrewritten = content.match(/'\.\/(?!app\/|_lib\/)/g);
-    expect(unrewritten, 'unrewritten app-relative imports found').toBeNull();
+    expect(content).not.toContain('/_lib/');
+    expect(content).not.toContain('../_lib/');
+  });
+
+  it('dist/ contains no _lib/ directory — JS is bundled', () => {
+    expect(existsSync(join(DIST, '_lib'))).toBe(false);
+  });
+
+  it('dist/app/ contains only icons — no component or page JS files', () => {
+    expect(existsSync(join(DIST, 'app', 'icons'))).toBe(true);
+    expect(existsSync(join(DIST, 'app', 'pages'))).toBe(false);
+    expect(existsSync(join(DIST, 'app', 'components'))).toBe(false);
+  });
+
+  it('tokens.css is inlined in index.html — no _lib/ stylesheet link', () => {
+    const html = readDist('index.html');
+    expect(html).not.toContain('href="_lib/core/styles/tokens.css"');
+    expect(html).toContain('--color-bg');
   });
 
   it('injects CACHE_VERSION into sw.js', () => {
@@ -76,7 +86,7 @@ describe('build — default (BASE_PATH=/)', () => {
     expect(sw).toContain("const BASE_PATH = '/'");
   });
 
-  it('injects ASSETS array into sw.js', () => {
+  it('injects ASSETS array into sw.js with bundle and manifest', () => {
     const sw = readDist('sw.js');
     expect(sw).not.toContain('%%ASSETS%%');
     const parsed = sw.match(/const ASSETS = (\[.*?\]);/s);
@@ -85,6 +95,8 @@ describe('build — default (BASE_PATH=/)', () => {
     expect(assets).toContain('/');
     expect(assets).toContain('/manifest.json');
     expect(assets.some(a => /^\/main\.[a-f0-9]{8}\.js$/.test(a))).toBe(true);
+    expect(assets.some(a => a.endsWith('.test.js'))).toBe(false);
+    expect(assets.some(a => a.includes('/_lib/'))).toBe(false);
   });
 
   it('replaces %%MAIN_JS%% token in index.html', () => {
@@ -93,34 +105,22 @@ describe('build — default (BASE_PATH=/)', () => {
     expect(html).toMatch(/src="\/main\.[a-f0-9]{8}\.js"/);
   });
 
-  it('copies manifest.json byte-for-byte', () => {
-    const src = readFileSync(join(APP_ROOT, 'manifest.json'), 'utf8');
-    expect(readDist('manifest.json')).toBe(src);
-  });
-
-  it('copies _lib/ to dist/_lib/', () => {
-    expect(existsSync(join(DIST, '_lib', 'core', 'app-element.js'))).toBe(true);
-    expect(existsSync(join(DIST, '_lib', 'core', 'router', 'router.js'))).toBe(true);
-  });
-
-  it('copies app/ to dist/app/', () => {
-    expect(existsSync(join(DIST, 'app', 'pages', 'home-page.js'))).toBe(true);
-    expect(existsSync(join(DIST, 'app', 'pages', 'not-found-page.js'))).toBe(true);
+  it('manifest.json is valid JSON with required installability fields', () => {
+    const manifest = JSON.parse(readDist('manifest.json'));
+    expect(manifest.start_url).toBeTruthy();
+    expect(Array.isArray(manifest.icons)).toBe(true);
+    expect(manifest.icons.length).toBeGreaterThan(0);
   });
 
   it('produces a deterministic hash — same content yields same filename', () => {
     const first = mainFilename();
-    rmSync(DIST, { recursive: true, force: true });
     runBuild();
     expect(mainFilename()).toBe(first);
   });
 });
 
 describe('build — custom BASE_PATH', () => {
-  beforeAll(() => {
-    rmSync(DIST, { recursive: true, force: true });
-    runBuild({ BASE_PATH: '/my-app/' });
-  });
+  beforeAll(() => runBuild({ BASE_PATH: '/my-app/' }));
 
   it('prefixes all asset paths in sw.js ASSETS with BASE_PATH', () => {
     const sw = readDist('sw.js');

@@ -24,17 +24,17 @@ function rootPkg() { return JSON.parse(read(root, 'package.json')); }
 // ─── build.js ────────────────────────────────────────────────────────────────
 
 describe('scaffold/utils/build.js', () => {
-  it('uses the general app-relative import regex, not hardcoded path rewrites', () => {
+  it('uses esbuild for bundling — no manual import path rewriting', () => {
     const src = read(scaffold, 'utils/build.js');
-    expect(src).toContain("/'\\.\\/(?!_lib\\/)/g");
-    expect(src).not.toContain(".replaceAll(\"'./pages/\"");
-    expect(src).not.toContain(".replaceAll(\"'./store/\"");
+    expect(src).toContain("from 'esbuild'");
+    expect(src).toContain('bundle:');
+    expect(src).toContain('minify:');
+    expect(src).not.toContain("replace(/'\\.\\/(?!_lib\\/)/g");
+    expect(src).not.toContain(".replaceAll(\"'../_lib/\"");
   });
 
-  it('rewrite expression matches reference-app build.js exactly', () => {
-    const extract = src => src.match(/.+replace\(\/'.+\/g.+/)?.[0]?.trim();
-    expect(extract(read(scaffold, 'utils/build.js')))
-      .toBe(extract(read(refApp, 'utils/build.js')));
+  it('build.js is identical between scaffold and reference-app', () => {
+    expect(read(scaffold, 'utils/build.js')).toBe(read(refApp, 'utils/build.js'));
   });
 });
 
@@ -115,8 +115,12 @@ describe('scaffold/package.json', () => {
 // ─── tests/unit/build.test.js ────────────────────────────────────────────────
 
 describe('scaffold/tests/unit/build.test.js', () => {
-  it('contains the general path-rewrite invariant (guards against narrow assertions)', () => {
-    expect(read(scaffold, 'tests/unit/build.test.js')).toContain('unrewritten');
+  it('asserts bundled output has no _lib/ import paths', () => {
+    expect(read(scaffold, 'tests/unit/build.test.js')).toContain('/_lib/');
+  });
+
+  it('build.test.js is identical between scaffold and reference-app', () => {
+    expect(read(scaffold, 'tests/unit/build.test.js')).toBe(read(refApp, 'tests/unit/build.test.js'));
   });
 });
 
