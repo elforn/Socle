@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.6] — 2026-06-13
+
+### Fixed
+- `core/styles/tokens.css` — `--color-on-dark`, `--color-on-dark-muted`, and `--color-on-dark-dim` now have dark-theme overrides (`rgba(0,0,0,0.80/0.60/0.12)`). In dark mode the update banner background inverts to `#F5F2EE` (light); without these overrides the text and dismiss button remained white and were invisible.
+
+---
+
 ## [0.9.5] — 2026-06-13
 
 ### Fixed
