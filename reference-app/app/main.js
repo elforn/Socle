@@ -17,6 +17,11 @@ setLocale(getLocale());
 
 await boot({ dbName: 'youryear', reducer });
 
+const swm = document.createElement('sw-manager');
+swm.setAttribute('base-path', __BASE_PATH__);
+swm.setAttribute('app-version', __APP_VERSION__);
+document.body.prepend(swm);
+
 console.log('YourYear', __APP_VERSION__);
 
 const router = document.querySelector('app-router');

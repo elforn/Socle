@@ -10,6 +10,20 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.7] — 2026-06-14
+
+### Fixed
+- `core/store/store-simple.js` — `boot()` now sets `_db` only after `_state` is fully loaded from IDB. Previously, a `setState` call arriving after `openDB` resolved but before `get()` returned would write an empty object to IDB, silently destroying all stored data. This race could be triggered by `<sw-manager>` being upgraded from static HTML before `boot()` completed.
+- `core/store/store-simple.js` — `setState` now no-ops when `_db` is null (called before `boot()` completes). Previously it called `put(null, ...)` which produced an unhandled `TypeError`.
+- `scaffold/index.html` and `reference-app/index.html` — `<sw-manager>` removed from static HTML. It is now created programmatically in `app/main.js` after `await boot()` completes, eliminating the SW update race condition in simple-store apps.
+- `scaffold/utils/build.js` and `reference-app/utils/build.js` — `__BASE_PATH__` is now injected at build time via esbuild `define`, replacing the `base-path="/"` HTML attribute substitution that was removed when `<sw-manager>` moved to JS.
+
+### Added
+- `core/store/store-simple.test.js` — two regression tests for the SW update race condition: one verifying that `setState` before `boot()` leaves IDB untouched, one confirming that `setState` after `boot()` adds a key without wiping other stored data.
+- `scaffold/tests/e2e/update-flow.spec.js` — IDB data-survival test: writes a marker directly into the simple store's state, triggers the update banner, reloads, and asserts the marker survived. Applies to simple-store apps only; event-log store apps can remove it.
+
+---
+
 ## [0.9.6] — 2026-06-13
 
 ### Fixed

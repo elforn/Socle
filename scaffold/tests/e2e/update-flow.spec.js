@@ -34,6 +34,10 @@ async function waitForApp(page) {
   );
 }
 
+// DB_NAME must match the dbName passed to boot() in app/main.js.
+// This test only applies to simple-store apps. Remove it if using the event-log store.
+const DB_NAME = '%%APP_NAME%%';
+
 test.describe('Update flow — banner behaviour', () => {
   test('update-banner is hidden on initial load', async ({ page }) => {
     await page.goto('/');
@@ -59,6 +63,54 @@ test.describe('Update flow — banner behaviour', () => {
     await page.locator('update-banner #dismiss').click();
     await expect(page.locator('update-banner')).toHaveAttribute('hidden', '');
     expect(reloaded).toBe(false);
+  });
+
+  test('store state survives a reload triggered by the update banner', async ({ page }) => {
+    await page.goto('/');
+    await waitForApp(page);
+
+    // Write a test marker directly into the simple store's IDB state
+    await page.evaluate(async (dbName) => {
+      const db = await new Promise((resolve, reject) => {
+        const req = indexedDB.open(dbName, 1);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e.target.error);
+      });
+      const existing = await new Promise(resolve => {
+        const req = db.transaction('state', 'readonly').objectStore('state').get('root');
+        req.onsuccess = () => resolve(req.result ?? { id: 'root', data: {} });
+      });
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('state', 'readwrite');
+        tx.objectStore('state').put({ ...existing, data: { ...existing.data, _test_marker: 'survives-update' } });
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }, DB_NAME);
+
+    await routeFutureVersion(page);
+    await page.reload();
+    await waitForApp(page);
+    await expect(page.locator('update-banner')).not.toHaveAttribute('hidden');
+
+    await page.unrouteAll();
+    await page.locator('update-banner #reload').click();
+    await page.waitForLoadState('domcontentloaded');
+    await waitForApp(page);
+
+    const marker = await page.evaluate(async (dbName) => {
+      const db = await new Promise((resolve, reject) => {
+        const req = indexedDB.open(dbName, 1);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e.target.error);
+      });
+      return new Promise(resolve => {
+        const req = db.transaction('state', 'readonly').objectStore('state').get('root');
+        req.onsuccess = () => resolve(req.result?.data?._test_marker ?? null);
+      });
+    }, DB_NAME);
+
+    expect(marker).toBe('survives-update');
   });
 
   test('reload button triggers a page reload when no waiting SW exists', async ({ page }) => {

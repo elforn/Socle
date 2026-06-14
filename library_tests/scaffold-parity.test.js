@@ -146,7 +146,9 @@ describe('scaffold/tests/unit/store.test.js', () => {
 // Pure infrastructure specs — identical in scaffold and reference-app.
 // navigation/offline/persistence legitimately differ: reference-app uses /:year routes
 // and domain-specific components (year-header); scaffold versions use / and are generic.
-const SCAFFOLD_E2E_IDENTICAL = ['install.spec.js', 'update-flow.spec.js'];
+// update-flow legitimately differs: scaffold includes a simple-store IDB data-survival
+// test that doesn't apply to the reference-app (which uses the event-log store).
+const SCAFFOLD_E2E_IDENTICAL = ['install.spec.js'];
 const SCAFFOLD_E2E_ALL = ['install.spec.js', 'navigation.spec.js', 'offline.spec.js', 'persistence.spec.js', 'update-flow.spec.js'];
 
 describe('scaffold/tests/e2e/', () => {
@@ -167,6 +169,13 @@ describe('scaffold/tests/e2e/', () => {
     expect(src).toContain('routeFutureVersion');
     expect(src).not.toContain("import('");
     expect(src).not.toContain('_lib/core/store');
+  });
+
+  it('update-flow.spec.js includes the IDB data-survival regression test', () => {
+    const src = read(scaffold, 'tests/e2e/update-flow.spec.js');
+    expect(src).toContain('store state survives a reload triggered by the update banner');
+    expect(src).toContain('_test_marker');
+    expect(src).toContain('survives-update');
   });
 });
 
