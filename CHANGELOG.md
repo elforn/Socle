@@ -10,6 +10,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.8] — 2026-06-14
+
+### Fixed
+- `core/sw-manager/sw-manager.js` — Layer 1: `register().then()` now checks `registration.installing` directly before attaching the `updatefound` listener. Previously, if `updatefound` fired during `boot()` (the browser detects the new SW before `main.js` completes), the event was missed and the update banner never appeared.
+- `core/sw-manager/sw-manager.js` — Layer 2: `version.json` fetch now appends `?_=${Date.now()}` to bust CDN caches (e.g. GitHub Pages/Fastly serves version.json with `Cache-Control: max-age=600`). `cache: 'no-store'` only bypasses the browser's own cache, not upstream CDNs.
+
+---
+
 ## [0.9.7] — 2026-06-14
 
 ### Fixed
