@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.10] — 2026-06-14
+
+### Fixed
+- `reference-app/tests/e2e/update-flow.spec.js` and `scaffold/tests/e2e/update-flow.spec.js` — `routeFutureVersion` now uses a regex (`/\/version\.json/`) instead of an exact string to match the intercepted URL. The cache-busting `?_=<timestamp>` query parameter added in v0.9.8 caused Playwright's string route to miss the request, so the version mismatch was never detected and the update banner never appeared in tests 2–4.
+
+---
+
 ## [0.9.9] — 2026-06-14
 
 ### Added

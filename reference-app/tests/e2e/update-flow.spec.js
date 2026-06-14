@@ -23,7 +23,8 @@ import { test, expect } from '@playwright/test';
 // sw-manager fetches version.json on boot and sets updateAvailable: true when it
 // differs from APP_VERSION. This works with the bundled build — no _lib/ import needed.
 async function routeFutureVersion(page) {
-  await page.route('/version.json', route =>
+  // Use regex to match version.json regardless of the ?_=<timestamp> cache-buster
+  await page.route(/\/version\.json/, route =>
     route.fulfill({ json: { version: '999.0.0', buildTime: new Date().toISOString() } })
   );
 }
