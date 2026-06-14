@@ -10,6 +10,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.9] — 2026-06-14
+
+### Added
+- `core/store/store.js` and `core/store/store-simple.js` — new `setRuntimeState(key, value)` export. Identical to `setState` but skips the IDB write and notifies subscribers unconditionally (bypassing the old === new equality guard). Use for session-only flags such as `updateAvailable` that must not survive a page reload. The unconditional notification ensures re-delivery works even when the value is already `true` in restored state.
+
+### Fixed
+- `core/sw-manager/sw-manager.js` — switched from `setState` to `setRuntimeState` for all `updateAvailable` writes. In simple-store apps, `setState` persisted `updateAvailable: true` to IDB; on the next session `boot()` restored it into `_state`; when sw-manager then called `setState('updateAvailable', true)` again the equality guard in `_notify` saw no change and fired no subscribers — the update banner never showed even though a new SW was waiting.
+
+---
+
 ## [0.9.8] — 2026-06-14
 
 ### Fixed
