@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.11] — 2026-06-14
+
+### Fixed
+- `core/sw.js` — `version.json` passthrough now uses `new URL(event.request.url).pathname.endsWith('/version.json')` instead of `event.request.url.endsWith('/version.json')`. The previous check always failed when the cache-busting `?_=<timestamp>` query string was present (added in v0.9.8), causing the SW to cache each unique timestamped URL under a key that was never hit again, and preventing Playwright from intercepting the network request in E2E tests.
+
+---
+
 ## [0.9.10] — 2026-06-14
 
 ### Fixed
