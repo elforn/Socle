@@ -10,6 +10,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.12] — 2026-06-16
+
+### Fixed
+- `modules/gestures/gestures.js` — swipe and hold-drag now set `touch-action: manipulation` on the host element instead of `pan-y`. `pan-y` propagates down to shadow DOM descendants via the touch-action intersection algorithm, causing the browser to apply 300ms double-tap-to-zoom disambiguation on any revealed action button — `pointerdown` fires immediately but `click` is delayed 1–3 seconds. `manipulation` suppresses that disambiguation. Horizontal swipe detection is unaffected because browsers only pan-x when a container is actually horizontally scrollable.
+- `reference-app/app/components/goal-item/goal-item.js` — action button now listens on `pointerup` (fires immediately on finger-lift) with a `click` keyboard-only fallback (`e.detail === 0`), ensuring instant response on both touch and keyboard.
+
+---
+
 ## [0.9.11] — 2026-06-14
 
 ### Fixed

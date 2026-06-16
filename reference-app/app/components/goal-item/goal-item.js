@@ -216,11 +216,15 @@ class GoalItem extends Gestures(AppElement) {
       this._closeReveal();
     };
     this._stopActionPointerDown = e => e.stopPropagation();
+    // keyboard-only fallback: e.detail === 0 means Enter/Space, not a pointer tap
+    this._onActionBtnKey = e => { if (e.detail === 0) this._onActionBtn(); };
     const actionEl = this.shadowRoot.querySelector('#action');
-    // Stop pointerdown from reaching the Gestures mixin on the host, so the
-    // button receives its own click event rather than being swallowed by capture.
+    // stopPropagation on pointerdown prevents the Gestures mixin from starting a
+    // drag/swipe when the user taps the revealed button.
+    // pointerup fires immediately on finger-lift; click is keyboard-only fallback.
     actionEl.addEventListener('pointerdown', this._stopActionPointerDown);
-    actionEl.addEventListener('click', this._onActionBtn);
+    actionEl.addEventListener('pointerup', this._onActionBtn);
+    actionEl.addEventListener('click', this._onActionBtnKey);
 
     this._onKeyDown = e => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._tap(); }
@@ -233,7 +237,8 @@ class GoalItem extends Gestures(AppElement) {
   unsubscribe() {
     const actionEl = this.shadowRoot.querySelector('#action');
     actionEl?.removeEventListener('pointerdown', this._stopActionPointerDown);
-    actionEl?.removeEventListener('click', this._onActionBtn);
+    actionEl?.removeEventListener('pointerup', this._onActionBtn);
+    actionEl?.removeEventListener('click', this._onActionBtnKey);
     this._bar?.removeEventListener('keydown', this._onKeyDown);
   }
 

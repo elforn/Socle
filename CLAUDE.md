@@ -268,7 +268,7 @@ Normalised event object passed to all handlers:
 `touch-action` is set automatically on the element based on which gestures are active:
 - tap only → `'manipulation'`
 - longPress → additionally sets `user-select: none`
-- swipe (horizontal) → `'pan-y'`
+- swipe (horizontal) → `'manipulation'` (not `pan-y` — `manipulation` suppresses double-tap-to-zoom so shadow DOM descendants such as swipe-revealed action buttons get immediate `click` events. Horizontal swipe detection is unaffected because browsers only pan-x when a container is actually horizontally scrollable.)
 - hold-drag → `'none'` (set automatically by `Gestures.attach`)
 - drag → `'none'`
 
