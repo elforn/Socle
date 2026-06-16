@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.13] — 2026-06-17
+
+### Fixed
+- `scaffold/utils/build.js` and `reference-app/utils/build.js` — `%%BASE_PATH%%` tokens in `index.html` are now substituted at build time via `.replaceAll('%%BASE_PATH%%', BASE_PATH)`. Previously the substitution was applied to `sw.js` and `manifest.json` but not `index.html`, causing the `<link rel="manifest">` href to be written literally as `%%BASE_PATH%%manifest.json` on non-root deployments.
+
+---
+
 ## [0.9.12] — 2026-06-16
 
 ### Fixed
