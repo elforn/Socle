@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.15] — 2026-06-17
+
+### Fixed
+- `modules/gestures/gestures.js` — both the mixin (`_gestureUp`) and `Gestures.attach` (`onUp`) now call `e.preventDefault()` on `pointerup` when a swipe completed. On Samsung Android Chrome, the browser can still apply double-tap disambiguation to the synthetic `click` that follows a swipe even with `manipulation` set on all elements, because disambiguation state is tracked at the gesture level. `preventDefault()` on `pointerup` suppresses that synthetic `click` at the source, so no element anywhere on the page receives a delayed or double-tap-required click after a swipe. Taps and hold-drag gestures are unaffected — `preventDefault` is only called when `phase === 'swipe'`.
+
+---
+
 ## [0.9.14] — 2026-06-17
 
 ### Fixed
