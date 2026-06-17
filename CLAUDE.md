@@ -269,7 +269,7 @@ Normalised event object passed to all handlers:
 - tap only → `'manipulation'`
 - longPress → additionally sets `user-select: none`
 - swipe (horizontal) → `'manipulation'` (not `pan-y` — `manipulation` suppresses double-tap-to-zoom so shadow DOM descendants such as swipe-revealed action buttons get immediate `click` events. Horizontal swipe detection is unaffected because browsers only pan-x when a container is actually horizontally scrollable.)
-- hold-drag → `'none'` (set automatically by `Gestures.attach`)
+- hold-drag → `'manipulation'` (set automatically by `Gestures.attach`; was `pan-y` before — same shadow DOM click-delay reasoning applies to inner gesture elements)
 - drag → `'none'`
 
 **Implemented:** tap, long press, swipe, hold-drag, `Gestures.attach`.

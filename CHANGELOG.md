@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.14] — 2026-06-17
+
+### Fixed
+- `modules/gestures/gestures.js` — `Gestures.attach` now sets `touch-action: manipulation` on the inner gesture element instead of `pan-y`. The shadow DOM boundary breaks touch-action inheritance, so the inner element received plain `pan-y` regardless of the host's `manipulation` value. `pan-y` leaves double-tap-to-zoom detection active, causing any subsequent `click` event (even on unrelated page elements) to be delayed 300–500ms or require two taps. `manipulation` disables the disambiguation. Vertical scrolling is unaffected because browsers only pan natively when a container is actually scrollable.
+
+---
+
 ## [0.9.13] — 2026-06-17
 
 ### Fixed

@@ -546,9 +546,9 @@ describe('Gestures.attach', () => {
     expect(holdDragStartSpy).not.toHaveBeenCalled();
   });
 
-  it('sets touch-action: pan-y on element', () => {
+  it('sets touch-action: manipulation on element', () => {
     Gestures.attach(child, { onHoldDragStart: holdDragStartSpy });
-    expect(child.style.touchAction).toBe('pan-y');
+    expect(child.style.touchAction).toBe('manipulation');
   });
 
   it('calls navigator.vibrate(40) when hold fires', () => {

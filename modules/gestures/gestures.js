@@ -368,7 +368,7 @@ Gestures.attach = (element, handlers) => {
     }
   };
 
-  element.style.touchAction = (hasSwipe || !!handlers.onHoldDragStart) ? 'pan-y' : 'none';
+  element.style.touchAction = (hasSwipe || !!handlers.onHoldDragStart) ? 'manipulation' : 'none';
   element.style.userSelect = 'none';
   element.addEventListener('pointerdown', onDown);
 
