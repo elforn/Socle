@@ -10,6 +10,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.16] — 2026-06-18
+
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — `show()` now uses `setTimeout(0)` instead of `requestAnimationFrame` to clear the `_justOpened` guard. On Android Chrome the synthetic click from the touch that triggered `show()` fires after a rAF but before a macrotask, so the guard was already cleared when the click arrived — the backdrop handler fired and immediately closed the dialog. A `setTimeout(0)` is guaranteed to run after all pending input tasks including that synthetic click.
+
+### Added
+- `modules/modal-dialog/modal-dialog.js` — `show(focusEl = null)` accepts an optional element to focus after the dialog opens. `showModal()` asynchronously grabs focus to the first focusable element; passing `focusEl` overrides that inside the same `setTimeout(0)` callback so callers don't need their own double-rAF workaround.
+
+---
+
 ## [0.9.15] — 2026-06-17
 
 ### Fixed
