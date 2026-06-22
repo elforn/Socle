@@ -5,6 +5,8 @@ defineStrings({
   'update-banner.reload':        'Recarregar',
   'update-banner.dismiss':       'Ignora',
 
+  'toast.close':                 '×',
+
   'home-page.capstone-section':  'Objectiu principal',
   'home-page.prev-year':         'Any anterior',
   'home-page.next-year':         'Any següent',
@@ -31,7 +33,8 @@ defineStrings({
   'goal-item.status-restored':   'Objectiu restaurat',
 
   'home.toast-goal-saved':       'Objectiu desat',
-  'home.toast-goal-deleted':     "Objectiu eliminat",
+  'home.toast-goal-deleted':     'Objectiu eliminat',
+  'home.toast-undo':             'Desfés',
 
   'year-header.menu':            'Menú',
   'year-header.year-section':    'Aquest any',

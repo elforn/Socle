@@ -316,6 +316,31 @@ function buildTokenMap(options) {
     "    sr.querySelector('#img-file-input')?.removeEventListener('change', this._onImgFile);",
   ].join('\n') : '';
 
+  const HP_TOAST_SECTION = includeToast ? [
+    '',
+    '        <section class="card">',
+    '          <h2>Toasts</h2>',
+    '          <p>Ephemeral feedback messages with optional actions.</p>',
+    '          <div class="actions">',
+    '            <button class="primary" id="toast-info-btn">Info</button>',
+    '            <button class="secondary" id="toast-action-btn">With action</button>',
+    '          </div>',
+    '        </section>',
+  ].join('\n') : '';
+
+  const HP_TOAST_SUBSCRIBE = includeToast ? [
+    "    this._onToastInfo   = () => toast('Info message', 'info');",
+    "    this._onToastAction = () => toast('Item deleted', 'info', { action: { label: 'Undo', onClick: () => toast('Restored', 'success') } });",
+    "    sr.querySelector('#toast-info-btn').addEventListener('click', this._onToastInfo);",
+    "    sr.querySelector('#toast-action-btn').addEventListener('click', this._onToastAction);",
+    '',
+  ].join('\n') : '';
+
+  const HP_TOAST_UNSUBSCRIBE = includeToast ? [
+    "    sr.querySelector('#toast-info-btn')?.removeEventListener('click', this._onToastInfo);",
+    "    sr.querySelector('#toast-action-btn')?.removeEventListener('click', this._onToastAction);",
+  ].join('\n') : '';
+
   const APP_HEADER_IMPORT = includeAppHeader
     ? "import '../_lib/modules/app-header/app-header.js';"
     : '';
@@ -349,6 +374,9 @@ function buildTokenMap(options) {
     HP_IMAGES_SECTION,
     HP_IMAGES_SUBSCRIBE,
     HP_IMAGES_UNSUBSCRIBE,
+    HP_TOAST_SECTION,
+    HP_TOAST_SUBSCRIBE,
+    HP_TOAST_UNSUBSCRIBE,
     APP_HEADER_IMPORT,
     MODAL_IMPORT,
     APP_HEADER_ELEMENT,

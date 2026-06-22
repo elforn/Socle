@@ -314,8 +314,15 @@ class HomePage extends AppElement {
     this._onDialogDelete = () => {
       const prefix = EVENT_PREFIX[this._editingSection];
       if (this._editingGoal) {
-        Store.dispatch(`${prefix}:deleted`, { year: String(this._year), id: this._editingGoal.id });
-        toast(t('home.toast-goal-deleted'), 'info');
+        const { id, title } = this._editingGoal;
+        const year = String(this._year);
+        Store.dispatch(`${prefix}:deleted`, { year, id });
+        toast(t('home.toast-goal-deleted'), 'info', {
+          action: {
+            label: t('home.toast-undo'),
+            onClick: () => Store.dispatch(`${prefix}:title-set`, { year, id, title }),
+          },
+        });
       }
     };
     this._dialog.addEventListener('goal-delete', this._onDialogDelete);

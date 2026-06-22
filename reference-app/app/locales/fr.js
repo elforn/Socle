@@ -5,6 +5,8 @@ defineStrings({
   'update-banner.reload':        'Recharger',
   'update-banner.dismiss':       'Ignorer',
 
+  'toast.close':                 '×',
+
   'home-page.capstone-section':  'Objectif phare',
   'home-page.prev-year':         'Année précédente',
   'home-page.next-year':         'Année suivante',
@@ -32,6 +34,7 @@ defineStrings({
 
   'home.toast-goal-saved':       'Objectif enregistré',
   'home.toast-goal-deleted':     'Objectif supprimé',
+  'home.toast-undo':             'Annuler',
 
   'year-header.menu':            'Menu',
   'year-header.year-section':    'Cette année',

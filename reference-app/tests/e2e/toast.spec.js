@@ -37,6 +37,39 @@ async function openAndSaveGoal(page, title) {
   });
 }
 
+async function openGoalForDelete(page) {
+  await page.evaluate(() => {
+    document.querySelector('app-router').shadowRoot
+      .querySelector('home-page').shadowRoot
+      .querySelector('#capstone-list goal-item')
+      .click();
+  });
+  await page.waitForFunction(() => {
+    const d = document.querySelector('app-router')?.shadowRoot
+      ?.querySelector('home-page')?.shadowRoot
+      ?.querySelector('goal-dialog')?.shadowRoot
+      ?.querySelector('#modal')?.shadowRoot?.querySelector('dialog');
+    return d?.open;
+  });
+}
+
+async function clickDeleteInDialog(page) {
+  await page.evaluate(() => {
+    document.querySelector('app-router').shadowRoot
+      .querySelector('home-page').shadowRoot
+      .querySelector('goal-dialog').shadowRoot
+      .querySelector('#delete').click();
+  });
+}
+
+async function goalCount(page) {
+  return page.evaluate(() => {
+    return document.querySelector('app-router').shadowRoot
+      .querySelector('home-page').shadowRoot
+      .querySelector('#capstone-list').querySelectorAll('goal-item').length;
+  });
+}
+
 test.describe('Toast feedback', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/${currentYear}`);
@@ -55,5 +88,24 @@ test.describe('Toast feedback', () => {
     await expect(page.locator('.socle-toast-success')).toBeVisible();
     await page.waitForTimeout(3500);
     await expect(page.locator('.socle-toast-success')).toHaveCount(0);
+  });
+
+  test('delete shows toast with Undo action button', async ({ page }) => {
+    await openAndSaveGoal(page, 'Goal to delete');
+    await page.waitForTimeout(3500); // let save toast dismiss
+    await openGoalForDelete(page);
+    await clickDeleteInDialog(page);
+    await expect(page.locator('.socle-toast-info')).toContainText('Goal deleted');
+    await expect(page.locator('.socle-toast-btn')).toContainText('Undo');
+  });
+
+  test('Undo restores the deleted goal', async ({ page }) => {
+    await openAndSaveGoal(page, 'Undo target');
+    await page.waitForTimeout(3500);
+    await openGoalForDelete(page);
+    await clickDeleteInDialog(page);
+    expect(await goalCount(page)).toBe(0);
+    await page.locator('.socle-toast-btn').click();
+    await expect(page.locator('#capstone-list goal-item')).toHaveCount(1);
   });
 });

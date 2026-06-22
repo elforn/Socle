@@ -287,6 +287,7 @@ class HomePage extends AppElement {
 %%HP_GESTURE_SECTION%%
 %%HP_SYNC_SECTION%%
 %%HP_IMAGES_SECTION%%
+%%HP_TOAST_SECTION%%
 %%HP_MODAL_ELEMENT%%
       </main>
     `;
@@ -311,6 +312,7 @@ class HomePage extends AppElement {
 %%HP_GESTURE_SUBSCRIBE%%
 %%HP_SYNC_SUBSCRIBE%%
 %%HP_IMAGES_SUBSCRIBE%%
+%%HP_TOAST_SUBSCRIBE%%
     this._tabs   = [...sr.querySelectorAll('[role="tab"]')];
     this._panels = [...sr.querySelectorAll('[role="tabpanel"]')];
     this._onTab  = e => {
@@ -329,6 +331,7 @@ class HomePage extends AppElement {
 %%HP_GESTURE_UNSUBSCRIBE%%
 %%HP_SYNC_UNSUBSCRIBE%%
 %%HP_IMAGES_UNSUBSCRIBE%%
+%%HP_TOAST_UNSUBSCRIBE%%
     this._tabs?.forEach(t => t.removeEventListener('click', this._onTab));
   }
 }
