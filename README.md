@@ -13,6 +13,7 @@ You run the CLI, choose your modules, and get a project where you own every line
 - Web Components throughout — Shadow DOM, adoptedStyleSheets, a reactive store, no virtual DOM
 - History API router with SW navigation intercept — no hash URLs, no full reloads
 - Gesture library — tap, long press, swipe, hold-drag, and more
+- Toast notifications — action buttons, undo support, pause on hover/focus, swipe-to-dismiss
 - Multilingual support — locale registry, `t()` helper, locale switching with persistence
 - CSS token system — retheme any app by changing two variables
 - Copy-into-project distribution — you own `_lib/`, update it on your terms
@@ -111,6 +112,7 @@ Firefox and Chrome on Android and desktop. iOS Safari is not supported — users
 | Sync — binary export/import, event-log and simple store | ✅ Complete |
 | CLI — scaffold, update, add/remove modules, cert wizard | ✅ Complete |
 | Simple store — snapshot-based alternative to event-log store | ✅ Complete |
+| Toast — action buttons, undo, swipe-to-dismiss, pause on hover/focus | ✅ Complete |
 | Gesture library — drag-to-reorder | 📋 Planned |
 | P2P sync | 📋 Planned V2 |
 

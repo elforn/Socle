@@ -8,6 +8,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `modules/toast/toast.js` — extended API: `toast(message, type, { duration, action })` with action button, configurable duration, `duration: Infinity` for persistent toasts (auto-adds `×` close button), and `const { dismiss, update } = toast(...)` return handle
+- `modules/toast/toast.js` — `update({ message, type })` mutates the live toast in place and restarts the auto-dismiss timer — eliminates the "dismiss then show a new one" flash for in-progress → complete transitions
+- `modules/toast/toast.js` — swipe-to-dismiss (left or right, 60px threshold)
+- `modules/toast/toast.js` — pause on hover and focus: auto-dismiss timer pauses while the toast is hovered or focused, resumes with the remaining time on leave
+- `modules/toast/toast.js` — fade-out exit animation on dismiss using `--duration-fast`; replacement by a new toast is instant to avoid two toasts being visible simultaneously
+- `docs/toast.md` — full feature doc and API reference
+
+### Changed
+- `modules/toast/toast.js` — default auto-dismiss duration changed from 3000ms to 4000ms to match the ui.md spec ("auto-dismisses after 4 seconds")
+- Scaffold CLI — toast module selection now generates a demo card with Info and "With action" buttons in the home page
+- `modules/toast/toast.js` — action button contrast: `'info'` toasts use `--color-accent` for the action button (6.2:1 contrast); `'success'` and `'error'` toasts use `inherit` to meet WCAG AA at 4.5:1+
+
 ---
 
 ## [0.9.16] — 2026-06-18
