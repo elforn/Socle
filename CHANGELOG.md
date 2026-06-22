@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [0.9.20] — 2026-06-22
+
 ### Added
 - `modules/toast/toast.js` — extended API: `toast(message, type, { duration, action })` with action button, configurable duration, `duration: Infinity` for persistent toasts (auto-adds `×` close button), and `const { dismiss, update } = toast(...)` return handle
 - `modules/toast/toast.js` — `update({ message, type })` mutates the live toast in place and restarts the auto-dismiss timer — eliminates the "dismiss then show a new one" flash for in-progress → complete transitions

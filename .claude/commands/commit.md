@@ -57,10 +57,13 @@ Description rules:
 ## What to do when /commit is run
 
 1. Run `git status` and `git diff --stat` to see what has changed
-2. Group changes into logical commits if multiple features are staged together
-3. For each commit:
+2. **Bump the patch version** in `package.json` (e.g. `0.9.19` → `0.9.20`). Always bump at minimum the patch version, even for fix or docs commits. Use minor for intentional new public API; major for breaking changes.
+3. **Update `CHANGELOG.md`**: move the contents of `## [Unreleased]` into a new `## [X.Y.Z] — YYYY-MM-DD` section immediately below it, leaving `## [Unreleased]` empty for the next cycle.
+4. Group remaining changes into logical commits if multiple features are staged together.
+5. For each commit:
    - Stage the relevant files with `git add`
    - Write the commit message following the format above
    - Run `git commit`
-4. Do **not** push — the developer decides when to push
-5. Report: how many commits were made, what each covers, and anything that was left unstaged and why
+6. Include `package.json` and `CHANGELOG.md` in the last (or a dedicated `chore: bump version to X.Y.Z`) commit.
+7. Do **not** push — the developer decides when to push.
+8. Report: how many commits were made, what each covers, and anything that was left unstaged and why.
