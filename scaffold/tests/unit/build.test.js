@@ -46,6 +46,17 @@ describe('build — default (BASE_PATH=/)', () => {
     expect(() => new Date(v.buildTime).toISOString()).not.toThrow();
   });
 
+  it('version.json buildHash matches the sw.js cache hash', () => {
+    const v = JSON.parse(readDist('version.json'));
+    expect(v.buildHash).toMatch(/^[a-f0-9]{8}$/);
+    expect(readDist('sw.js')).toContain(`'${version}-${v.buildHash}'`);
+  });
+
+  it('produces 404.html identical to index.html (deep-link fallback on static hosts)', () => {
+    expect(existsSync(join(DIST, '404.html'))).toBe(true);
+    expect(readDist('404.html')).toBe(readDist('index.html'));
+  });
+
   it('main.js bundle contains version string and no __APP_VERSION__ token', () => {
     const content = readDist(mainFilename());
     expect(content).not.toContain('__APP_VERSION__');

@@ -42,13 +42,7 @@ const jsContent    = jsFile.text.replace(
 writeFileSync(join(dist, mainFilename), jsContent);
 if (mapFile) writeFileSync(join(dist, `${mainFilename}.map`), mapFile.text);
 
-// 2. version.json
-writeFileSync(
-  join(dist, 'version.json'),
-  JSON.stringify({ version, buildTime: new Date().toISOString() }, null, 2)
-);
-
-// 3. SW — compute CACHE_VERSION from all significant content
+// 2. SW — compute CACHE_VERSION from all significant content
 const swSrc         = readFileSync(join(root, '_lib', 'core', 'sw.js'), 'utf8');
 const tokensContent = readFileSync(join(root, '_lib', 'core', 'styles', 'tokens.css'), 'utf8');
 const manifestSrc   = readFileSync(join(root, 'manifest.json'), 'utf8');
@@ -67,11 +61,21 @@ writeFileSync(join(dist, 'sw.js'), swSrc
   .replace('%%ASSETS%%',        JSON.stringify(assets))
   .replace('%%BASE_PATH%%',     BASE_PATH));
 
+// 3. version.json — written after the cache hash exists so it can carry buildHash
+writeFileSync(
+  join(dist, 'version.json'),
+  JSON.stringify({ version, buildTime: new Date().toISOString(), buildHash: cacheHash }, null, 2)
+);
+
 // 4. index.html — inline tokens.css, inject hashed main.js, substitute BASE_PATH tokens
-writeFileSync(join(dist, 'index.html'), indexSrc
+const indexHtml = indexSrc
   .replace('<link rel="stylesheet" href="_lib/core/styles/tokens.css" />', `<style>\n${tokensContent}\n</style>`)
   .replace('%%MAIN_JS%%', `${BASE_PATH}${mainFilename}`)
-  .replaceAll('%%BASE_PATH%%', BASE_PATH));
+  .replaceAll('%%BASE_PATH%%', BASE_PATH);
+writeFileSync(join(dist, 'index.html'), indexHtml);
+// 404.html = index.html so static hosts (GitHub Pages) serve the app for deep
+// links on uncontrolled navigations; the client router takes over from there.
+writeFileSync(join(dist, '404.html'), indexHtml);
 
 // 5. manifest.json (BASE_PATH substitution for scaffolded apps)
 writeFileSync(join(dist, 'manifest.json'), manifestSrc.replaceAll('%%BASE_PATH%%', BASE_PATH));
@@ -85,3 +89,4 @@ if (mapFile) console.log(`  ${mainFilename}.map`);
 console.log(`  sw.js (cache: ${version}-${cacheHash})`);
 console.log(`  version.json`);
 console.log(`  index.html`);
+console.log(`  404.html`);

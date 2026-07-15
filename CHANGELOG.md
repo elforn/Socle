@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Scaffold `utils/build.js` — emits `dist/404.html` as a copy of the built `index.html` so static hosts (GitHub Pages) serve the app for deep links; the client router resolves the route
+- Scaffold `utils/build.js` — `version.json` now includes `buildHash` (the SW cache hash); written after the hash is computed so apps can display a build identifier without importing it into app code
+
 ---
 
 ## [0.9.20] — 2026-06-22
