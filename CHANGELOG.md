@@ -8,9 +8,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [0.10.0] — 2026-07-16
+
 ### Added
 - Scaffold `utils/build.js` — emits `dist/404.html` as a copy of the built `index.html` so static hosts (GitHub Pages) serve the app for deep links; the client router resolves the route
 - Scaffold `utils/build.js` — `version.json` now includes `buildHash` (the SW cache hash); written after the hash is computed so apps can display a build identifier without importing it into app code
+- `core/dom/sync-children.js` — `syncChildren(container, items, tagName, assign, { getId, getElId })`: keyed child reconciliation, the library's render primitive for lists. Reuses existing children matched by id (moved, not recreated — identity, focus, and internal state survive reorders), creates missing ones, removes leftovers, appends in `items` order. `assign` runs before append so property setters fire pre-connect. Matches by `el.dataset.id` (default, managed automatically on created elements) or a custom `getElId` for elements that carry their id on an assigned property
+- `docs/components.md` — "Rendering lists — syncChildren" section
+
+### Fixed
+- `library_tests/scaffold-parity.test.js` — the `%%BASE_PATH%%` index.html assertion sliced from the `writeFileSync` call, but the 404.html change moved the substitution into a `const indexHtml` built before the write; the slice missed the `.replaceAll` and the test failed against correct code. Now anchors on the `indexHtml` assignment
 
 ---
 
