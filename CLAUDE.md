@@ -145,6 +145,10 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - `adoptedStyleSheets` for shared base styles — one stylesheet, adopted by every shadow root
 - Targeted update methods for state changes — **no full re-renders after initial mount** (avoids focus loss, scroll reset, nested component lifecycle churn)
 
+### syncChildren (`core/dom/sync-children.js`)
+
+The render primitive for dynamic lists of child components. `syncChildren(container, items, tagName, assign, { getId = i => i.id, getElId } = {})` reuses existing `tagName` children matched by id, creates missing ones, removes leftovers, and appends in `items` order — kept elements are **moved, not recreated**, so identity, focus, and internal state survive reorders. `assign(el, item)` runs for every kept/created element *before* append, so property setters fire pre-connect (created) or in the old position (kept). Matching: omit `getElId` to match by `el.dataset.id` (the helper sets it on created elements); provide `getElId` (e.g. `el => el._goal?.id`) when the assigned property carries the id. Duplicate item ids get separate elements — the first occurrence claims the match.
+
 ### Component Tiers
 
 - **Page components** — one per route, own layout, subscribe to store slices

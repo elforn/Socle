@@ -9,6 +9,7 @@ All UI in a Socle app is built from Web Components that extend `AppElement`. Thi
 - [Shadow DOM](#shadow-dom)
 - [Styles and tokens](#styles-and-tokens)
 - [The render lifecycle](#the-render-lifecycle)
+- [Rendering lists — syncChildren](#rendering-lists--syncchildren)
 - [subscribe and unsubscribe](#subscribe-and-unsubscribe)
 - [Registering a component](#registering-a-component)
 - [Styling patterns](#styling-patterns)
@@ -116,6 +117,33 @@ updateCount(n) {
 ```
 
 Full re-renders cause focus loss, scroll position resets, and nested component lifecycle churn. They are never the right answer.
+
+---
+
+## Rendering lists — syncChildren
+
+For a dynamic list of child components, the targeted-update rule means you must reconcile the existing children against new data instead of rebuilding them. `core/dom/sync-children.js` is the library primitive for this:
+
+```js
+import { syncChildren } from '../../_lib/core/dom/sync-children.js';
+
+_renderGoals(goals) {
+  syncChildren(this._list, goals, 'goal-item',
+    (el, goal) => { el.goal = goal; },
+    { getElId: el => el._goal?.id });
+}
+```
+
+`syncChildren(container, items, tagName, assign, options?)` reuses existing `tagName` children matched by id, creates missing ones, removes leftovers, and appends everything in `items` order. Kept elements are **moved, not recreated** — identity, focus, and internal state survive reorders. `assign(el, item)` runs for every kept and created element *before* it is (re)appended, so property setters fire while the element is still detached (created) or in its old position (kept).
+
+Options:
+
+- `getId` — extracts the id from an item. Default: `item => item.id`.
+- `getElId` — extracts the id from an existing element for matching. Two modes:
+  - **Omitted:** elements are matched by `el.dataset.id`, and the helper sets `dataset.id` on created elements automatically. Zero-config.
+  - **Provided** (e.g. `el => el._goal?.id`): matching reads a property of the element — `assign` is responsible for the element carrying its id (usually free, because the assigned property setter stores it).
+
+Duplicate item ids do not share an element: the first occurrence claims the matched element, subsequent ones get fresh elements.
 
 ---
 
