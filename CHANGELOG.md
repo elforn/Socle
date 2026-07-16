@@ -10,6 +10,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.11.0] — 2026-07-16
+
+### Added
+- `core/app-element.js` — auto-cleanup helpers: `listen(target, type, handler, options?)` (`addEventListener` + recorded removal, byte-for-byte equivalent to a manual pair — same options object identity, `{capture}` supported) and `watch(key, callback)` (store `subscribe` + recorded unsubscribe). Both return a removal function for mid-life use. `disconnectedCallback` replays removals after `unsubscribe()` and clears the records — reconnection starts clean. Not for per-gesture dynamic listeners (pointermove/up added on pointerdown), which keep manual management
+- `docs/components.md` — `listen`/`watch` API reference and updated subscribe/unsubscribe guidance
+
+---
+
 ## [0.10.0] — 2026-07-16
 
 ### Added
