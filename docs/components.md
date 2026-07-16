@@ -151,6 +151,17 @@ Duplicate item ids do not share an element: the first occurrence claims the matc
 
 `subscribe()` is called every time the element connects to the DOM. `unsubscribe()` is called every time it disconnects. Use these to bind and release store subscriptions.
 
+Inside `subscribe()`, prefer the auto-cleanup helpers — the base class removes everything they registered on disconnect, so no matching `unsubscribe()` bookkeeping is needed:
+
+```js
+subscribe() {
+  this.watch('goals', goals => this.updateList(goals));
+  this.listen(this.shadowRoot.querySelector('#add'), 'click', this._onAdd);
+}
+```
+
+Manual pairs remain fully supported for cleanup the base class cannot see (timers, per-gesture listeners):
+
 ```js
 subscribe() {
   this._unsub = Store.subscribe('goals', goals => this.updateList(goals));
@@ -265,6 +276,37 @@ unsubscribe() {
   this._unsub?.();
 }
 ```
+
+---
+
+#### `listen(target, type, handler, options?)`
+
+`addEventListener` with automatic removal on disconnect. The base class records the call and replays the exact `removeEventListener` (same handler and options object, including `{capture}`) in `disconnectedCallback`, after `unsubscribe()` runs. Returns an unlisten function for mid-life removal. Re-connection starts clean — re-register in `subscribe()`.
+
+**Example**
+```js
+subscribe() {
+  this.listen(this.shadowRoot.querySelector('#save'), 'click', this._onSave);
+  this.listen(window, 'resize', this._onResize);
+}
+```
+
+> **Not for per-gesture dynamic listeners** (pointermove/up added on pointerdown) — those have sub-connection lifecycles and must keep manual management.
+
+---
+
+#### `watch(key, callback)`
+
+Store subscription with automatic unsubscribe on disconnect. Delegates to the store's `subscribe(key, callback)` — the callback fires immediately with the current value. Returns an unwatch function for mid-life removal.
+
+**Example**
+```js
+subscribe() {
+  this.watch('items', items => this.updateItems(items));
+}
+```
+
+With `listen()` and `watch()`, most components no longer need an `unsubscribe()` override at all — reserve it for cleanup the base class cannot see (timers, per-gesture listeners, `Gestures.attach` detach functions).
 
 ---
 

@@ -142,6 +142,8 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - `attachShadow({ mode: 'open' })` in `connectedCallback`
 - A `render()` method that calls `this.template()` once on connect
 - `subscribe()` / `unsubscribe()` lifecycle hooks for store bindings
+- `listen(target, type, handler, options?)` — `addEventListener` with automatic removal on disconnect (exact same handler/options passed to `removeEventListener`, `{capture}` supported); returns an unlisten function. **Not for per-gesture dynamic listeners** (pointermove/up added on pointerdown) — those have sub-connection lifecycles and keep manual management.
+- `watch(key, callback)` — store `subscribe` with automatic unsubscribe on disconnect; returns an unwatch function. Both helpers' records are cleared on disconnect — reconnection starts clean, so registration belongs in `subscribe()`.
 - `adoptedStyleSheets` for shared base styles — one stylesheet, adopted by every shadow root
 - Targeted update methods for state changes — **no full re-renders after initial mount** (avoids focus loss, scroll reset, nested component lifecycle churn)
 
