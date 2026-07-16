@@ -38,7 +38,7 @@ describe('scaffold/utils/build.js', () => {
     // causing a literal %%BASE_PATH%%manifest.json 404 on non-root deployments.
     const src = read(scaffold, 'utils/build.js');
     // Find the index.html writeFileSync block and verify replaceAll is present
-    const indexBlock = src.slice(src.indexOf("join(dist, 'index.html')"), src.indexOf("join(dist, 'manifest.json')"));
+    const indexBlock = src.slice(src.indexOf('const indexHtml'), src.indexOf("join(dist, 'manifest.json')"));
     expect(indexBlock).toContain(".replaceAll('%%BASE_PATH%%', BASE_PATH)");
   });
 
