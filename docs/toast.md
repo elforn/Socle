@@ -132,6 +132,12 @@ Calling `toast()` while another toast is visible immediately removes the previou
 
 ---
 
+## Stacking above dialogs
+
+The toast container is a manual popover (`popover="manual"`), so it renders in the browser's top layer — above any open `<dialog>`, including a `showModal()` backdrop. Because top-layer elements stack in show order, the container is re-shown on every `toast()` call, keeping it above a dialog that opened after it. This also means the Undo/action button stays clickable while a modal is open. Environments without the Popover API fall back to the plain fixed-position container (`z-index: 9999`).
+
+---
+
 ## String registration
 
 The close button label (`×`) is resolved via the locale system. Register it in `app/strings.js`:
