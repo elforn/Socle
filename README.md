@@ -51,6 +51,8 @@ npx serve dist --single
 - [SW update flow](docs/sw-update-flow.md) — sw-manager, update banner, version.json, strings
 - [Building components](docs/components.md) — AppElement, Shadow DOM, store integration
 - [Gestures](docs/gestures.md) — gesture mixin, tap, long press, swipe, hold-drag, keyboard alternatives
+- [Reorder](docs/reorder.md) — drag-to-reorder controller, cross-section drags, keyboard reorder
+- [Toast](docs/toast.md) — ephemeral feedback messages, actions, top-layer popover
 - [Testing](docs/testing.md) — test environments, fake-indexeddb, component test patterns, E2E setup
 - [Claude Code](docs/claude.md) — slash commands, workflow, /setup-claude
 - [Theming](docs/theming.md) — CSS tokens, custom properties, retheming

@@ -24,10 +24,11 @@ const MODULE_OPTIONS = [
   { label: 'App header',           value: 'app-header',   description: 'Sticky header, safe area' },
   { label: 'Modal dialog',         value: 'modal-dialog', description: 'Sheet and dialog component' },
   { label: 'Toast notifications',  value: 'toast',        description: 'Ephemeral feedback messages' },
+  { label: 'Drag-to-reorder',      value: 'reorder',      description: 'Keyed list reorder controller' },
   { label: 'P2P sync',             value: 'p2p', disabled: true, hint: 'coming in V2' },
 ];
 
-const VALID_MODULES = ['gestures', 'sync', 'images', 'app-header', 'modal-dialog', 'toast', 'ui', 'p2p'];
+const VALID_MODULES = ['gestures', 'sync', 'images', 'app-header', 'modal-dialog', 'toast', 'reorder', 'ui', 'p2p'];
 
 // ── pure helpers (exported for tests) ────────────────────────────────────────
 
@@ -409,6 +410,7 @@ export function scaffoldApp(options, destDir) {
     appName, appShortName, appDescription, githubUser,
     includeSync = false, includeGestures = true, includeImages = false,
     includeAppHeader = false, includeModal = false, includeToast = false,
+    includeReorder = false,
     storeType = 'event-log',
     exportExt = '.data',
     accentColor, version, port = 3000,
@@ -417,7 +419,7 @@ export function scaffoldApp(options, destDir) {
   const resolvedOptions = {
     appName, appShortName, appDescription, githubUser, version, port,
     includeGestures, includeSync, includeImages,
-    includeAppHeader, includeModal, includeToast,
+    includeAppHeader, includeModal, includeToast, includeReorder,
     storeType, exportExt,
   };
 
@@ -449,6 +451,7 @@ export function scaffoldApp(options, destDir) {
     ...(includeAppHeader ? ['app-header']    : []),
     ...(includeModal     ? ['modal-dialog']  : []),
     ...(includeToast     ? ['toast']         : []),
+    ...(includeReorder   ? ['reorder']       : []),
   ];
   const blockMap = {
     APP_NAME:        appName,
@@ -510,6 +513,7 @@ export function scaffoldApp(options, destDir) {
   if (includeAppHeader) fs.cpSync(path.join(MODULES_DIR, 'app-header'),   path.join(destDir, '_lib', 'modules', 'app-header'),   { recursive: true });
   if (includeModal)     fs.cpSync(path.join(MODULES_DIR, 'modal-dialog'), path.join(destDir, '_lib', 'modules', 'modal-dialog'), { recursive: true });
   if (includeToast)     fs.cpSync(path.join(MODULES_DIR, 'toast'),        path.join(destDir, '_lib', 'modules', 'toast'),        { recursive: true });
+  if (includeReorder)   fs.cpSync(path.join(MODULES_DIR, 'reorder'),      path.join(destDir, '_lib', 'modules', 'reorder'),      { recursive: true });
 
   fs.writeFileSync(
     path.join(destDir, '_lib', 'lib-version.json'),
@@ -785,6 +789,7 @@ async function runScaffold(dirArg) {
     includeAppHeader: selectedModules.includes('app-header'),
     includeModal:     selectedModules.includes('modal-dialog'),
     includeToast:     selectedModules.includes('toast'),
+    includeReorder:   selectedModules.includes('reorder'),
   }, destDir);
 
   console.log('  ✔ app/ structure created');

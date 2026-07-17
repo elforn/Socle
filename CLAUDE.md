@@ -63,6 +63,7 @@ Socle/
     modal-dialog/     # Responsive modal / bottom-sheet component
     app-header/       # Sticky header with safe-area support and --update-banner-height integration
     toast/            # toast() function + <toast-manager> service component
+    reorder/          # Reorder.attach() drag-to-reorder controller (single-list + cross-section)
     images/           # compressImage() canvas-based JPEG compression
     sync/             # Export / import / merge
     p2p/              # WebRTC/WS local network sync (V2)
@@ -280,6 +281,12 @@ Normalised event object passed to all handlers:
 
 **Implemented:** tap, long press, swipe, hold-drag, `Gestures.attach`.
 
+### Reorder module (`modules/reorder/`)
+
+Drag-to-reorder controller for lists of components. `Reorder.attach(container, options)` manages the ghost clone (0.4 opacity source + fixed-position clone), the accent insert line, edge auto-scroll (100px zone, 14px max speed), drop-index maths, and keyboard reorder; returns a `detach()` for `unsubscribe()`. The drag is **initiated by the consumer** — the item's drag handle calls `setPointerCapture` on pointerdown and dispatches a bubbling/composed `dragStartEvent` (`detail: { element, startX, startY, ... }`); `attach` listens for that event rather than installing its own pointerdown, so it composes with the gesture library. Pairs with `syncChildren` — reorder mutates state, `syncChildren` re-renders without recreating elements.
+
+Two modes: single-list (`container` is the list; `onMove(from, to)`) and cross-section (pass `sections: [{ name, sectionEl, listEl }]`; `onMoveSection(fromSection, from, toSection, to)`). `from`/`to` are insertion-slot indices in the array *including* the dragged element; a no-change drop (`from === to || from === to - 1`, same section) is skipped so the callback never fires an identity update. Keyboard reorder (via optional `reorderKeyEvent`) uses `from + 2` down / `from - 1` up (clamped) and stays within the item's section. Clone shadow is `var(--shadow-drag, 0 8px 24px rgba(0,0,0,0.18))`. Not scaffolded by default — added via `npx socle add reorder`.
+
 ### Sync module (`modules/sync/`)
 
 Exports and imports app data as a binary backup file. Designed for manual backup and cross-device transfer — not real-time P2P sync (that is V2). **Requires the event-log store** — the simple store has no event log to export.
@@ -372,7 +379,7 @@ This is the contract between the library and the user project. The update comman
 
 `npx socle remove <module>` — scans `app/` for import references to the module before removing; warns and requires explicit confirmation if any are found. Removes `_lib/modules/<module>/`, updates `lib-version.json`.
 
-Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, `toast`.
+Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, `toast`, `reorder`.
 
 `npx socle manage` — interactive TUI showing all currently installed modules pre-selected; the developer toggles modules on/off and confirms; adds and removes are applied in batch using the same `addModule`/`removeModule` logic.
 
