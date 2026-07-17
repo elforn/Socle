@@ -10,6 +10,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.12.0] — 2026-07-17
+
+### Added
+- `modules/reorder/reorder.js` — `Reorder.attach(container, options)`: drag-to-reorder controller ported from the three hand-rolled copies in the reference app. Manages the ghost clone, accent insert line, edge auto-scroll (100px/14px), drop-index maths, and keyboard reorder; returns a `detach()`. Consumer-initiated (listens for a bubbling `dragStartEvent` carrying `{ element, startX, startY }` rather than installing its own pointerdown, so it composes with the gesture library). Single-list (`onMove(from, to)`) and cross-section (`sections` + `onMoveSection(fromSection, from, toSection, to)`) modes. No-change drops (`from === to || from === to - 1`, same section) are skipped. Keyboard reorder uses `from + 2` down / `from - 1` up. Registered as a CLI module (`npx socle add reorder`)
+- `docs/reorder.md` — full module doc; linked from README (Toast doc also linked)
+
+### Changed
+- `modules/toast/toast.js` — the toast container is now a manual popover (`popover="manual"` + `showPopover()`), rendering in the top layer above any open `<dialog>`. Re-shown on every `toast()` call so it stays above a dialog opened after it; fixes the Undo/action button being unclickable behind a modal backdrop on desktop. Feature-detected — falls back to the fixed-position container where the Popover API is absent
+
+---
+
 ## [0.11.0] — 2026-07-16
 
 ### Added
