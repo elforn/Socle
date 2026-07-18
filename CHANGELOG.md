@@ -10,6 +10,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.13.0] — 2026-07-18
+
+### Added
+- `modules/modal-dialog/modal-dialog.js` — swipe-down-to-dismiss on the sheet's `.handle` (mobile / ≤600px only). Pointerdown on the handle captures the pointer, records start Y, and disables the dialog transition; per-drag `pointermove`/`pointerup`/`pointercancel` listeners are added on down and removed on up/cancel (mirrors the gesture library's lifecycle). The dialog follows the finger downward via inline `transform: translateY()`; upward drags clamp to rest. Release commits when dragged past 25% of sheet height **or** flicked down faster than 0.5 px/ms — the sheet animates to `translateY(100%)` then `close()` on `transitionend` (with a 350ms `setTimeout` fallback), routing through the native `close` event to `modal-close` exactly like every other dismissal path. Below-threshold releases spring back to rest with the existing `cubic-bezier(0.32, 0.72, 0, 1)` easing. `prefers-reduced-motion` skips the follow-transform and slide-out: a past-threshold release closes immediately, a below-threshold release resets. `pointercancel` and a close by any other route (backdrop, native) tear the drag down cleanly; `show()` clears any leftover inline transform so a prior drag can never leave the sheet mis-positioned. The `_justOpened` backdrop guard and the `show()`/`close()`/`modal-close`/aria-label public contract are unchanged; the centered desktop dialog is unaffected (the handle is `display: none` above the breakpoint and the gesture is gated on `matchMedia('(max-width: 600px)')`)
+- `docs/modal-dialog.md` — module doc covering the bottom-sheet variant, drag-to-dismiss, and scroll containment; linked from README
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — the dialog now sets `overscroll-behavior-y: contain` so an overscroll inside the sheet never chains to the page's root scroller or triggers native pull-to-refresh, and the `.handle` sets `touch-action: none` so a handle drag is fully owned by the pointer handlers. Containment lives on the dialog element only — `document.body`/`documentElement` overscroll is left to the consuming app
+
+---
+
 ## [0.12.0] — 2026-07-17
 
 ### Added

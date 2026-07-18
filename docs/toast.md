@@ -197,4 +197,4 @@ Mutates the visible toast and restarts the auto-dismiss timer. Pass only the fie
 
 ---
 
-[← Sync](architecture.md) · [Docs home](../README.md#docs) · [Next: Testing →](testing.md)
+[← Sync](architecture.md) · [Docs home](../README.md#docs) · [Next: Modal dialog →](modal-dialog.md)
