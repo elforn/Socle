@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.13.1] — 2026-07-19
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — the sheet's `.handle` is now a full-width, `min-block-size: var(--touch-target)` flex grab zone that carries the pointerdown and `touch-action: none`, enlarging the swipe-to-dismiss hit target from the 36×4px pill to a reliably grabbable band above the slotted content. The visible pill is unchanged — rendered as a centered `::before` using `--color-border` / `--radius-full` — as is the `--space-4` spacing to the content. Gesture JS is unchanged (it already listens on `.handle`)
+
+---
+
 ## [0.13.0] — 2026-07-18
 
 ### Added
