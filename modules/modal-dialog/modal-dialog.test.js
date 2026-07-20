@@ -161,6 +161,42 @@ describe('modal-dialog — slots and structure', () => {
   });
 });
 
+describe('modal-dialog — footer collapse', () => {
+  function mountWithFooter() {
+    const el = document.createElement('modal-dialog');
+    const btn = document.createElement('button');
+    btn.setAttribute('slot', 'footer');
+    btn.textContent = 'Save';
+    el.appendChild(btn);
+    document.body.appendChild(el);
+    return el;
+  }
+
+  it('collapses the footer (hidden, no layout box) when no footer content is slotted', () => {
+    const el = mount();
+    const footer = el.shadowRoot.querySelector('.footer');
+    expect(footer.hidden).toBe(true);
+    // [hidden] collapses to display:none via the base stylesheet — no margin, no height.
+    expect(getComputedStyle(footer).display).toBe('none');
+  });
+
+  it('keeps the footer present when content is slotted', () => {
+    const el = mountWithFooter();
+    const footer = el.shadowRoot.querySelector('.footer');
+    expect(footer.hidden).toBe(false);
+    expect(getComputedStyle(footer).display).not.toBe('none');
+  });
+
+  it('re-collapses when footer content is removed (slotchange)', () => {
+    const el = mountWithFooter();
+    const footer = el.shadowRoot.querySelector('.footer');
+    expect(footer.hidden).toBe(false);
+    el.querySelector('button[slot="footer"]').remove();
+    el.shadowRoot.querySelector('slot[name="footer"]').dispatchEvent(new Event('slotchange'));
+    expect(footer.hidden).toBe(true);
+  });
+});
+
 describe('modal-dialog — accessibility attributes', () => {
   it('dialog has aria-modal="true"', () => {
     const el = mount();

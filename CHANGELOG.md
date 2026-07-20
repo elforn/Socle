@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.13.2] — 2026-07-20
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — the `.footer` wrapper now collapses to no layout box (no margin, no height) when nothing is slotted into the `footer` slot, so action-sheet / menu dialogs no longer get an unwanted gap at the bottom. A `slotchange` listener toggles `hidden` on the wrapper based on `assignedNodes({ flatten: true }).length`, checked on connect and on every change; `[hidden]` collapses via the base stylesheet's `[hidden] { display: none !important; }` rule. Dialogs that do slot footer content are unaffected
+
+---
+
 ## [0.13.1] — 2026-07-19
 
 ### Changed
