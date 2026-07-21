@@ -147,14 +147,14 @@ describe('modal-dialog — slots and structure', () => {
     expect(el.shadowRoot.querySelector('.handle')).toBeTruthy();
   });
 
-  it('handle grab zone spans full width and meets the touch-target min-size', () => {
+  it('handle grab zone spans full width with touch-action none', () => {
     // Media-query rules are not applied by happy-dom getComputedStyle, so assert the
-    // authored rule: the grab zone is full-width and at least --touch-target tall.
+    // authored rule: the grab zone is full-width, compact, and overlaps surrounding layout.
     const el = mount();
     const css = el.shadowRoot.querySelector('style').textContent;
     const handleRule = css.slice(css.indexOf('.handle {'), css.indexOf('.handle::before'));
     expect(handleRule).toMatch(/inline-size:\s*100%/);
-    expect(handleRule).toMatch(/min-block-size:\s*var\(--touch-target\)/);
+    expect(handleRule).toMatch(/min-block-size:\s*var\(--space-8\)/);
     expect(handleRule).toMatch(/touch-action:\s*none/);
     // Visible pill unchanged: 36×4 rendered on ::before.
     expect(css).toMatch(/\.handle::before[^}]*inline-size:\s*36px/);
