@@ -154,7 +154,7 @@ describe('modal-dialog — slots and structure', () => {
     const css = el.shadowRoot.querySelector('style').textContent;
     const handleRule = css.slice(css.indexOf('.handle {'), css.indexOf('.handle::before'));
     expect(handleRule).toMatch(/inline-size:\s*100%/);
-    expect(handleRule).toMatch(/min-block-size:\s*var\(--touch-target\)/);
+    expect(handleRule).toMatch(/min-block-size:\s*var\(--space-6\)/);
     expect(handleRule).toMatch(/touch-action:\s*none/);
     // Visible pill unchanged: 36×4 rendered on ::before.
     expect(css).toMatch(/\.handle::before[^}]*inline-size:\s*36px/);

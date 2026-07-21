@@ -72,8 +72,8 @@ class ModalDialog extends AppElement {
             align-items: center;
             justify-content: center;
             inline-size: 100%;
-            min-block-size: var(--touch-target);
-            margin-block-end: var(--space-4);
+            min-block-size: var(--space-6);
+            margin-block-end: var(--space-2);
             touch-action: none;
           }
 
