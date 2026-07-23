@@ -10,7 +10,31 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.13.2] — 2026-07-20
+## [0.14.1] — 2026-07-24
+
+### Fixed
+- `core/store/store-simple.js` — `migrate` returning a Promise now throws immediately (`store-simple migrate must be synchronous`) instead of silently writing a Promise object to IDB
+- `core/store/store.js` — a thrown `migrate` error now resets `_db`, `_state`, `_reducer`, and `_deviceId` before rethrowing, so the store is fully unusable after a failed boot (consistent with `store-simple`)
+- `core/sw-manager/sw-repair.js` — replaced `.then` chain with `try { await … } catch {} location.replace()` for consistency with the rest of the async function
+- `core/sw-manager/sw-manager.js` — added comment on `notifyUpdate` documenting the false-positive case where a rapid successive deploy within the loop window also triggers repair
+
+---
+
+## [0.14.0] — 2026-07-23
+
+### Added
+- `core/store/store-simple.js` `boot()` — accepts optional `migrate?: (state) => state`. Called synchronously after `initialState`/stored-state merge, before `_db` is set (preserving the set-last invariant). If the returned object differs by reference, the migrated state is written to IDB immediately after `_db` is set. Thrown errors propagate out of `boot()` so a broken migration halts startup visibly. Use for one-time field renames, schema shape changes, or data cleanup at boot.
+- `core/store/store.js` `boot()` — accepts optional `migrate?: (state) => state | Promise<state>`. Called after event replay and after `_db` is set, so the function may call `dispatch()` to write corrective events that will replay on subsequent boots. If the returned object differs by reference, the in-memory state is updated immediately.
+- `core/sw-manager/sw-repair.js` — new module exporting four functions for SW loop detection and installation repair:
+  - `recordControllerChange()` — writes `socle:swReloadAt` timestamp to sessionStorage; called automatically by `sw-manager` on every SW-triggered reload.
+  - `isUpdateLoop()` — returns `true` if an update notification arrives within 15 s of a SW reload (signature of a poisoned-cache update loop).
+  - `clearLoopMarker()` — removes the sessionStorage key.
+  - `repairInstallation({ basePath, onBackup?, checkServer? })` — verifies server reachability (skip when called from loop detection, since connectivity was just confirmed), runs an optional async `onBackup` callback (non-fatal), then clears all SW caches, unregisters all SWs, and calls `location.replace(basePath)`. Export from your app's sync/settings page and supply `onBackup` to trigger a data export before clearing.
+- `core/sw-manager/sw-manager.js` — the `controllerchange` handler now calls `recordControllerChange()` before reloading (apps no longer need a `sessionStorage.setItem` in `main.js`). Each `updateAvailable` notification now checks `isUpdateLoop()`; when a loop is detected it calls `clearLoopMarker()` and `repairInstallation({ basePath, checkServer: false })` automatically.
+
+---
+
+## [0.13.3] — 2026-07-20
 
 ### Changed
 - `modules/modal-dialog/modal-dialog.js` — the `.footer` wrapper now collapses to no layout box (no margin, no height) when nothing is slotted into the `footer` slot, so action-sheet / menu dialogs no longer get an unwanted gap at the bottom. A `slotchange` listener toggles `hidden` on the wrapper based on `assignedNodes({ flatten: true }).length`, checked on connect and on every change; `[hidden]` collapses via the base stylesheet's `[hidden] { display: none !important; }` rule. Dialogs that do slot footer content are unaffected
