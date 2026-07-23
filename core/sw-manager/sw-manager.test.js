@@ -288,7 +288,21 @@ describe('loop detection and auto-repair', () => {
     await Promise.resolve();
 
     expect(clearLoopMarker).toHaveBeenCalledOnce();
-    expect(repairInstallation).toHaveBeenCalledWith({ basePath: '/app/', checkServer: false });
+    expect(repairInstallation).toHaveBeenCalledWith({ basePath: '/app/', checkServer: false, onBackup: undefined });
+  });
+
+  it('passes onBackup property through to repairInstallation on loop', async () => {
+    isUpdateLoop.mockReturnValue(true);
+    const waitingSW = makeFakeSW('installed');
+    const registration = makeFakeRegistration({ waiting: waitingSW });
+    stubServiceWorker({ register: vi.fn().mockResolvedValue(registration) });
+
+    const onBackup = vi.fn();
+    const el = mountElement({ 'base-path': '/' });
+    el.onBackup = onBackup;
+    await Promise.resolve();
+
+    expect(repairInstallation).toHaveBeenCalledWith({ basePath: '/', checkServer: false, onBackup });
   });
 
   it('does not trigger repairInstallation when not a loop', async () => {

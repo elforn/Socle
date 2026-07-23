@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.2] — 2026-07-24
+
+### Fixed
+- `core/sw-manager/sw-manager.js` — `onBackup` property on the `<sw-manager>` element is now passed through to `repairInstallation` during auto-repair, so apps can set `swm.onBackup = async () => { … }` to export data before a loop-triggered cache clear
+
+---
+
 ## [0.14.1] — 2026-07-24
 
 ### Fixed

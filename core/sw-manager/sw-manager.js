@@ -19,7 +19,7 @@ class SwManager extends AppElement {
       // accepted false-positive when a rapid successive deploy coincides with a SW reload.
       if (isUpdateLoop()) {
         clearLoopMarker();
-        repairInstallation({ basePath, checkServer: false });
+        repairInstallation({ basePath, checkServer: false, onBackup: this.onBackup });
       }
     };
 
