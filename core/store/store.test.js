@@ -33,6 +33,25 @@ describe('boot', () => {
     expect(getState().items).toHaveLength(1);
     expect(getState().items[0].title).toBe('hello');
   });
+
+  it('calls migrate with replayed state and applies returned state', async () => {
+    const name = freshName();
+    await boot({ dbName: name, reducer });
+    await dispatch('count:incremented', {});
+    reset();
+    const migrate = vi.fn(state => ({ ...state, migrated: true }));
+    await boot({ dbName: name, reducer, migrate });
+    expect(migrate).toHaveBeenCalledOnce();
+    expect(migrate).toHaveBeenCalledWith(expect.objectContaining({ count: 1 }));
+    expect(getState().migrated).toBe(true);
+  });
+
+  it('thrown migrate error fails boot loudly and leaves store unusable', async () => {
+    await expect(
+      boot({ dbName: freshName(), reducer, migrate: () => { throw new Error('migration failed'); } })
+    ).rejects.toThrow('migration failed');
+    await expect(dispatch('count:incremented', {})).rejects.toThrow('Store.dispatch called before Store.boot');
+  });
 });
 
 describe('dispatch', () => {

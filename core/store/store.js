@@ -7,12 +7,21 @@ let _reducer = null;
 let _deviceId = null;
 const _subs = new Map(); // key → Set<callback>
 
-export async function boot({ dbName, version = CURRENT_VERSION, reducer, deviceId = null }) {
+export async function boot({ dbName, version = CURRENT_VERSION, reducer, deviceId = null, migrate }) {
   _reducer = reducer;
   _deviceId = deviceId;
   _db = await openDB(dbName, version, runMigrations);
   const events = await getAll(_db, 'events');
   _state = _sortEvents(events).reduce(reducer, {});
+  if (migrate) {
+    try {
+      const migratedState = await migrate(_state);
+      if (migratedState !== _state) _state = migratedState;
+    } catch (err) {
+      _db = null; _state = {}; _reducer = null; _deviceId = null;
+      throw err;
+    }
+  }
 }
 
 function _uuid() {
