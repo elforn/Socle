@@ -49,7 +49,7 @@ my-app/
     unit/              ← Vitest unit tests
     e2e/               ← Playwright E2E tests
   utils/
-    build.js           ← build script, edit if you need custom behaviour
+    build.js           ← build pipeline — Socle-managed; use extra-assets.js to extend it
   .github/
     workflows/
       deploy.yml       ← deploys to GitHub Pages on push to main
@@ -74,6 +74,21 @@ The build script:
 - Processes `index.html` with the hashed asset filenames
 
 Output goes to `dist/`. Serve `dist/` locally during development or let GitHub Actions do it on deploy.
+
+### Custom build assets
+
+To copy extra directories into `dist/` and include them in the SW precache — fonts, for example — create `utils/extra-assets.js`:
+
+```js
+// utils/extra-assets.js
+export const extraAssetDirs = ['app/fonts'];
+```
+
+Every file in each listed directory is copied to the matching path under `dist/` and added to the SW install precache, so the files are served offline automatically. Paths are relative to the project root.
+
+`utils/extra-assets.js` is not part of the scaffold template and is never touched by `socle update`, so customisations here survive library upgrades.
+
+> **Note:** changing files inside an `extraAssetDirs` directory does not update the SW `CACHE_VERSION`. Bump your app version in `package.json` to bust the cache after replacing a static font or other asset file.
 
 ## Testing on a real device
 

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execFileSync } from 'child_process';
-import { readFileSync, existsSync, readdirSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -127,6 +127,62 @@ describe('build — default (BASE_PATH=/)', () => {
     const first = mainFilename();
     runBuild();
     expect(mainFilename()).toBe(first);
+  });
+});
+
+describe('build — extra-assets hook', () => {
+  const fontsDir  = join(APP_ROOT, 'app', 'fonts');
+  const extraFile = join(APP_ROOT, 'utils', 'extra-assets.js');
+
+  it('absent extra-assets.js is silently ignored — build succeeds, no extra assets', () => {
+    runBuild();
+    const sw     = readDist('sw.js');
+    const parsed = sw.match(/const ASSETS = (\[.*?\]);/s);
+    const assets = JSON.parse(parsed[1]);
+    expect(assets.some(a => a.includes('/app/fonts/'))).toBe(false);
+  });
+
+  describe('declared dir exists', () => {
+    beforeAll(() => {
+      mkdirSync(fontsDir, { recursive: true });
+      writeFileSync(join(fontsDir, 'test.woff2'), 'fake-font-data');
+      writeFileSync(extraFile, "export const extraAssetDirs = ['app/fonts'];\n");
+      runBuild();
+    });
+    afterAll(() => {
+      rmSync(fontsDir, { recursive: true, force: true });
+      rmSync(extraFile, { force: true });
+    });
+
+    it('copies the extra dir into dist/', () => {
+      expect(existsSync(join(DIST, 'app', 'fonts', 'test.woff2'))).toBe(true);
+    });
+
+    it('adds extra files to the SW ASSETS precache list', () => {
+      const sw     = readDist('sw.js');
+      const parsed = sw.match(/const ASSETS = (\[.*?\]);/s);
+      const assets = JSON.parse(parsed[1]);
+      expect(assets).toContain('/app/fonts/test.woff2');
+    });
+  });
+
+  describe('declared dir does not exist', () => {
+    beforeAll(() => {
+      writeFileSync(extraFile, "export const extraAssetDirs = ['app/nonexistent'];\n");
+      runBuild();
+    });
+    afterAll(() => { rmSync(extraFile, { force: true }); });
+
+    it('build succeeds when a declared dir is absent', () => {
+      expect(existsSync(join(DIST, 'sw.js'))).toBe(true);
+    });
+
+    it('absent dir contributes nothing to SW ASSETS', () => {
+      const sw     = readDist('sw.js');
+      const parsed = sw.match(/const ASSETS = (\[.*?\]);/s);
+      const assets = JSON.parse(parsed[1]);
+      expect(assets.some(a => a.includes('/app/nonexistent/'))).toBe(false);
+    });
   });
 });
 

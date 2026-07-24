@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.4] — 2026-07-25
+
+### Added
+- `scaffold/utils/build.js` + `reference-app/utils/build.js` — optional `utils/extra-assets.js` hook. After the icon asset block, the build attempts a dynamic import of `utils/extra-assets.js`; a missing file is a silent no-op. If the file exports `extraAssetDirs` (array of project-root-relative paths), each existing directory's files are appended to the SW precache asset list and the directory is `cpSync`'d into `dist/` at the matching path. `utils/extra-assets.js` is deliberately outside the scaffold template so `socle update` never overwrites it, making it the correct home for app-specific build extensions (e.g. font directories). `build.test.js` extended with three extra-assets test cases (absent file, declared dir present, declared dir missing). Docs updated in `getting-started.md`.
+
+---
+
 ## [0.14.3] — 2026-07-25
 
 ### Changed

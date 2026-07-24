@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import * as esbuild from 'esbuild';
 
 const root      = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -54,6 +54,17 @@ const iconDir = join(root, 'app', 'icons');
 const assets  = [BASE_PATH, `${BASE_PATH}${mainFilename}`, `${BASE_PATH}manifest.json`];
 if (existsSync(iconDir)) {
   for (const f of readdirSync(iconDir)) assets.push(`${BASE_PATH}app/icons/${f}`);
+}
+
+// utils/extra-assets.js is deliberately outside the scaffold template — socle update
+// replaces _lib/ and utils/build.js but never touches other files in utils/, so
+// app-specific build extensions go there and survive library updates unchanged.
+const { extraAssetDirs = [] } = await import(pathToFileURL(join(root, 'utils', 'extra-assets.js')).href).catch(() => ({}));
+for (const rel of extraAssetDirs) {
+  const srcDir = join(root, rel);
+  if (!existsSync(srcDir)) continue;
+  for (const f of readdirSync(srcDir)) assets.push(`${BASE_PATH}${rel}/${f}`);
+  cpSync(srcDir, join(dist, rel), { recursive: true });
 }
 
 writeFileSync(join(dist, 'sw.js'), swSrc
