@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.5] — 2026-07-25
+
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — regression from 0.14.3: `display: flex` on the bare `dialog` selector overrode the UA stylesheet's `display: none` default, causing all dialogs to render on page load and remain visible after `.close()`. Moved `display: flex` and `flex-direction: column` into `dialog[open]` so visibility is again gated on the native `open` attribute. All other scroll-containment properties (`.body` flex sizing, `flex-shrink: 0` on handle/footer, `max-block-size` caps) are unaffected. Test updated and a regression guard added asserting the bare `dialog` rule never sets `display`.
+
+---
+
 ## [0.14.4] — 2026-07-25
 
 ### Added
