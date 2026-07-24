@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.3] — 2026-07-25
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — restructured `<dialog>` into a fixed-header / scrollable-body / fixed-footer flex layout. The default slot is now wrapped in a `<div class="body">` (`flex: 1 1 auto; min-block-size: 0; overflow-y: auto; overscroll-behavior-y: contain`) between `.handle` and `.footer`. Both `.handle` and `.footer` gain `flex-shrink: 0`. The mobile sheet variant gets `max-block-size: 85vh`; the desktop centered variant gets `max-block-size: min(85vh, 600px)` so overflow behaviour is explicit and consistent in both modes. Dialogs with content taller than the viewport now scroll only the body region; the handle and footer buttons remain fixed and reachable. No behaviour change to open/close, backdrop dismiss, swipe-down-to-dismiss, or footer-collapse logic.
+
+---
+
 ## [0.14.2] — 2026-07-24
 
 ### Fixed

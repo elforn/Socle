@@ -88,9 +88,15 @@ Under `prefers-reduced-motion: reduce`, the follow-transform and slide-out are s
 
 ## Scroll containment
 
-The dialog sets `overscroll-behavior-y: contain`, so an overscroll inside the sheet never chains to the page's root scroller or triggers the browser's native pull-to-refresh. The handle sets `touch-action: none`, so a drag starting on the handle is fully owned by the pointer handlers with no native scroll interpretation.
+The dialog uses a fixed-header / scrollable-body / fixed-footer layout so that tall content scrolls only the middle region while the handle and footer buttons remain fixed and reachable.
 
-Containment lives on the dialog element only. The module never touches `document.body` or `documentElement` overscroll — root overscroll behaviour is left to the consuming app.
+Internally the default slot is wrapped in a `.body` element (`flex: 1 1 auto; overflow-y: auto`). You do not interact with `.body` directly — slot content as usual and it is placed inside `.body` automatically.
+
+`overscroll-behavior-y: contain` is set on `.body`, so an overscroll inside the dialog never chains to the page's root scroller or triggers the browser's native pull-to-refresh. The handle sets `touch-action: none`, so a drag starting on the handle is fully owned by the pointer handlers with no native scroll interpretation.
+
+Height caps: the sheet variant (`≤600px`) limits `max-block-size` to `85vh`; the desktop centered variant caps at `min(85vh, 600px)`. Both ensure scrolling activates predictably rather than relying on the browser's UA default.
+
+The module never touches `document.body` or `documentElement` overscroll — root overscroll behaviour is left to the consuming app.
 
 ---
 
