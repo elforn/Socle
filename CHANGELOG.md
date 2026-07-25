@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.6] — 2026-07-25
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — reduced `padding-block-start` on the mobile sheet variant from `var(--space-6)` to `var(--space-4)` so the drag handle sits closer to the top edge. Desktop centered dialog is unchanged.
+
+---
+
 ## [0.14.5] — 2026-07-25
 
 ### Fixed
