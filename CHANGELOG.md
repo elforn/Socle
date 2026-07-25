@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.8] — 2026-07-25
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — increased mobile sheet `padding-block-end` from `var(--space-1)` to `var(--space-2)` (plus safe-area).
+
+---
+
 ## [0.14.7] — 2026-07-25
 
 ### Changed

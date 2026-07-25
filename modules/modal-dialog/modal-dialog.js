@@ -70,7 +70,7 @@ class ModalDialog extends AppElement {
             border-start-start-radius: var(--radius-lg);
             border-start-end-radius: var(--radius-lg);
             padding-block-start: var(--space-2);
-          padding-block-end: calc(var(--space-1) + var(--safe-area-bottom, 0px));
+          padding-block-end: calc(var(--space-2) + var(--safe-area-bottom, 0px));
             max-block-size: 85vh;
           }
 
