@@ -95,26 +95,6 @@ describe('modal-dialog — modal-close event', () => {
   });
 });
 
-describe('modal-dialog — modal-open event', () => {
-  it('dispatches modal-open when show() opens the dialog', () => {
-    const el = mount();
-    const handler = vi.fn();
-    el.addEventListener('modal-open', handler);
-    el.show();
-    expect(handler).toHaveBeenCalledOnce();
-  });
-
-  it('modal-open event bubbles and is composed', () => {
-    const el = mount();
-    let captured = null;
-    document.addEventListener('modal-open', e => { captured = e; }, { once: true });
-    el.show();
-    expect(captured).not.toBeNull();
-    expect(captured.bubbles).toBe(true);
-    expect(captured.composed).toBe(true);
-  });
-});
-
 describe('modal-dialog — backdrop dismiss', () => {
   it('clicking the dialog element (backdrop area) calls close()', () => {
     const el = mount();

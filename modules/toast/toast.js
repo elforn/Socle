@@ -7,7 +7,6 @@ let container = null;
 let stylesInjected = false;
 let activeToast = null;
 let containerOpen = false;
-let onModalOpen = null;
 
 function ensureStyles() {
   if (stylesInjected) return;
@@ -100,17 +99,7 @@ function getContainer() {
     container.setAttribute('popover', 'manual');
     document.body.appendChild(container);
   }
-  hookModalOpen();
   return container;
-}
-
-// A <dialog>.showModal() enters the top layer after an already-shown toast and paints
-// over it. modal-dialog dispatches 'modal-open' on open; re-raise so the toast stays on
-// top even when no new toast() call happens. Installed once, lazily.
-function hookModalOpen() {
-  if (onModalOpen) return;
-  onModalOpen = () => { if (containerOpen && container) raiseContainer(container); };
-  document.addEventListener('modal-open', onModalOpen);
 }
 
 // Show (or re-show) the container as a manual popover so it enters the top
@@ -249,5 +238,4 @@ export function _resetToast() {
   stylesInjected = false;
   activeToast = null;
   containerOpen = false;
-  if (onModalOpen) { document.removeEventListener('modal-open', onModalOpen); onModalOpen = null; }
 }

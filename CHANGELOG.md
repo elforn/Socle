@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.10] — 2026-07-25
+
+### Reverted
+- Reverted the 0.14.9 toast-over-modal attempt (`modal-open` event + toast re-raise handler). A `<dialog>.showModal()` dialog lives in the top layer and always paints above every popover and all z-index content — verified in Firefox and Chromium — so re-raising the toast's popover can never beat an open modal dialog. The handler was dead code and the `modal-open` event had no working consumer. `modules/toast/toast.js` and `modules/modal-dialog/modal-dialog.js` are restored to their 0.14.8 state.
+
+---
+
 ## [0.14.9] — 2026-07-25
 
 ### Fixed

@@ -275,9 +275,6 @@ class ModalDialog extends AppElement {
     this._clearDragStyles();
     this._justOpened = true;
     this._dialog?.showModal();
-    // Signal that a new top-layer element opened after any already-shown toast, so the
-    // toast module can re-raise its popover above this dialog (mirrors modal-close).
-    this.dispatchEvent(new CustomEvent('modal-open', { bubbles: true, composed: true }));
     // setTimeout(0) rather than rAF: on Android Chrome the synthetic click from the
     // touch that opened the dialog fires after a rAF but before a macrotask, so rAF
     // would clear the guard before the click arrives and the backdrop handler would

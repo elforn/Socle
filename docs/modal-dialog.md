@@ -122,10 +122,6 @@ Closes the dialog, which fires the native `close` event and, in turn, `modal-clo
 
 Bubbling and composed. Dispatched on every dismissal. This is where consumers persist content — the component itself stores nothing.
 
-### `modal-open` event
-
-Bubbling and composed. Dispatched on `show()`, immediately after `showModal()`. Signals that a new top-layer element has opened so other top-layer UI (e.g. an active toast) can re-raise itself above the dialog. Consumers rarely need to listen for it directly.
-
 ### `aria-label` attribute
 
 Forwarded to the inner `<dialog>` when present.
