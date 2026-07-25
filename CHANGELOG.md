@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.7] — 2026-07-25
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — tightened mobile sheet spacing: `padding-block-start` → `var(--space-2)`, `padding-block-end` → `calc(var(--space-1) + var(--safe-area-bottom, 0px))`, `.footer` `margin-block-start` → `var(--space-1)`.
+
+---
+
 ## [0.14.6] — 2026-07-25
 
 ### Changed
