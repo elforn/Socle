@@ -86,6 +86,34 @@ describe('toast', () => {
     expect(document.querySelector('.socle-toast')).toBeTruthy();
   });
 
+  it('re-raises the container above a dialog opened after the toast (modal-open)', () => {
+    const showPopover = vi.fn();
+    const hidePopover = vi.fn();
+    HTMLElement.prototype.showPopover = showPopover;
+    HTMLElement.prototype.hidePopover = hidePopover;
+    try {
+      toast('Saved');
+      expect(showPopover).toHaveBeenCalledTimes(1);
+      document.dispatchEvent(new CustomEvent('modal-open'));
+      expect(hidePopover).toHaveBeenCalledTimes(1); // dropped from top layer…
+      expect(showPopover).toHaveBeenCalledTimes(2); // …then re-shown above the dialog
+    } finally {
+      delete HTMLElement.prototype.showPopover;
+      delete HTMLElement.prototype.hidePopover;
+    }
+  });
+
+  it('ignores modal-open before any toast has opened the container', () => {
+    const showPopover = vi.fn();
+    HTMLElement.prototype.showPopover = showPopover;
+    try {
+      document.dispatchEvent(new CustomEvent('modal-open'));
+      expect(showPopover).not.toHaveBeenCalled();
+    } finally {
+      delete HTMLElement.prototype.showPopover;
+    }
+  });
+
   // --- auto-dismiss ---
 
   it('removes the toast after 4000ms by default', () => {

@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.9] — 2026-07-25
+
+### Fixed
+- `modules/toast/toast.js` + `modules/modal-dialog/modal-dialog.js` — a toast shown before a modal opened was buried behind the dialog. Both use the top layer (toast via a manual `popover`, modal via `<dialog>.showModal()`), which stacks in call order, and the toast only re-raised itself inside `toast()`. `modal-dialog` now dispatches a `modal-open` event on `show()` (mirroring `modal-close`), and the toast module lazily hooks a one-time document listener that re-raises the container above the dialog whenever a toast is currently shown.
+
+---
+
 ## [0.14.8] — 2026-07-25
 
 ### Changed
