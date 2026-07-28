@@ -10,6 +10,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.11] — 2026-07-29
+
+### Added
+- `modules/sync/sync.js` — `exportSlice(payload)`: wraps an arbitrary JS object into the standard SCLE binary envelope (magic bytes + gzip, same format as `exportData`) as a single `simple:state` event, with no blob section. Designed for simple-store app handoffs where there is no IDB event log to pull from. `previewImport` and `applyMerge` consume the output unchanged.
+- `core/sw.js` — Share Target POST handler: intercepts `POST ${BASE_PATH}share-target`, reads `title`, `text`, `url`, and zero-or-more `files` from the multipart form data, stores them into a dedicated `share-inbox` Cache Storage bucket (index key `pending`, file content under `file-N` keys), and returns a 303 redirect to `BASE_PATH`. App manifest must declare `share_target` with `method: 'POST'`, `enctype: 'multipart/form-data'`, and `params.files[0].name: 'files'`.
+- `core/share-inbox.js` — `readShareInbox()`: consume-once reader for the share-inbox cache. Returns `{ title, text, url, files: [{ name, type, blob }] }` or `null` if nothing is pending. Deletes the cache entry on read so a share is not re-applied on subsequent app launches.
+
+---
+
 ## [0.14.10] — 2026-07-25
 
 ### Reverted
