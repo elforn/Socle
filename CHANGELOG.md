@@ -10,6 +10,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.14.12] — 2026-07-29
+
+### Added
+- `modules/filter-state/filter-state.js` — `FilterState(storageKey, shape)`: localStorage-backed filter persistence helper. Shape declares fields by kind (`string`, `set`, `enum`, `boolean`); `load()` deserializes and validates (invalid enum values reset to default, bad types fall back gracefully), `save(state)` serializes and removes the key when all fields are default, `clear()` removes the key, `isActive(state)` returns true when any non-boolean field is non-default. Boolean fields (e.g. `panelExpanded`) are persisted but do not count toward `isActive()`.
+- `modules/toast/undo.js` — `withUndo({ getSnapshot, apply, restore, message, undoLabel? })`: captures a snapshot, runs `apply()`, then shows a toast with an undo action that calls `restore(snapshot)`. If `apply()` throws the error propagates and no toast is shown. Returns the toast handle. Eliminates the snapshot→mutate→`toast(msg, 'info', {action})` triple repeated across pages.
+
+---
+
 ## [0.14.11] — 2026-07-29
 
 ### Added

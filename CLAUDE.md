@@ -379,7 +379,7 @@ This is the contract between the library and the user project. The update comman
 
 `npx socle remove <module>` — scans `app/` for import references to the module before removing; warns and requires explicit confirmation if any are found. Removes `_lib/modules/<module>/`, updates `lib-version.json`.
 
-Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, `toast`, `reorder`.
+Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, `toast`, `reorder`, `filter-state`.
 
 `npx socle manage` — interactive TUI showing all currently installed modules pre-selected; the developer toggles modules on/off and confirms; adds and removes are applied in batch using the same `addModule`/`removeModule` logic.
 
