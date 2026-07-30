@@ -10,6 +10,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.0] — 2026-07-31
+
+### Added
+- `modules/sync/zip.js` — `zipEntries(entries)` / `unzipEntries(zipBytes)`: minimal hand-rolled ZIP writer and reader using native `CompressionStream('deflate-raw')` / `DecompressionStream('deflate-raw')`. Supports multiple entries with per-entry compression control (`compress: false` for already-compressed content such as images). Includes a standard CRC-32 lookup-table implementation. No external dependencies.
+
+### Changed
+- `modules/sync/sync.js` — all exports now produce standard ZIP files instead of the custom SCLE+gzip binary format. `exportData` writes a multi-entry ZIP containing `data.json` (events + blob metadata, deflated) and one `images/<id>` entry per blob (stored uncompressed). `exportSlice` writes a single-entry ZIP containing `data.json`. Import paths (`importData`, `previewImport`, `readImportFile`) now detect ZIP by `PK\x03\x04` magic bytes. The legacy JSON import path is unchanged. `downloadExport` now sets `type: 'application/zip'` on the download blob, enabling Android share sheet compatibility.
+
+### Breaking
+The SCLE binary format is replaced by ZIP in both `exportData` and `exportSlice`. Files exported by earlier versions cannot be imported. The legacy JSON format (pre-SCLE) remains importable.
+
+---
+
 ## [0.14.12] — 2026-07-29
 
 ### Added
