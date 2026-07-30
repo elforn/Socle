@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.2] — 2026-07-31
+
+### Fixed
+- `modules/sync/sync.js` — `downloadExport` now declares its Blob as `application/octet-stream` instead of `application/zip`. Android's download manager maps `application/zip` to its canonical extension and appends it, turning `export.telos` into `export.telos.zip`. `application/octet-stream` has no canonical extension so the `download` attribute's filename is preserved as-is. Note: the `File` object constructed for `navigator.share({files})` in app code still legitimately needs `application/zip` (required by the share API's file-type safelist) — that is a separate constraint and unaffected by this change.
+
+---
+
 ## [0.15.1] — 2026-07-31
 
 ### Fixed

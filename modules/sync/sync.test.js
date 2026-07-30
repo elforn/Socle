@@ -178,6 +178,31 @@ describe('downloadExport', () => {
     expect(clicks).toEqual(['backup.youryear']);
     vi.restoreAllMocks();
   });
+
+  it('Blob type is application/octet-stream, not application/zip', () => {
+    // application/zip causes Android's download manager to append .zip to the filename
+    // (e.g. "export.telos" → "export.telos.zip") because it maps the MIME to its
+    // canonical extension. octet-stream has no canonical extension, so the download
+    // attribute's filename is preserved as-is. The share path in app code uses
+    // application/zip independently — that constraint does not apply to <a download>.
+    const blobs = [];
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation(tag => {
+      const el = realCreate(tag);
+      if (tag === 'a') el.click = () => {};
+      return el;
+    });
+    const realBlob = globalThis.Blob;
+    globalThis.Blob = class extends realBlob {
+      constructor(parts, opts) { super(parts, opts); blobs.push(this); }
+    };
+
+    downloadExport(new Uint8Array([1, 2, 3]), 'export.telos');
+    expect(blobs[0].type).toBe('application/octet-stream');
+
+    globalThis.Blob = realBlob;
+    vi.restoreAllMocks();
+  });
 });
 
 // ── readImportFile ────────────────────────────────────────────────────────────

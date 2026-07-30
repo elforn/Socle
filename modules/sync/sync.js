@@ -197,7 +197,13 @@ export async function applyMerge(parsed, mergeStrategy) {
 // ── Download / file read ──────────────────────────────────────────────────────
 
 export function downloadExport(uint8, filename) {
-  const blob = new Blob([uint8], { type: 'application/zip' });
+  // application/octet-stream, not application/zip — Android's download manager maps
+  // application/zip to its canonical extension (.zip) and appends it, turning
+  // "export.telos" into "export.telos.zip". octet-stream has no canonical extension
+  // so the download attribute's filename is preserved as-is.
+  // (The share path in app code uses application/zip independently, as required by
+  // navigator.share's file-type safelist — that constraint does not apply here.)
+  const blob = new Blob([uint8], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
