@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.1] — 2026-07-31
+
+### Fixed
+- `modules/sync/sync.js` — `exportSlice` now passes `compress: false` for its `data.json` ZIP entry (stored, method 0). Previously the entry was deflated, which caused `CompressionStream` / `Response.arrayBuffer()` to cross the task queue and expire the transient user activation that `navigator.share()` requires — resulting in a `NotAllowedError` even when `navigator.canShare()` had returned `true`. `exportData` (full backup) is unaffected; its `data.json` entry remains deflated.
+
+---
+
 ## [0.15.0] — 2026-07-31
 
 ### Added

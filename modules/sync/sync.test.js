@@ -406,4 +406,13 @@ describe('exportSlice', () => {
     await applyMerge(parsed, (current, imported) => ({ ...current, ...imported }));
     expect(getState().score).toBe(42);
   });
+
+  it('data.json entry is stored (compression method 0), not deflated (method 8)', async () => {
+    // Must stay stored — deflate() crosses the task queue via CompressionStream/Response,
+    // which expires the transient user activation that navigator.share() requires.
+    const uint8 = await exportSlice({ x: 1 });
+    // Compression method is at byte offset 8 of the first local file header (LE uint16).
+    const method = new DataView(uint8.buffer).getUint16(8, true);
+    expect(method).toBe(0); // 0 = stored, 8 = deflated
+  });
 });
