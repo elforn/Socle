@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.3] — 2026-07-31
+
+### Removed
+- `modules/sync/sync.js` — `exportSlice(payload)` removed. The function was added in 0.14.11 for a Telos slice-handoff feature that has since moved to a plain-text export living entirely in Telos's own app code. No Socle code calls it; it was never listed in the sync module's public API in CLAUDE.md; and the project removes dead code rather than carrying it speculatively. The `compress: false` flag on its `data.json` ZIP entry was there specifically to preserve `navigator.share()`'s transient user activation — a constraint that was always Telos-specific and that no longer applies now that the caller is gone. `exportData`, `importData`, `downloadExport`, `readImportFile`, `previewImport`, `applyReplace`, and `applyMerge` are unaffected.
+
+---
+
 ## [0.15.2] — 2026-07-31
 
 ### Fixed
