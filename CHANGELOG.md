@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.4] — 2026-08-01
+
+### Fixed
+- `core/strings.test.js` — added `afterEach(() => reset())` to mirror the existing `beforeEach`. Without it, tests that call `setLocale('fr')` left the locale set for the rest of the worker's lifetime. Consuming apps running with `isolate: false` (shared workers for speed) could see locale-leaking flaky failures in unrelated test files that assert English strings without ever touching locale.
+
+---
+
 ## [0.15.3] — 2026-07-31
 
 ### Removed
