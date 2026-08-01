@@ -197,13 +197,15 @@ The render primitive for dynamic lists of child components. `syncChildren(contai
 
 An alternative to the event-log store for apps that don't need history, undo, or export. Selected at scaffold time via CLI (`Simple state` option). Not the default — use the event-log store unless you have a clear reason not to.
 
-State is a plain object persisted as a single JSON snapshot in IDB. There is no reducer, no migrations system, and no event log. `setState` writes to IDB on every call (fire-and-forget).
+State is a plain object persisted as a single JSON snapshot in IDB. There is no reducer and no event log. `setState` writes to IDB on every call (fire-and-forget).
 
 **API:**
-- `boot({ dbName, initialState? })` — opens IDB, reads the persisted snapshot, merges over `initialState`. `await` before anything else in `main.js`.
+- `boot({ dbName, initialState?, migrate? })` — opens IDB, reads the persisted snapshot, merges over `initialState`. Optional `migrate(state) => state` runs once synchronously on boot — return a new object to persist the migrated shape to IDB, or return the same reference to skip the write. Must be synchronous (returning a Promise throws). `await` before anything else in `main.js`.
 - `setState(key, value)` — updates in-memory state, notifies subscribers, and persists the full snapshot to IDB. **Survives reload** — unlike `setState` in the event-log store.
+- `setRuntimeState(key, value)` — updates in-memory state and notifies subscribers. Does NOT write to IDB. Use for ephemeral runtime state (e.g. undo snapshots, pending import state) that must not survive a page reload.
 - `subscribe(key, cb)` / `unsubscribe(key, cb)` / `getState()` / `attachBlob` / `getBlob` / `deleteBlob` / `reset()` — identical to the event-log store.
-- No `dispatch`, `getAllEvents`, `getAllBlobs`, `importEvents` — these are event-log-only concepts. The sync module cannot be used with the simple store.
+- `getAllEvents()` / `importEvents(events)` — compatibility shims so the sync module works with the simple store. `getAllEvents` returns a single synthetic `{ type: 'simple:state', payload: currentState }` event; `importEvents` writes the snapshot to IDB without updating in-memory state (app must reload). Do not call these directly — use `exportData`/`importData` from the sync module.
+- No `dispatch` — the simple store has no event log.
 
 ### IDB / Data Model
 
@@ -289,19 +291,51 @@ Two modes: single-list (`container` is the list; `onMove(from, to)`) and cross-s
 
 ### Sync module (`modules/sync/`)
 
-Exports and imports app data as a binary backup file. Designed for manual backup and cross-device transfer — not real-time P2P sync (that is V2). **Requires the event-log store** — the simple store has no event log to export.
+Exports and imports app data as a binary backup file. Designed for manual backup and cross-device transfer — not real-time P2P sync (that is V2). Works with both the event-log store and the simple store.
 
-Export produces a gzip-compressed binary file (`.youryear` / app-specific extension). The format is detected by a 4-byte `SCLE` magic header so legacy `.json` exports remain importable. Export can be scoped to a specific year by passing a filter function. Blobs are only included when their id appears in a filtered event — orphaned blobs are excluded automatically.
+Export produces a ZIP archive (standard `PK\x03\x04` magic bytes) containing `data.json` and binary image entries. Legacy `.json` exports (plain JSON, no ZIP header) remain importable via `importData` and `previewImport`. Export can be scoped by passing an `eventFilter` function; blobs are only included when their id appears in a filtered event — orphaned blobs are excluded automatically.
 
-Import reads the file, detects format from magic bytes, writes events via `importEvents()` (idempotent — duplicate IDs skipped), and writes blobs via `attachBlob()`. Returns `{ eventsAdded, imagesAdded }` counts — callers show these to the user.
+Import reads the file, detects format from magic bytes, writes events via `importEvents()` (idempotent — duplicate IDs skipped), and writes blobs via `attachBlob()`. For the simple store the export contains a single synthetic `simple:state` event; `applyReplace`/`applyMerge` handle both store types transparently.
 
 **Public API:**
-- `exportData(options?)` — returns `Uint8Array` (SCLE-prefixed gzip binary). Accepts optional `options.eventFilter(event)` to scope the export.
-- `importData(input)` — accepts `Uint8Array` (binary) or a plain object (legacy JSON). Returns `{ eventsAdded, imagesAdded }`.
-- `downloadExport(uint8, filename)` — triggers browser download. First arg is the `Uint8Array` from `exportData`; second is the full filename including extension.
+- `exportData(options?)` — returns `Uint8Array` (ZIP archive). Accepts optional `options.eventFilter(event)` to scope the export.
+- `importData(input)` — high-level import: accepts `Uint8Array` (binary) or a plain object (legacy JSON). Returns `{ eventsAdded, imagesAdded }`. For most apps, this is the only import function needed.
+- `downloadExport(uint8, filename)` — triggers browser download. First arg is the `Uint8Array` from `exportData`; second is the full filename including extension. Uses `application/octet-stream` (not `application/zip`) so Android's download manager does not append `.zip` to the filename.
 - `readImportFile(file)` — reads a `File` object, detects format by magic bytes, returns `Uint8Array` (binary) or parsed object (legacy JSON).
+- `previewImport(raw)` — low-level: parses without applying. Returns `{ type: 'simple'|'log', payload|events, blobs }`. Use when the app needs to show a preview or confirmation before committing the import.
+- `applyReplace(parsed)` — applies a parsed import by overwriting. For simple store: calls `setState` for each key. For event-log: calls `importEvents` (dedup-by-id). App must reload after an event-log replace.
+- `applyMerge(parsed, mergeStrategy)` — applies a parsed import via merge. For simple store: calls `mergeStrategy(currentState, payload)` then `setState` for each returned key. For event-log: calls `importEvents` (dedup-by-id is already merge semantics).
 
-All four functions are async. `exportData` and `importData` require `Store.boot()` to have been called first.
+All functions are async. `exportData`, `importData`, `previewImport`, `applyReplace`, and `applyMerge` require `Store.boot()` to have been called first.
+
+**`navigator.share({files})` and the ZIP format:** Chromium's file-share allowlist covers only images, audio, video, PDF, and plain text/csv/html/css — **archives are excluded outright, under any MIME label, permanently.** `canShare()` does not run this check (always optimistically returns `true`); `share()` rejects with `NotAllowedError: Permission denied`. Never pass an `exportData` result to `navigator.share({files})`. If an app needs share-sheet delivery of app data, produce a plain `.txt` file instead (the export envelope is valid JSON — stringify it and share as `text/plain`). Direct file downloads via `downloadExport` are not affected.
+
+### Share inbox (`core/share-inbox.js`)
+
+`readShareInbox()` — reads and clears the share inbox populated by the SW's Share Target handler. Returns `{ title, text, url, files: [{ name, type, blob }] }`, or `null` if nothing is pending. Consume-once: the pending entry is deleted on read.
+
+Call once on app boot (before routing), then dispatch a custom event or call a handler to process the received data. Only fires when the app is installed as a PWA with a `share_target` in `manifest.json`.
+
+**Required `manifest.json` `share_target` shape:**
+```json
+{
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title", "text": "text", "url": "url",
+      "files": [{ "name": "files", "accept": ["text/plain", ".txt"] }]
+    }
+  }
+}
+```
+
+The `files` param name must stay `"files"` — the SW reads it via `fd.getAll('files')`.
+
+**Platform constraints:**
+- `share_target` is the real phone-side file-reception mechanism. Only `text/plain`/`.txt` is guaranteed to arrive on Android via `navigator.share({files})` — archives are excluded (see Sync module above).
+- `file_handlers` (tap-to-open by file extension in `manifest.json`) **does not work on Android at all** — it is desktop Chrome/Chromium only per Chrome's own documentation. Do not rely on it for phone users.
 
 ### P2P (`modules/p2p/`) — V2
 
