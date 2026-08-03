@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.7] — 2026-08-03
+
+### Tests
+- `core/sw.test.js` (new) — behavioral unit tests for the `sw.js` fetch event handler using `vm.runInNewContext` to simulate a SW environment. Covers: navigate-mode POST to the share-target path writes to the share-inbox cache and returns a 303 redirect (the real-device code path that was previously untested); navigate-mode POST with a file attachment caches the file entry; cors-mode POST (the in-page `fetch()` path covered by Telos e2e) as a regression guard; GET navigate does not touch the share-inbox; non-root `BASE_PATH` resolves the share-target path correctly. A `TestResponse` shim in the test file normalises `Response.redirect`'s requirement for absolute URLs in Node (browsers accept relative paths) without touching `sw.js`.
+
+---
+
 ## [0.15.6] — 2026-08-03
 
 ### Fixed
