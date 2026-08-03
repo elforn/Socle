@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.6] — 2026-08-03
+
+### Fixed
+- `core/sw.js` — Share Target POST handler now correctly intercepts real OS share-sheet invocations. The handler was unreachable in practice because the `mode === 'navigate'` branch ran first; a share-sheet launch is a top-level navigation so `event.request.mode` is `'navigate'`, causing the generic navigate branch to win and serve the cached homepage, silently discarding the share payload. The fix moves the Share Target POST check before the navigate check. A comment on that block documents the ordering constraint and the reason it must stay first. **Why the test suite didn't catch this:** the existing coverage (Socle L7 session + Telos e2e) POSTs via an in-page `fetch()` call, which is always `mode: 'cors'`/`'same-origin'`, never `'navigate'` — so those tests exercised the POST-handling logic directly without ever competing with the navigate branch. A new static ordering test in `library_tests/sw-assets.test.js` encodes the constraint and will catch a future reordering; navigate-mode behaviour itself cannot be covered by a `fetch()`-based unit test and must be verified on a real device after each release.
+
+---
+
 ## [0.15.4] — 2026-08-01
 
 ### Fixed

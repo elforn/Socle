@@ -20,3 +20,22 @@ describe('SW install integrity', () => {
     expect(src).toContain('caches.delete(CACHE_VERSION)');
   });
 });
+
+describe('SW fetch handler ordering', () => {
+  // A real OS share-sheet invocation arrives as a top-level navigation
+  // (event.request.mode === 'navigate'), not as a plain fetch() call.
+  // If the navigate branch runs first it serves the cached homepage and silently
+  // discards the share payload — the POST handler is never reached.
+  // This test encodes that ordering constraint so a future edit can't quietly
+  // reintroduce the bug. It cannot be verified by a fetch()-based unit test
+  // (fetch() is always mode 'cors'/'same-origin', never 'navigate') — real-device
+  // verification after each release remains the definitive check.
+  it('Share Target POST check appears before mode === navigate check in sw.js', () => {
+    const src = readFileSync(join(root, 'core', 'sw.js'), 'utf8');
+    const postIdx = src.indexOf("event.request.method === 'POST'");
+    const navIdx  = src.indexOf("event.request.mode === 'navigate'");
+    expect(postIdx).toBeGreaterThan(-1);
+    expect(navIdx).toBeGreaterThan(-1);
+    expect(postIdx).toBeLessThan(navIdx);
+  });
+});
