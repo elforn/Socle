@@ -10,6 +10,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.8] — 2026-08-11
+
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — `aria-label` is now removed from the `<modal-dialog>` host element after being forwarded to the inner `<dialog>`. The host is a role-less custom element; per the ARIA-in-HTML spec, `aria-label` is prohibited on elements with no ARIA role, and axe-core's `aria-prohibited-attr` rule (Lighthouse "Elements use prohibited ARIA attributes" audit) flags every instance. The label was always on the wrong element — the inner `<dialog>` (which carries an implicit `role="dialog"`) is the correct bearer. **Behavior change:** external selectors querying `modal-dialog[aria-label]` after mount will no longer match. App code should never rely on a `_lib/` element retaining a forwarded attribute post-connect.
+
+### Changed
+- `core/styles/tokens.css` — `--color-text-muted` increased contrast in both themes: light `#AEAEB2` → `#9C9CA0` (~2.7:1 on white, up from 2.32:1); dark `#636366` → `#6A6A6E`. Still clearly muted relative to `--color-text-secondary`.
+
+---
+
 ## [0.15.7] — 2026-08-03
 
 ### Tests
