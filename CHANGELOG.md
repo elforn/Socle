@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.15.9] — 2026-08-18
+
+### Fixed
+- `core/strings.js` / `core/strings.test.js` — `strings.test.js`'s `reset()` calls (added in 0.15.4 to fix locale leaking between its own test cases) permanently wiped a consuming app's real `defineStrings()` registrations when a test suite ran with vitest `isolate: false`. `app/strings.js`'s registration is a one-time ES module side effect; if `strings.test.js` happened to run afterward in the same worker, its `afterEach(reset())` cleared the shared `_locales` registry and nothing ever repopulated it, so every `t()` call for the rest of the worker fell back to the raw key. Surfaced by Telos as an intermittent `import-text-dialog.test.js` failure. Fix: `strings.js` gains test-only `_snapshot()`/`_restore()` helpers; `strings.test.js` snapshots `_locales` in `beforeAll` and restores it in `afterAll`, so its per-test `reset()` cycle no longer leaks past the file. `reset()`'s own behavior for real callers is unchanged. New `core/strings.fixture.js` (ships alongside `strings.test.js`, same precedent as `core/test-setup.js`) simulates a consuming app's registration for the regression test.
+
+---
+
 ## [0.15.8] — 2026-08-11
 
 ### Fixed
