@@ -20,7 +20,7 @@ function walkJs(dir, results = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) walkJs(full, results);
-    else if (entry.name.endsWith('.js') && !entry.name.includes('.test.') && entry.name !== 'test-setup.js')
+    else if (entry.name.endsWith('.js') && !entry.name.includes('.test.') && entry.name !== 'test-setup.js' && entry.name !== 'test-helpers.js')
       results.push(full);
   }
   return results;
