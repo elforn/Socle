@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [0.15.10] — 2026-08-25
+
 ### Fixed
 - `core/components/update-banner/update-banner.test.js` — its `beforeEach` called `strings.js`'s `reset()` (to isolate its own `defineStrings()` fixtures per test) but never restored the registry afterward. Under vitest `isolate: false`, once this file's last test ran, `strings.js`'s shared `_locales` registry was left containing only this file's 3 fixture keys — permanently, for the rest of that worker's life — silently breaking `t()` for every real string in every test file that happened to run afterward in the same worker. This is the same bug class fixed in `core/strings.js`/`core/strings.test.js` in 0.15.9, just in a second, independent file that also called `reset()` without the matching snapshot/restore guard. Root-caused via a Telos test run where `tag-input.test.js`'s aria-label assertion failed intermittently — traced to `update-banner.test.js` running earlier in the same worker.
 
