@@ -8,6 +8,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — the bare `dialog {}` rule now sets `overflow: hidden`. Without it, the UA default lets `<dialog>` itself become a second, independent scroll container once slotted content pushes the flex layout past `max-block-size` — `.body` scrolls correctly, but the dialog element's own `scrollHeight` can also exceed its `clientHeight`, letting the fixed `.handle`/`.footer` regions drift with it instead of staying pinned. All scrolling is now forced through `.body` exclusively, matching the fixed-header/scrollable-body/fixed-footer layout the 0.9.x scroll-containment work already established.
+
 ---
 
 ## [0.15.9] — 2026-08-18
