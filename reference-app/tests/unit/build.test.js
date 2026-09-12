@@ -186,6 +186,39 @@ describe('build — extra-assets hook', () => {
   });
 });
 
+describe('build — sw-extensions hook', () => {
+  const extFile = join(APP_ROOT, 'app', 'sw-extensions.js');
+
+  it('absent sw-extensions.js is silently ignored — build succeeds, sw.js unaffected', () => {
+    runBuild();
+    const sw = readDist('sw.js');
+    expect(sw).not.toContain('SW_EXTENSIONS_MARKER');
+  });
+
+  describe('file present', () => {
+    const marker = "self.SW_EXTENSIONS_MARKER = 'loaded';";
+
+    beforeAll(() => {
+      writeFileSync(extFile, `${marker}\n`);
+      runBuild();
+    });
+    afterAll(() => { rmSync(extFile, { force: true }); });
+
+    it('appends the file contents to dist/sw.js as plain script (no import/export)', () => {
+      const sw = readDist('sw.js');
+      expect(sw).toContain(marker);
+    });
+
+    it('changing the extension content alone busts CACHE_VERSION', () => {
+      const before = JSON.parse(readDist('version.json')).buildHash;
+      writeFileSync(extFile, `${marker}-changed\n`);
+      runBuild();
+      const after = JSON.parse(readDist('version.json')).buildHash;
+      expect(after).not.toBe(before);
+    });
+  });
+});
+
 describe('build — custom BASE_PATH', () => {
   beforeAll(() => runBuild({ BASE_PATH: '/my-app/' }));
 

@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.16.1] — 2026-09-12
+
+### Added
+- `utils/build.js` — new `app/sw-extensions.js` build hook, mirroring the existing `utils/extra-assets.js` pattern. Lets an app append extra code (a `periodicsync` handler, a custom push listener) to the built `dist/sw.js` as a plain classic script, since the service worker is registered without `{ type: 'module' }`. The file is optional (no-op when absent), never touched by `socle update`, and folded into the SW `CACHE_VERSION` hash so a change to it alone busts the cache. Motivated by a downstream app (Telos) whose hand-patched `utils/build.js` silently lost this logic on every `socle update`.
+
+---
+
 ## [0.16.0] — 2026-09-12
 
 ### Added

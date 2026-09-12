@@ -90,6 +90,21 @@ Every file in each listed directory is copied to the matching path under `dist/`
 
 > **Note:** changing files inside an `extraAssetDirs` directory does not update the SW `CACHE_VERSION`. Bump your app version in `package.json` to bust the cache after replacing a static font or other asset file.
 
+### Custom service worker code
+
+`dist/sw.js` is registered without `{ type: 'module' }`, so it can't `import` app code directly. To run extra logic inside the service worker — a `periodicsync` handler, a custom push listener — create `app/sw-extensions.js` as a plain classic script (no `import`/`export`):
+
+```js
+// app/sw-extensions.js
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'check-updates') event.waitUntil(/* ... */);
+});
+```
+
+Its contents are appended verbatim to the end of the built `dist/sw.js`, after the library's own template substitutions. A change to this file alone still bumps the SW `CACHE_VERSION`.
+
+`app/sw-extensions.js` is not part of the scaffold template and is never touched by `socle update`, so customisations here survive library upgrades.
+
 ## Testing on a real device
 
 Service workers only register on HTTPS or `localhost`. If you test at `http://192.168.x.x:3000` from a phone, the SW silently fails to register and offline mode never works. Use a locally-trusted HTTPS cert instead.
