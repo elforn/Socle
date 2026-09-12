@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.16.0] — 2026-09-12
+
+### Added
+- `core/multi-tap.js` — new `createTapCounter({ windowMs, max, onResolve })` utility that disambiguates a burst of repeated taps/clicks/keypresses into a single resolved count. Pure and DOM-free, so it composes with the gesture mixin's `onTap` (or any other input source) without being folded into it. Extracted from a downstream app (Telos) where it replaced inline tap-counting logic in a `Gestures`-mixin component with zero behavior change.
+
+---
+
 ## [0.15.10] — 2026-08-25
 
 ### Fixed
