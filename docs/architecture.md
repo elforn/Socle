@@ -8,6 +8,7 @@
 - [Router](#router)
 - [Store and IDB](#store-and-idb) — [event-log store](#event-log-store) · [simple store](#simple-store)
 - [Strings and locale](#strings-and-locale)
+- [Multi-tap](#multi-tap)
 - [Sync module](#sync-module-modulessync)
 - [Service Worker](#service-worker)
 - [Reference app](#reference-app)
@@ -514,6 +515,32 @@ Returns the active locale from `localStorage`, defaulting to `'en'`.
 #### `reset()`
 
 Clears all registered strings and resets the active locale to `'en'`. **Test isolation only.**
+
+## Multi-tap
+
+`core/multi-tap.js` exports `createTapCounter({ windowMs, max, onResolve })`, a pure, DOM-free utility that disambiguates a burst of repeated inputs — taps, clicks, or keypresses — into a single resolved count. A caller registers each input; `onResolve(count)` fires exactly once per burst, either immediately once `max` is reached or after `windowMs` of silence.
+
+```js
+import { createTapCounter } from '../_lib/core/multi-tap.js';
+
+class MyComponent extends Gestures(AppElement) {
+  subscribe() {
+    this._tapCounter = createTapCounter({
+      windowMs: 250,
+      max: 3,
+      onResolve: (count) => {
+        if (count === 1) { /* single tap action */ }
+        if (count === 3) { /* triple tap action */ }
+        // count === 2 is a deliberate no-op
+      },
+    });
+  }
+
+  onTap() { this._tapCounter.register(); }
+}
+```
+
+It has no dependency on `Gestures` or the DOM — it composes with any input source a caller wires it to. `cancel()` discards an in-progress burst without resolving it, for a caller that discovers mid-sequence that the input wasn't a tap burst after all (e.g. it turned into a swipe).
 
 ## Sync module (`modules/sync/`)
 
