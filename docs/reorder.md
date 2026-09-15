@@ -141,4 +141,4 @@ The drag clone uses `var(--shadow-drag, 0 8px 24px rgba(0,0,0,0.18))` — define
 
 ---
 
-[← Gestures](gestures.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: Testing →](testing.md)
+[← Gestures](gestures.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: App header →](app-header.md)

@@ -412,7 +412,7 @@ export function scaffoldApp(options, destDir) {
     appName, appShortName, appDescription, githubUser,
     includeSync = false, includeGestures = true, includeImages = false,
     includeAppHeader = false, includeModal = false, includeToast = false,
-    includeReorder = false,
+    includeReorder = false, includeFilterState = false,
     storeType = 'event-log',
     exportExt = '.data',
     accentColor, version, port = 3000,
@@ -421,7 +421,7 @@ export function scaffoldApp(options, destDir) {
   const resolvedOptions = {
     appName, appShortName, appDescription, githubUser, version, port,
     includeGestures, includeSync, includeImages,
-    includeAppHeader, includeModal, includeToast, includeReorder,
+    includeAppHeader, includeModal, includeToast, includeReorder, includeFilterState,
     storeType, exportExt,
   };
 
@@ -454,6 +454,7 @@ export function scaffoldApp(options, destDir) {
     ...(includeModal     ? ['modal-dialog']  : []),
     ...(includeToast     ? ['toast']         : []),
     ...(includeReorder   ? ['reorder']       : []),
+    ...(includeFilterState ? ['filter-state'] : []),
   ];
   const blockMap = {
     APP_NAME:        appName,
@@ -516,6 +517,7 @@ export function scaffoldApp(options, destDir) {
   if (includeModal)     fs.cpSync(path.join(MODULES_DIR, 'modal-dialog'), path.join(destDir, '_lib', 'modules', 'modal-dialog'), { recursive: true });
   if (includeToast)     fs.cpSync(path.join(MODULES_DIR, 'toast'),        path.join(destDir, '_lib', 'modules', 'toast'),        { recursive: true });
   if (includeReorder)   fs.cpSync(path.join(MODULES_DIR, 'reorder'),      path.join(destDir, '_lib', 'modules', 'reorder'),      { recursive: true });
+  if (includeFilterState) fs.cpSync(path.join(MODULES_DIR, 'filter-state'), path.join(destDir, '_lib', 'modules', 'filter-state'), { recursive: true });
 
   fs.writeFileSync(
     path.join(destDir, '_lib', 'lib-version.json'),
@@ -792,6 +794,7 @@ async function runScaffold(dirArg) {
     includeModal:     selectedModules.includes('modal-dialog'),
     includeToast:     selectedModules.includes('toast'),
     includeReorder:   selectedModules.includes('reorder'),
+    includeFilterState: selectedModules.includes('filter-state'),
   }, destDir);
 
   console.log('  ✔ app/ structure created');

@@ -636,4 +636,4 @@ The reference app proves every library feature works end-to-end before it is con
 
 ---
 
-[← Getting started](getting-started.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: SW update flow →](sw-update-flow.md)
+[← Getting started](getting-started.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: Images →](images.md)

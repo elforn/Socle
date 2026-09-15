@@ -180,6 +180,24 @@ describe('scaffoldApp', () => {
     expect(lv.modules).toContain('sync');
   });
 
+  it('does not copy filter-state module when includeFilterState is false', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    expect(existsSync(join(dest, '_lib', 'modules', 'filter-state'))).toBe(false);
+  });
+
+  it('copies filter-state module when includeFilterState is true', () => {
+    // Regression: selecting Filter state at scaffold time used to silently
+    // no-op — scaffoldApp had no includeFilterState wiring at all, so it was
+    // only ever installable after the fact via `npx socle add filter-state`.
+    const dest = makeTmpDir();
+    scaffoldApp({ ...BASE_OPTIONS, includeFilterState: true }, dest);
+    expect(existsSync(join(dest, '_lib', 'modules', 'filter-state', 'filter-state.js'))).toBe(true);
+
+    const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
+    expect(lv.modules).toContain('filter-state');
+  });
+
   describe('store type selection', () => {
     it('event-log (default): main.js imports store.js and reducer', () => {
       const dest = makeTmpDir();

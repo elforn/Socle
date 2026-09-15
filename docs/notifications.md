@@ -232,4 +232,4 @@ Methods:
 
 ---
 
-[← Modal dialog](modal-dialog.md) · [Docs home](../README.md#docs) · [Next: Testing →](testing.md)
+[← Filter state](filter-state.md) · [Docs home](../README.md#docs) · [Next: Testing →](testing.md)

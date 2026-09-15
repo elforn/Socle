@@ -48,12 +48,15 @@ npx serve dist --single
 
 - [Getting started](docs/getting-started.md) — scaffold, first component, deploy
 - [Architecture](docs/architecture.md) — event sourcing, store, router, Service Worker
+- [Images](docs/images.md) — compressImage(), storing blobs, export inclusion
 - [SW update flow](docs/sw-update-flow.md) — sw-manager, update banner, version.json, strings
 - [Building components](docs/components.md) — AppElement, Shadow DOM, store integration
 - [Gestures](docs/gestures.md) — gesture mixin, tap, long press, swipe, hold-drag, keyboard alternatives
 - [Reorder](docs/reorder.md) — drag-to-reorder controller, cross-section drags, keyboard reorder
+- [App header](docs/app-header.md) — sticky header, update-banner integration, safe area
 - [Toast](docs/toast.md) — ephemeral feedback messages, actions, top-layer popover
 - [Modal dialog](docs/modal-dialog.md) — centered dialog / bottom sheet, swipe-to-dismiss, scroll containment
+- [Filter state](docs/filter-state.md) — localStorage-backed filter persistence, isActive() indicator
 - [Notifications](docs/notifications.md) — opt-in digest notifications, dedup, periodic background sync, cold-launch routing
 - [Testing](docs/testing.md) — test environments, fake-indexeddb, component test patterns, E2E setup
 - [Claude Code](docs/claude.md) — slash commands, workflow, /setup-claude

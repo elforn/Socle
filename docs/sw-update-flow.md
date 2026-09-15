@@ -231,4 +231,4 @@ The automated E2E test (`tests/e2e/update-flow.spec.js`) covers the banner's UI 
 
 ---
 
-[← Architecture](architecture.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: Building components →](components.md)
+[← Images](images.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: Building components →](components.md)

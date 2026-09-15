@@ -62,10 +62,11 @@ Socle/
     gestures/         # Touch and gesture library
     modal-dialog/     # Responsive modal / bottom-sheet component
     app-header/       # Sticky header with safe-area support and --update-banner-height integration
-    toast/            # toast() function + <toast-manager> service component
+    toast/            # toast() function — ephemeral feedback messages, actions, swipe-to-dismiss
     reorder/          # Reorder.attach() drag-to-reorder controller (single-list + cross-section)
     images/           # compressImage() canvas-based JPEG compression
     sync/             # Export / import / merge
+    filter-state/     # FilterState() localStorage-backed filter/search bar persistence
     notifications/    # Opt-in digest notifications: <digest-notifier>, dedup, periodic-sync, cold-launch
     p2p/              # WebRTC/WS local network sync (V2)
   scaffold/           # Template for scaffolded apps — mirrors exact app directory structure
