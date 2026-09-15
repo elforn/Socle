@@ -12,6 +12,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - New `notifications` module (`npx socle add notifications`) — opt-in digest notifications for any app. Ships `<digest-notifier>` (a service component that checks on boot and app resume, firing at most one notification a day via an app-supplied `buildDigest(state)` function), `NotificationPrefs` (device-local opt-in preference), `NotificationDedup` (dedicated IDB dedup store, kept separate from the main app store to avoid a background-write race), `PeriodicSync`/`isPeriodicSyncSupported` (Chromium-only background sync registration), and `cold-launch.js` (routes a tapped notification back into the app, whether an existing tab or a fresh one). See `docs/notifications.md`. Extracted from a downstream app (Telos)'s hand-rolled implementation.
 - YourYear (reference app) now demonstrates the module with a "goals in progress" digest, wired through `app/main.js`, a Settings toggle in `year-header.js`, and `app/sw-extensions.js` for cold-launch tap handling.
 
+### Fixed
+- `modules/toast/toast.js` — swipe-to-dismiss no longer requires the pointer to stay over the toast for the entire gesture. It was missing `setPointerCapture`, so a fast swipe that carried the finger past the toast's own bounds never delivered `pointerup` back to it and the dismiss silently never fired. The gesture now also follows the finger live (translate + fade) and springs back below the threshold or on `pointercancel`, instead of being a silent all-or-nothing check at release.
+
 ---
 
 ## [0.16.1] — 2026-09-12

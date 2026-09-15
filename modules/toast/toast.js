@@ -2,6 +2,11 @@ import { t } from '../../core/strings.js';
 
 const SWIPE_THRESHOLD = 60;
 const DISMISS_DURATION = 200; // fallback when transitionend doesn't fire
+const DRAG_TRANSITION = 'transform var(--duration-fast, 120ms) ease, opacity var(--duration-fast, 120ms) ease';
+
+function reducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 let container = null;
 let stylesInjected = false;
@@ -42,6 +47,7 @@ function ensureStyles() {
       box-shadow: var(--shadow-sheet);
       pointer-events: auto;
       white-space: nowrap;
+      touch-action: manipulation;
       animation: socle-toast-in var(--duration-normal, 220ms) var(--ease-out, ease);
     }
     .socle-toast-out {
@@ -155,20 +161,30 @@ export function toast(message, type = 'info', { duration, action } = {}) {
     if (e.key === 'Escape') dismiss();
   };
 
-  const dismiss = ({ instant = false } = {}) => {
+  const dismiss = ({ instant = false, swipeDx } = {}) => {
     if (dismissed) return;
     dismissed = true;
     clearTimeout(timerId);
     document.removeEventListener('keydown', onKeyDown);
     if (activeToast === handle) activeToast = null;
-    if (instant) {
+
+    if (instant || (swipeDx !== undefined && reducedMotion())) {
       el.remove();
+      return;
+    }
+
+    const removeEl = () => { if (el.isConnected) el.remove(); };
+    if (swipeDx !== undefined) {
+      // Continue the swipe outward from wherever the drag left off, instead
+      // of the default upward fade, so release reads as one continuous motion.
+      el.style.transition = DRAG_TRANSITION;
+      el.style.transform = `translateX(${swipeDx > 0 ? '120%' : '-120%'})`;
+      el.style.opacity = '0';
     } else {
       el.classList.add('socle-toast-out');
-      const removeEl = () => { if (el.isConnected) el.remove(); };
-      el.addEventListener('transitionend', removeEl, { once: true });
-      setTimeout(removeEl, DISMISS_DURATION);
     }
+    el.addEventListener('transitionend', removeEl, { once: true });
+    setTimeout(removeEl, DISMISS_DURATION);
   };
 
   const startTimer = () => {
@@ -203,10 +219,60 @@ export function toast(message, type = 'info', { duration, action } = {}) {
   el.addEventListener('focusout', resumeTimer);
   document.addEventListener('keydown', onKeyDown);
 
-  let swipeStartX = 0;
-  el.addEventListener('pointerdown', e => { swipeStartX = e.clientX; });
-  el.addEventListener('pointerup', e => {
-    if (Math.abs(e.clientX - swipeStartX) > SWIPE_THRESHOLD) dismiss();
+  // Swipe-to-dismiss — pointer capture is essential here, not optional: without
+  // it, a fast swipe that carries the pointer outside the toast's own bounds
+  // never delivers pointerup back to `el`, so the gesture silently does
+  // nothing. Follows the finger live (no transition while dragging) and
+  // either continues the motion out (past SWIPE_THRESHOLD) or springs back.
+  let dragStartX = null;
+
+  const onDragMove = e => {
+    const dx = e.clientX - dragStartX;
+    el.style.transform = `translateX(${dx}px)`;
+    el.style.opacity = String(Math.max(0.3, 1 - Math.abs(dx) / (SWIPE_THRESHOLD * 2)));
+  };
+
+  const removeDragListeners = () => {
+    el.removeEventListener('pointermove', onDragMove);
+    el.removeEventListener('pointerup', onDragEnd);
+    el.removeEventListener('pointercancel', onDragCancel);
+  };
+
+  const springBack = () => {
+    if (reducedMotion()) {
+      el.style.transition = '';
+      el.style.transform = '';
+      el.style.opacity = '';
+      return;
+    }
+    el.style.transition = DRAG_TRANSITION;
+    el.style.transform = '';
+    el.style.opacity = '';
+    el.addEventListener('transitionend', () => { el.style.transition = ''; }, { once: true });
+  };
+
+  function onDragEnd(e) {
+    removeDragListeners();
+    const dx = e.clientX - dragStartX;
+    dragStartX = null;
+    if (Math.abs(dx) > SWIPE_THRESHOLD) dismiss({ swipeDx: dx });
+    else springBack();
+  }
+
+  function onDragCancel() {
+    removeDragListeners();
+    dragStartX = null;
+    springBack();
+  }
+
+  el.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    el.setPointerCapture(e.pointerId);
+    dragStartX = e.clientX;
+    el.style.transition = 'none';
+    el.addEventListener('pointermove', onDragMove);
+    el.addEventListener('pointerup', onDragEnd);
+    el.addEventListener('pointercancel', onDragCancel);
   });
 
   c.appendChild(el);

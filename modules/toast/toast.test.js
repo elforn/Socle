@@ -3,6 +3,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { defineStrings } from '../../core/strings.js';
 import { toast, _resetToast } from './toast.js';
 
+// happy-dom does not implement pointer capture — no-op it so the swipe-to-
+// dismiss handlers (which call setPointerCapture on pointerdown) can run.
+HTMLElement.prototype.setPointerCapture = () => {};
+HTMLElement.prototype.releasePointerCapture = () => {};
+
 defineStrings({ 'toast.close': '×' });
 
 describe('toast', () => {
@@ -285,6 +290,77 @@ describe('toast', () => {
     vi.advanceTimersByTime(200);
     expect(document.querySelector('.socle-toast')).toBeNull();
     vi.useRealTimers();
+  });
+
+  it('a fast swipe that leaves the toast bounds before release still dismisses it', () => {
+    // Regression: without setPointerCapture, this pointerup would be delivered
+    // to whatever's under the pointer, not `el` — and never register at all.
+    vi.useFakeTimers();
+    toast('Fast swipe');
+    const el = document.querySelector('.socle-toast');
+    el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, bubbles: true }));
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('follows the pointer during the drag', () => {
+    toast('Drag me');
+    const el = document.querySelector('.socle-toast');
+    el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 25, bubbles: true }));
+    expect(el.style.transform).toBe('translateX(25px)');
+    expect(Number(el.style.opacity)).toBeLessThan(1);
+  });
+
+  it('springs back to rest when released below the threshold', () => {
+    toast('Stay put');
+    const el = document.querySelector('.socle-toast');
+    el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 30, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointerup', { clientX: 30, bubbles: true }));
+    expect(document.querySelector('.socle-toast')).toBeTruthy();
+    expect(el.style.transform).toBe('');
+    expect(el.style.opacity).toBe('');
+  });
+
+  it('a cancelled drag (e.g. a system gesture) springs back instead of dismissing', () => {
+    toast('Interrupted');
+    const el = document.querySelector('.socle-toast');
+    el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 90, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+    expect(document.querySelector('.socle-toast')).toBeTruthy();
+    expect(el.style.transform).toBe('');
+  });
+
+  it('a swipe past the threshold continues outward rather than the default fade', () => {
+    vi.useFakeTimers();
+    toast('Swipe out');
+    const el = document.querySelector('.socle-toast');
+    el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointerup', { clientX: 80, bubbles: true }));
+    expect(el.style.transform).toBe('translateX(120%)');
+    expect(el.classList.contains('socle-toast-out')).toBe(false);
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('respects prefers-reduced-motion by removing immediately on swipe-dismiss', () => {
+    const matchMedia = vi.fn(query => ({ matches: query.includes('reduce') }));
+    vi.stubGlobal('matchMedia', matchMedia);
+    try {
+      toast('Reduced motion');
+      const el = document.querySelector('.socle-toast');
+      el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+      el.dispatchEvent(new PointerEvent('pointerup', { clientX: 80, bubbles: true }));
+      expect(document.querySelector('.socle-toast')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   // --- mouseenter / mouseleave pause ---
