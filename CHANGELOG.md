@@ -10,6 +10,25 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.0] — 2026-09-16
+
+V1 complete: every item in `.claude/technical-context.md`'s Build Order through Session 11 is done. P2P (Session 12) remains deliberately deferred to V2 — the CLI already marks it `disabled: true, hint: 'coming in V2'`, and the append-only event log with `deviceId` is designed for it without requiring any schema change when it lands.
+
+### Breaking
+
+None. This release is a documentation and scaffold-completeness pass on top of 0.17.1 — no API changes.
+
+**From this version on, the core API is frozen** (`AppElement`, `Store`, `Router`, IDB conventions — see `.claude/technical-context.md`'s Core API Stability Policy). New modules and additive changes remain safe; a breaking change to an existing signature now requires a major version bump and a written migration guide.
+
+### Added
+- `docs/images.md`, `docs/app-header.md`, `docs/filter-state.md` — the three shipped, CLI-installable modules (`images`, `app-header`, `filter-state`) had no dedicated documentation until now, despite being available since earlier releases. Linked from `README.md`'s docs index.
+
+### Fixed
+- `cli/index.js` — selecting **Filter state** in the interactive `npx socle scaffold` module picker silently did nothing; `scaffoldApp()` had no `includeFilterState` wiring at all, so the module was only ever installable after the fact via `npx socle add filter-state`. Scaffold-time selection now works like every other module.
+- `CLAUDE.md` — corrected a stale description of the `toast` module referencing a `<toast-manager>` service component that no longer exists (superseded by the current standalone `toast()` function some releases ago).
+
+---
+
 ## [0.17.1] — 2026-09-16
 
 ### Fixed
