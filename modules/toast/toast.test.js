@@ -267,6 +267,7 @@ describe('toast', () => {
     toast('Swipe me');
     const el = document.querySelector('.socle-toast');
     el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 80, bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointerup', { clientX: 80, bubbles: true }));
     vi.advanceTimersByTime(200);
     expect(document.querySelector('.socle-toast')).toBeNull();
@@ -277,6 +278,7 @@ describe('toast', () => {
     toast('Stay');
     const el = document.querySelector('.socle-toast');
     el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 30, bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointerup', { clientX: 30, bubbles: true }));
     expect(document.querySelector('.socle-toast')).toBeTruthy();
   });
@@ -286,6 +288,7 @@ describe('toast', () => {
     toast('Left swipe');
     const el = document.querySelector('.socle-toast');
     el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 20, bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointerup', { clientX: 20, bubbles: true }));
     vi.advanceTimersByTime(200);
     expect(document.querySelector('.socle-toast')).toBeNull();
@@ -341,6 +344,7 @@ describe('toast', () => {
     toast('Swipe out');
     const el = document.querySelector('.socle-toast');
     el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 80, bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointerup', { clientX: 80, bubbles: true }));
     expect(el.style.transform).toBe('translateX(120%)');
     expect(el.classList.contains('socle-toast-out')).toBe(false);
@@ -356,11 +360,69 @@ describe('toast', () => {
       toast('Reduced motion');
       const el = document.querySelector('.socle-toast');
       el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+      el.dispatchEvent(new PointerEvent('pointermove', { clientX: 80, bubbles: true }));
       el.dispatchEvent(new PointerEvent('pointerup', { clientX: 80, bubbles: true }));
       expect(document.querySelector('.socle-toast')).toBeNull();
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it('does not treat a near-zero-movement press as a drag', () => {
+    toast('Tap only');
+    const el = document.querySelector('.socle-toast');
+    el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 3, bubbles: true }));
+    expect(el.style.transform).toBe('');
+    el.dispatchEvent(new PointerEvent('pointerup', { clientX: 3, bubbles: true }));
+    expect(document.querySelector('.socle-toast')).toBeTruthy();
+  });
+
+  // --- action button vs. swipe gesture (regression) ---
+  //
+  // 0.17.0 fixed the missing setPointerCapture above, but that fix captured
+  // immediately on pointerdown — which redirects the resulting click to `el`,
+  // silently breaking clicks on the action/close button (a child of `el`,
+  // so its own pointerdown bubbles up here too). Capture is now deferred
+  // until DRAG_CONFIRM_THRESHOLD is crossed, so a plain press-and-release
+  // anywhere — including directly on the button — never captures at all.
+
+  it('does not engage pointer capture for a plain press-and-release on the action button', () => {
+    const captureSpy = vi.fn();
+    const original = HTMLElement.prototype.setPointerCapture;
+    HTMLElement.prototype.setPointerCapture = captureSpy;
+    try {
+      toast('Deleted', 'info', { action: { label: 'Undo', onClick: () => {} } });
+      const btn = document.querySelector('.socle-toast-btn');
+      btn.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, bubbles: true }));
+      btn.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, bubbles: true }));
+      expect(captureSpy).not.toHaveBeenCalled();
+    } finally {
+      HTMLElement.prototype.setPointerCapture = original;
+    }
+  });
+
+  it('pressing and releasing directly on the action button still fires onClick', () => {
+    const onClick = vi.fn();
+    toast('Deleted', 'info', { action: { label: 'Undo', onClick } });
+    const btn = document.querySelector('.socle-toast-btn');
+    btn.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, bubbles: true }));
+    btn.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, bubbles: true }));
+    btn.click(); // happy-dom doesn't synthesize click from pointer events; this is what proves the click isn't lost
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it('a drag starting on the toast body still dismisses even when an action button is present', () => {
+    vi.useFakeTimers();
+    toast('Deleted', 'info', { action: { label: 'Undo', onClick: () => {} } });
+    const el = document.querySelector('.socle-toast');
+    const msg = document.querySelector('.socle-toast-msg');
+    msg.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 80, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointerup', { clientX: 80, bubbles: true }));
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
   });
 
   // --- mouseenter / mouseleave pause ---

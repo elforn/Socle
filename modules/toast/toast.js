@@ -224,10 +224,26 @@ export function toast(message, type = 'info', { duration, action } = {}) {
   // never delivers pointerup back to `el`, so the gesture silently does
   // nothing. Follows the finger live (no transition while dragging) and
   // either continues the motion out (past SWIPE_THRESHOLD) or springs back.
+  //
+  // Capture is deferred until movement crosses DRAG_CONFIRM_THRESHOLD — same
+  // reasoning as the gesture mixin (modules/gestures/gestures.js): capturing
+  // immediately on pointerdown redirects the resulting click to `el`, which
+  // would silently break the action/close button (a child of `el`) on a
+  // plain press-and-release. Deferring means a tap on that button never
+  // triggers capture at all, regardless of what's nested inside the toast —
+  // no need to enumerate "interactive" elements to exclude.
+  const DRAG_CONFIRM_THRESHOLD = 10;
   let dragStartX = null;
+  let dragConfirmed = false;
 
   const onDragMove = e => {
     const dx = e.clientX - dragStartX;
+    if (!dragConfirmed) {
+      if (Math.abs(dx) <= DRAG_CONFIRM_THRESHOLD) return;
+      dragConfirmed = true;
+      el.setPointerCapture(e.pointerId);
+      el.style.transition = 'none';
+    }
     el.style.transform = `translateX(${dx}px)`;
     el.style.opacity = String(Math.max(0.3, 1 - Math.abs(dx) / (SWIPE_THRESHOLD * 2)));
   };
@@ -254,22 +270,26 @@ export function toast(message, type = 'info', { duration, action } = {}) {
   function onDragEnd(e) {
     removeDragListeners();
     const dx = e.clientX - dragStartX;
+    const wasConfirmed = dragConfirmed;
     dragStartX = null;
+    dragConfirmed = false;
+    if (!wasConfirmed) return; // plain tap/click — never captured, let it reach its real target
     if (Math.abs(dx) > SWIPE_THRESHOLD) dismiss({ swipeDx: dx });
     else springBack();
   }
 
   function onDragCancel() {
+    const wasConfirmed = dragConfirmed;
     removeDragListeners();
     dragStartX = null;
-    springBack();
+    dragConfirmed = false;
+    if (wasConfirmed) springBack();
   }
 
   el.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
-    el.setPointerCapture(e.pointerId);
     dragStartX = e.clientX;
-    el.style.transition = 'none';
+    dragConfirmed = false;
     el.addEventListener('pointermove', onDragMove);
     el.addEventListener('pointerup', onDragEnd);
     el.addEventListener('pointercancel', onDragCancel);

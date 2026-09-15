@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.17.1] — 2026-09-16
+
+### Fixed
+- `modules/toast/toast.js` — the 0.17.0 swipe-to-dismiss fix introduced a regression: capturing the pointer immediately on `pointerdown` redirects the resulting `click` event to the toast's root element, which silently broke clicks on the action/close button (`.socle-toast-btn` is a child of the root, so its own `pointerdown` bubbles up too). Capture is now deferred until movement crosses a small threshold (10px) — the same pattern already used by the gesture mixin (`modules/gestures/gestures.js`) — so a plain press-and-release anywhere, including directly on the button, never captures the pointer at all. A genuine swipe starting on the toast body is unaffected. Reported against a downstream app (Telos) whose Playwright suite caught 4 regressed tests after updating to 0.17.0.
+
+---
+
 ## [0.17.0] — 2026-09-15
 
 ### Added
