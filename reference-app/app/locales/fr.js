@@ -59,4 +59,12 @@ defineStrings({
   'sync.import-reload':          'Recharger',
   'sync.import-close':           'Fermer',
   'sync.import-error':           'Fichier d\'export invalide ou incompatible.',
+
+  'year-header.notifications':        'Notifications',
+  'year-header.notifications-on':     'Activées',
+  'year-header.notifications-off':    'Désactivées',
+  'year-header.notifications-denied': 'Les notifications sont bloquées — activez-les dans les paramètres de votre navigateur.',
+
+  'notifications.digest-title':       '{count} objectifs en cours',
+  'notifications.digest-body':        'Touchez pour voir où vous en êtes.',
 }, 'fr');

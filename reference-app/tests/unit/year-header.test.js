@@ -203,3 +203,67 @@ describe('year-header — sync section', () => {
     expect(el.shadowRoot.querySelector('#import-btn')).not.toBeNull();
   });
 });
+
+describe('year-header — notifications', () => {
+  afterEach(() => {
+    localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  it('renders the notifications toggle, off by default', () => {
+    vi.stubGlobal('Notification', { permission: 'default', requestPermission: vi.fn() });
+    const el = mount();
+    const btn = el.shadowRoot.querySelector('#notifications-btn');
+    expect(btn).not.toBeNull();
+    expect(btn.hidden).toBe(false);
+    expect(el.shadowRoot.querySelector('#notifications-value').textContent).toBe('Off');
+  });
+
+  it('hides the toggle when the Notification API is unavailable', () => {
+    vi.stubGlobal('Notification', undefined);
+    const el = mount();
+    expect(el.shadowRoot.querySelector('#notifications-btn').hidden).toBe(true);
+  });
+
+  it('requests permission and turns on when tapped', async () => {
+    const notificationStub = { permission: 'default' };
+    notificationStub.requestPermission = vi.fn(async () => { notificationStub.permission = 'granted'; return 'granted'; });
+    vi.stubGlobal('Notification', notificationStub);
+    const el = mount();
+    el.shadowRoot.querySelector('#notifications-btn').click();
+    await vi.waitFor(() => expect(el.shadowRoot.querySelector('#notifications-value').textContent).toBe('On'));
+  });
+
+  it('refreshes an existing digest-notifier immediately after turning on', async () => {
+    const notificationStub = { permission: 'default' };
+    notificationStub.requestPermission = vi.fn(async () => { notificationStub.permission = 'granted'; return 'granted'; });
+    vi.stubGlobal('Notification', notificationStub);
+    const notifier = document.createElement('digest-notifier');
+    notifier.refresh = vi.fn();
+    document.body.appendChild(notifier);
+    const el = mount();
+    el.shadowRoot.querySelector('#notifications-btn').click();
+    await vi.waitFor(() => expect(notifier.refresh).toHaveBeenCalled());
+  });
+
+  it('turns off without re-prompting when tapped while already granted', async () => {
+    vi.stubGlobal('Notification', { permission: 'granted', requestPermission: vi.fn() });
+    const { NotificationPrefs } = await import('../../_lib/modules/notifications/notification-prefs.js');
+    const { NOTIFICATIONS_PREFS_KEY } = await import('../../app/notifications-config.js');
+    NotificationPrefs(NOTIFICATIONS_PREFS_KEY).setEnabled(true);
+    const el = mount();
+    expect(el.shadowRoot.querySelector('#notifications-value').textContent).toBe('On');
+    el.shadowRoot.querySelector('#notifications-btn').click();
+    expect(Notification.requestPermission).not.toHaveBeenCalled();
+    expect(el.shadowRoot.querySelector('#notifications-value').textContent).toBe('Off');
+  });
+
+  it('shows a toast instead of re-prompting when permission was already denied', () => {
+    vi.stubGlobal('Notification', { permission: 'denied', requestPermission: vi.fn() });
+    const el = mount();
+    el.shadowRoot.querySelector('#notifications-btn').click();
+    expect(Notification.requestPermission).not.toHaveBeenCalled();
+    expect(document.querySelector('.socle-toast-msg')?.textContent)
+      .toBe('Notifications are blocked — enable them in your browser settings.');
+  });
+});

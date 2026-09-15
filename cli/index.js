@@ -26,10 +26,11 @@ const MODULE_OPTIONS = [
   { label: 'Toast notifications',  value: 'toast',        description: 'Ephemeral feedback messages' },
   { label: 'Drag-to-reorder',      value: 'reorder',      description: 'Keyed list reorder controller' },
   { label: 'Filter state',         value: 'filter-state', description: 'localStorage-backed filter persistence' },
+  { label: 'Notifications',        value: 'notifications', description: 'Opt-in digest notifications, foreground + background' },
   { label: 'P2P sync',             value: 'p2p', disabled: true, hint: 'coming in V2' },
 ];
 
-const VALID_MODULES = ['gestures', 'sync', 'images', 'app-header', 'modal-dialog', 'toast', 'reorder', 'filter-state', 'ui', 'p2p'];
+const VALID_MODULES = ['gestures', 'sync', 'images', 'app-header', 'modal-dialog', 'toast', 'reorder', 'filter-state', 'notifications', 'ui', 'p2p'];
 
 // ── pure helpers (exported for tests) ────────────────────────────────────────
 

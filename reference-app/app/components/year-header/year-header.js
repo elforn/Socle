@@ -5,6 +5,15 @@ import { setTheme, getTheme } from '../../../_lib/core/theme/theme.js';
 import * as Store from '../../../_lib/core/store/store.js';
 import { exportData, importData, downloadExport, readImportFile } from '../../../_lib/modules/sync/sync.js';
 import { compressImage } from '../../../_lib/modules/images/images.js';
+import { toast } from '../../../_lib/modules/toast/toast.js';
+import { NotificationPrefs } from '../../../_lib/modules/notifications/notification-prefs.js';
+import { NOTIFICATIONS_PREFS_KEY } from '../../notifications-config.js';
+
+function notificationsOn() {
+  return typeof Notification !== 'undefined'
+    && Notification.permission === 'granted'
+    && NotificationPrefs(NOTIFICATIONS_PREFS_KEY).enabled();
+}
 
 const LOCALE_LABELS = { en: 'English', fr: 'Français', ca: 'Català' };
 const IMAGE_HEADER_HEIGHT = '200px';
@@ -398,6 +407,10 @@ class YearHeader extends Gestures(AppElement) {
           <span>${t('year-header.language')}</span>
           <span class="menu-item-value">${LOCALE_LABELS[getLocale()]} ›</span>
         </button>
+        <button class="menu-item" id="notifications-btn"${typeof Notification === 'undefined' ? ' hidden' : ''}>
+          <span>${t('year-header.notifications')}</span>
+          <span class="menu-item-value" id="notifications-value">${t('year-header.notifications-' + (notificationsOn() ? 'on' : 'off'))}</span>
+        </button>
         <button class="menu-item" id="export-all-btn">
           <span>${t('sync.export-all')}</span>
           <span class="menu-item-value">↓</span>
@@ -650,6 +663,27 @@ class YearHeader extends Gestures(AppElement) {
       this._updateThemeBtn();
     };
     this._themeSheet.addEventListener('click', this._onThemeSelect);
+
+    // Notifications — Notification.requestPermission() only works fired
+    // synchronously from this real click, never programmatically.
+    this._onNotificationsBtn = async () => {
+      const prefs = NotificationPrefs(NOTIFICATIONS_PREFS_KEY);
+      if (notificationsOn()) {
+        prefs.setEnabled(false);
+        this._updateNotificationsBtn();
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        toast(t('year-header.notifications-denied'));
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') { this._updateNotificationsBtn(); return; }
+      prefs.setEnabled(true);
+      document.querySelector('digest-notifier')?.refresh();
+      this._updateNotificationsBtn();
+    };
+    this.shadowRoot.querySelector('#notifications-btn')?.addEventListener('click', this._onNotificationsBtn);
   }
 
   unsubscribe() {
@@ -681,6 +715,7 @@ class YearHeader extends Gestures(AppElement) {
     this.shadowRoot.querySelector('#theme-btn')?.removeEventListener('click', this._onThemeBtn);
     this._themeSheet?.removeEventListener('click', this._onThemeSheetBackdrop);
     this._themeSheet?.removeEventListener('click', this._onThemeSelect);
+    this.shadowRoot.querySelector('#notifications-btn')?.removeEventListener('click', this._onNotificationsBtn);
     window.removeEventListener('scroll', this._onScroll);
   }
 
@@ -729,6 +764,11 @@ class YearHeader extends Gestures(AppElement) {
   _updateThemeBtn() {
     const val = this.shadowRoot?.querySelector('#theme-value');
     if (val) val.textContent = t('year-header.theme-' + getTheme());
+  }
+
+  _updateNotificationsBtn() {
+    const val = this.shadowRoot?.querySelector('#notifications-value');
+    if (val) val.textContent = t('year-header.notifications-' + (notificationsOn() ? 'on' : 'off'));
   }
 
   _updatePhotoMenu(hasImage) {

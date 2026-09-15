@@ -411,6 +411,21 @@ describe('addModule', () => {
     expect(() => addModule(dest, 'unknown-module')).toThrow('Unknown module');
   });
 
+  it('adds the notifications module', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+
+    addModule(dest, 'notifications');
+
+    expect(existsSync(join(dest, '_lib', 'modules', 'notifications', 'digest-notifier.js'))).toBe(true);
+    expect(existsSync(join(dest, '_lib', 'modules', 'notifications', 'notification-prefs.js'))).toBe(true);
+    expect(existsSync(join(dest, '_lib', 'modules', 'notifications', 'notification-dedup.js'))).toBe(true);
+    expect(existsSync(join(dest, '_lib', 'modules', 'notifications', 'periodic-sync.js'))).toBe(true);
+    expect(existsSync(join(dest, '_lib', 'modules', 'notifications', 'cold-launch.js'))).toBe(true);
+    const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
+    expect(lv.modules).toContain('notifications');
+  });
+
   it('throws when lib-version.json is missing', () => {
     const dest = makeTmpDir();
     expect(() => addModule(dest, 'sync')).toThrow('No _lib/lib-version.json found');

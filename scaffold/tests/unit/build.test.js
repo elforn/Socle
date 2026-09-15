@@ -187,12 +187,28 @@ describe('build — extra-assets hook', () => {
 });
 
 describe('build — sw-extensions hook', () => {
+  // The reference app has a real, permanent app/sw-extensions.js (the
+  // notifications module's notificationclick handler) — these tests
+  // temporarily swap it out rather than assuming the path is empty, so they
+  // pass whether or not a real extension file is present in the tree.
   const extFile = join(APP_ROOT, 'app', 'sw-extensions.js');
+  const existedBefore = existsSync(extFile);
+  const originalContent = existedBefore ? readFileSync(extFile, 'utf8') : null;
+
+  function restoreOriginal() {
+    if (existedBefore) writeFileSync(extFile, originalContent);
+    else rmSync(extFile, { force: true });
+  }
 
   it('absent sw-extensions.js is silently ignored — build succeeds, sw.js unaffected', () => {
-    runBuild();
-    const sw = readDist('sw.js');
-    expect(sw).not.toContain('SW_EXTENSIONS_MARKER');
+    rmSync(extFile, { force: true });
+    try {
+      runBuild();
+      const sw = readDist('sw.js');
+      expect(sw).not.toContain('SW_EXTENSIONS_MARKER');
+    } finally {
+      restoreOriginal();
+    }
   });
 
   describe('file present', () => {
@@ -202,7 +218,7 @@ describe('build — sw-extensions hook', () => {
       writeFileSync(extFile, `${marker}\n`);
       runBuild();
     });
-    afterAll(() => { rmSync(extFile, { force: true }); });
+    afterAll(restoreOriginal);
 
     it('appends the file contents to dist/sw.js as plain script (no import/export)', () => {
       const sw = readDist('sw.js');

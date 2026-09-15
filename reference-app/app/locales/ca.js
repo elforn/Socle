@@ -59,4 +59,12 @@ defineStrings({
   'sync.import-reload':          'Recarrega',
   'sync.import-close':           'Tanca',
   'sync.import-error':           "Fitxer d'exportació invàlid o incompatible.",
+
+  'year-header.notifications':        'Notificacions',
+  'year-header.notifications-on':     'Activades',
+  'year-header.notifications-off':    'Desactivades',
+  'year-header.notifications-denied': 'Les notificacions estan bloquejades — activa-les als ajustos del navegador.',
+
+  'notifications.digest-title':       '{count} objectius en curs',
+  'notifications.digest-body':        'Toca per veure com estàs.',
 }, 'ca');

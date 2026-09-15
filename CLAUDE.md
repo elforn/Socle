@@ -66,6 +66,7 @@ Socle/
     reorder/          # Reorder.attach() drag-to-reorder controller (single-list + cross-section)
     images/           # compressImage() canvas-based JPEG compression
     sync/             # Export / import / merge
+    notifications/    # Opt-in digest notifications: <digest-notifier>, dedup, periodic-sync, cold-launch
     p2p/              # WebRTC/WS local network sync (V2)
   scaffold/           # Template for scaffolded apps — mirrors exact app directory structure
                       # CLI copies this to the app root, substituting %%PLACEHOLDER%% tokens
@@ -413,7 +414,7 @@ This is the contract between the library and the user project. The update comman
 
 `npx socle remove <module>` — scans `app/` for import references to the module before removing; warns and requires explicit confirmation if any are found. Removes `_lib/modules/<module>/`, updates `lib-version.json`.
 
-Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, `toast`, `reorder`, `filter-state`.
+Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, `toast`, `reorder`, `filter-state`, `notifications`.
 
 `npx socle manage` — interactive TUI showing all currently installed modules pre-selected; the developer toggles modules on/off and confirms; adds and removes are applied in batch using the same `addModule`/`removeModule` logic.
 

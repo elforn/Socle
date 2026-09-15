@@ -128,4 +128,4 @@ Forwarded to the inner `<dialog>` when present.
 
 ---
 
-[← Toast](toast.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: Testing →](testing.md)
+[← Toast](toast.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: Notifications →](notifications.md)

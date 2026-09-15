@@ -54,6 +54,7 @@ npx serve dist --single
 - [Reorder](docs/reorder.md) — drag-to-reorder controller, cross-section drags, keyboard reorder
 - [Toast](docs/toast.md) — ephemeral feedback messages, actions, top-layer popover
 - [Modal dialog](docs/modal-dialog.md) — centered dialog / bottom sheet, swipe-to-dismiss, scroll containment
+- [Notifications](docs/notifications.md) — opt-in digest notifications, dedup, periodic background sync, cold-launch routing
 - [Testing](docs/testing.md) — test environments, fake-indexeddb, component test patterns, E2E setup
 - [Claude Code](docs/claude.md) — slash commands, workflow, /setup-claude
 - [Theming](docs/theming.md) — CSS tokens, custom properties, retheming

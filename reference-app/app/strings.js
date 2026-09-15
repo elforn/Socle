@@ -59,4 +59,12 @@ defineStrings({
   'sync.import-reload':          'Reload',
   'sync.import-close':           'Close',
   'sync.import-error':           'Invalid or incompatible export file.',
+
+  'year-header.notifications':        'Notifications',
+  'year-header.notifications-on':     'On',
+  'year-header.notifications-off':    'Off',
+  'year-header.notifications-denied': 'Notifications are blocked — enable them in your browser settings.',
+
+  'notifications.digest-title':       '{count} goals in progress',
+  'notifications.digest-body':        'Tap to see where you stand.',
 });
