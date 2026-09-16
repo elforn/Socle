@@ -127,7 +127,7 @@ Calling `toast()` while another toast is visible immediately removes the previou
 - Each toast element has `role="status"`.
 - **Escape key** dismisses the active toast globally. The listener is removed when the toast is dismissed.
 - **Hover and focus** pause the auto-dismiss timer. Moving away resumes it with the remaining time.
-- **Swipe left or right** on the toast (past 60px) dismisses it.
+- **Swipe left or right** on the toast (past 120px, calibrated on-device) dismisses it, following the finger live and springing back if released short of the threshold. Requires `touch-action: none` on the toast — `manipulation` looks equally reasonable but is unreliable on Chrome for Android (the compositor's own scroll-gesture arbitration can commit to native panning ahead of `setPointerCapture()`). A vertical-dominant move is ignored rather than attempted as a confused horizontal drag.
 - All dismissals except replacement fade out over `--duration-fast` (120ms). Replacement by a new toast is instant.
 
 ---

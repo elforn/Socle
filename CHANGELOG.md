@@ -10,22 +10,27 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [1.0.0] — 2026-09-16
+## [1.0.0] — 2026-09-17
 
 V1 complete: every item in `.claude/technical-context.md`'s Build Order through Session 11 is done. P2P (Session 12) remains deliberately deferred to V2 — the CLI already marks it `disabled: true, hint: 'coming in V2'`, and the append-only event log with `deviceId` is designed for it without requiring any schema change when it lands.
 
 ### Breaking
 
-None. This release is a documentation and scaffold-completeness pass on top of 0.17.1 — no API changes.
+None. This release is a documentation and scaffold-completeness pass on top of 0.17.1, plus a real on-device bug fix in the toast module — no API changes.
 
 **From this version on, the core API is frozen** (`AppElement`, `Store`, `Router`, IDB conventions — see `.claude/technical-context.md`'s Core API Stability Policy). New modules and additive changes remain safe; a breaking change to an existing signature now requires a major version bump and a written migration guide.
 
 ### Added
 - `docs/images.md`, `docs/app-header.md`, `docs/filter-state.md` — the three shipped, CLI-installable modules (`images`, `app-header`, `filter-state`) had no dedicated documentation until now, despite being available since earlier releases. Linked from `README.md`'s docs index.
 
+### Changed
+- `modules/toast/toast.js` — `SWIPE_THRESHOLD` raised from 60px to 120px. 60 was calibrated while the touch-action bug below was still masking the gesture entirely; once fixed, 60 dismissed too easily on a real device. 120 is the on-device-confirmed value.
+
 ### Fixed
 - `cli/index.js` — selecting **Filter state** in the interactive `npx socle scaffold` module picker silently did nothing; `scaffoldApp()` had no `includeFilterState` wiring at all, so the module was only ever installable after the fact via `npx socle add filter-state`. Scaffold-time selection now works like every other module.
 - `CLAUDE.md` — corrected a stale description of the `toast` module referencing a `<toast-manager>` service component that no longer exists (superseded by the current standalone `toast()` function some releases ago).
+- `modules/toast/toast.js` — swipe-to-dismiss did not work reliably on real Chrome for Android (in a normal tab, not just the installed PWA): `touch-action: manipulation` allowed the browser's own compositor-thread scroll-gesture arbitration to commit to native panning ahead of (or independent of) `setPointerCapture()`, firing `pointercancel` mid-drag or swallowing the gesture outright — reproducible only on-device, not in this library's happy-dom test environment. Changed to `touch-action: none`, the documented fix ([mdn/content#38468](https://github.com/mdn/content/issues/38468)). Root-caused and verified on-device against a downstream app (Telos).
+- `modules/toast/toast.js` — the drag-detection logic now direction-locks like `modules/gestures/gestures.js`'s own `_gestureMove`: tracks both axes from `pointerdown`, waits for euclidean distance to cross `TAP_THRESHOLD` (18px, matching the gesture mixin's constant) before deciding anything, then only engages the horizontal drag when `dx` dominates `dy`. Previously only `dx` was checked at all, meaning a vertical swipe on a toast could still attempt a confused horizontal drag.
 
 ---
 
