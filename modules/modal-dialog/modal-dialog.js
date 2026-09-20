@@ -129,7 +129,7 @@ class ModalDialog extends AppElement {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: var(--space-2);
+          gap: var(--space-1);
           inline-size: 100%;
         }
 
