@@ -40,9 +40,18 @@ class ModalDialog extends AppElement {
           font-family: var(--font-family);
           font-size: var(--font-size-body);
           box-shadow: var(--shadow-sheet);
-          max-block-size: min(85vh, 600px);
+          --dialog-block-size-cap: min(85vh, 600px);
+          max-block-size: var(--dialog-block-size-cap);
           overflow: hidden;
         }
+
+        /* Opt-in via the fixedHeight property — see below. Adds block-size on top of
+           the max-block-size cap above (harmless: block-size is already ≤ the cap) so
+           .body's flex: 1 1 auto has a real height to fill regardless of active tab,
+           instead of the dialog shrink-wrapping to whichever tab is showing. Reads the
+           same --dialog-block-size-cap the cap itself uses, so the desktop/mobile values
+           are defined once each rather than duplicated per rule. */
+        dialog.fixed-height { block-size: var(--dialog-block-size-cap); }
 
         dialog[open] {
           display: flex;
@@ -80,7 +89,8 @@ class ModalDialog extends AppElement {
             border-start-end-radius: var(--radius-lg);
             padding-block-start: var(--space-2);
           padding-block-end: calc(var(--space-2) + var(--safe-area-bottom, 0px));
-            max-block-size: 85vh;
+            --dialog-block-size-cap: 85vh;
+            max-block-size: var(--dialog-block-size-cap);
           }
 
           dialog[open] {
@@ -182,6 +192,7 @@ class ModalDialog extends AppElement {
     this._body = this.shadowRoot.querySelector('.body');
     this._tabCount = 0;
     this._activeTab = 0;
+    this._fixedHeight = false;
 
     const label = this.getAttribute('aria-label');
     if (label) {
@@ -252,28 +263,70 @@ class ModalDialog extends AppElement {
   }
 
   // ── Swipe-down-to-dismiss (handle) ──────────────────────────────────────
+  // With no tabs, the handle has one gesture (dismiss) and this forks nowhere —
+  // pointerdown captures immediately and every move is tracked as vertical,
+  // exactly as before. With tabs, the handle is shared with the dot row, so a
+  // touch there might be a tap (native click on a .tab-seg), a vertical
+  // dismiss-drag, or a horizontal tab-swipe. Capture and commitment are
+  // deferred until ~10px of movement classifies the direction — mirroring
+  // _bodyDown/_bodyMove's approach — so a tap still resolves to its own click.
 
   _handleDown(e) {
     if (e.button !== 0 || !this._isSheet()) return;
-    if (e.target.closest('.tab-seg')) return; // let the tab button's own click through untouched
-    this._handle.setPointerCapture(e.pointerId);
+
+    if (this._tabCount <= 1) {
+      this._handle.setPointerCapture(e.pointerId);
+      this._drag = {
+        startY: e.clientY,
+        startTime: Date.now(),
+        pointerId: e.pointerId,
+        height: this._dialog.getBoundingClientRect().height,
+      };
+      this._dialog.style.transition = 'none';
+      this._handle.addEventListener('pointermove', this._onHandleMove);
+      this._handle.addEventListener('pointerup', this._onHandleUp);
+      this._handle.addEventListener('pointercancel', this._onHandleCancel);
+      return;
+    }
+
     this._drag = {
+      startX: e.clientX,
       startY: e.clientY,
       startTime: Date.now(),
       pointerId: e.pointerId,
       height: this._dialog.getBoundingClientRect().height,
+      width: this._body.getBoundingClientRect().width,
+      horizontal: null, // undecided until ~10px of movement
+      lastDx: 0,
     };
-    this._dialog.style.transition = 'none';
     this._handle.addEventListener('pointermove', this._onHandleMove);
     this._handle.addEventListener('pointerup', this._onHandleUp);
     this._handle.addEventListener('pointercancel', this._onHandleCancel);
   }
 
   _handleMove(e) {
-    if (!this._drag) return;
-    // Follow the finger downward; clamp upward drags to rest so the sheet never rises.
-    const dy = Math.max(0, e.clientY - this._drag.startY);
-    this._dialog.style.transform = `translateY(${dy}px)`;
+    const d = this._drag;
+    if (!d) return;
+
+    if (d.horizontal === undefined) {
+      // No-tabs path: vertical-only, unchanged. Follow the finger downward;
+      // clamp upward drags to rest so the sheet never rises.
+      this._dialog.style.transform = `translateY(${Math.max(0, e.clientY - d.startY)}px)`;
+      return;
+    }
+
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+
+    if (d.horizontal === null) {
+      if (Math.abs(dx) < TAB_SWIPE_INTENT_PX && Math.abs(dy) < TAB_SWIPE_INTENT_PX) return;
+      d.horizontal = Math.abs(dx) > Math.abs(dy);
+      this._handle.setPointerCapture(d.pointerId);
+      if (!d.horizontal) this._dialog.style.transition = 'none';
+    }
+
+    if (d.horizontal) { d.lastDx = dx; return; }
+    this._dialog.style.transform = `translateY(${Math.max(0, dy)}px)`;
   }
 
   _handleUp(e) {
@@ -282,10 +335,28 @@ class ModalDialog extends AppElement {
     this._removeDragListeners();
     this._drag = null;
 
-    const dy = e.clientY - d.startY;
-    const elapsed = Date.now() - d.startTime;
+    if (d.horizontal === undefined) {
+      this._resolveDismiss(e.clientY - d.startY, d.startTime, d.height);
+      return;
+    }
+
+    if (d.horizontal === null) return; // never moved past the intent threshold — a tap, let native click fire
+
+    if (d.horizontal) {
+      const elapsed = Date.now() - d.startTime;
+      const velocity = elapsed > 0 ? Math.abs(d.lastDx) / elapsed : 0;
+      const commit = Math.abs(d.lastDx) > d.width * TAB_SWIPE_DISTANCE_RATIO || velocity > TAB_SWIPE_VELOCITY;
+      if (commit) this._selectTab(this._activeTab + (d.lastDx < 0 ? 1 : -1));
+      return;
+    }
+
+    this._resolveDismiss(e.clientY - d.startY, d.startTime, d.height);
+  }
+
+  _resolveDismiss(dy, startTime, height) {
+    const elapsed = Date.now() - startTime;
     const velocity = elapsed > 0 ? dy / elapsed : 0;
-    const commit = dy > d.height * DISMISS_DISTANCE_RATIO || velocity > DISMISS_VELOCITY;
+    const commit = dy > height * DISMISS_DISTANCE_RATIO || velocity > DISMISS_VELOCITY;
 
     if (this._reducedMotion()) {
       this._clearDragStyles();
@@ -368,6 +439,19 @@ class ModalDialog extends AppElement {
   // Programmatic assignment — does not dispatch modal-tab-change (that event
   // is reserved for user-driven interaction: segment tap, arrow key, swipe).
   set activeTab(i) { this._selectTab(i, { emit: false }); }
+
+  // Opt-in: render at the max-block-size ceiling instead of shrink-wrapping to
+  // content, so switching tabs with different content heights doesn't resize
+  // the sheet. Default false — every dialog that wants to hug its own content
+  // (confirm sheets, action menus) renders exactly as before.
+  get fixedHeight() { return this._fixedHeight ?? false; }
+
+  set fixedHeight(v) {
+    const val = !!v;
+    if (val === this._fixedHeight) return;
+    this._fixedHeight = val;
+    this._dialog.classList.toggle('fixed-height', val);
+  }
 
   _renderTabSegments() {
     const on = this._tabCount > 1;

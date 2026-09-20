@@ -447,6 +447,172 @@ describe('modal-dialog — swipe-down-to-dismiss', () => {
   });
 });
 
+describe('modal-dialog — tabs: swipe and tap on the handle', () => {
+  function handlePointer(type, clientX, clientY, extra = {}) {
+    return new PointerEvent(type, { button: 0, pointerId: 3, clientX, clientY, bubbles: true, ...extra });
+  }
+
+  it('a horizontal drag on the handle margin changes tabs, same thresholds as the body', () => {
+    const el = mountWithTabs(3);
+    const handle = el.shadowRoot.querySelector('.handle');
+    const dialog = el.shadowRoot.querySelector('dialog');
+    const onChange = vi.fn();
+    el.addEventListener('modal-tab-change', onChange);
+
+    handle.dispatchEvent(handlePointer('pointerdown', 200, 20));
+    handle.dispatchEvent(handlePointer('pointermove', 130, 20)); // dx = -70, > 20% of 300
+    handle.dispatchEvent(handlePointer('pointerup', 130, 20));
+
+    expect(el.activeTab).toBe(1);
+    expect(onChange.mock.calls[0][0].detail).toEqual({ index: 1 });
+    expect(dialog.style.transform).toBe(''); // never touched the dismiss-drag path
+  });
+
+  it('a horizontal drag starting directly on a dot changes tabs (dot no longer swallows the drag)', () => {
+    const el = mountWithTabs(3);
+    const dot = el.shadowRoot.querySelectorAll('.tab-seg')[0];
+    const handle = el.shadowRoot.querySelector('.handle');
+
+    dot.dispatchEvent(handlePointer('pointerdown', 200, 20));
+    handle.dispatchEvent(handlePointer('pointermove', 130, 20));
+    handle.dispatchEvent(handlePointer('pointerup', 130, 20));
+
+    expect(el.activeTab).toBe(1);
+  });
+
+  it('a vertical drag starting directly on a dot still dismisses (dot no longer swallows the drag)', () => {
+    const el = mountWithTabs(3);
+    const dot = el.shadowRoot.querySelectorAll('.tab-seg')[0];
+    const dialog = el.shadowRoot.querySelector('dialog');
+    el.show();
+
+    dot.dispatchEvent(handlePointer('pointerdown', 200, 0));
+    el.shadowRoot.querySelector('.handle').dispatchEvent(handlePointer('pointermove', 200, 200)); // dy = 200 > 25% of 400
+    el.shadowRoot.querySelector('.handle').dispatchEvent(handlePointer('pointerup', 200, 200));
+
+    expect(dialog.style.transform).toBe('translateY(100%)'); // committing animation
+    transitionEnd(dialog);
+    expect(dialog.close).toHaveBeenCalledOnce();
+  });
+
+  it('a vertical drag on the handle margin still dismisses when tabs are present', () => {
+    const el = mountWithTabs(2);
+    const handle = el.shadowRoot.querySelector('.handle');
+    const dialog = el.shadowRoot.querySelector('dialog');
+    el.show();
+
+    handle.dispatchEvent(handlePointer('pointerdown', 150, 0));
+    handle.dispatchEvent(handlePointer('pointermove', 150, 300)); // dy = 300 > 25% of 400
+    handle.dispatchEvent(handlePointer('pointerup', 150, 300));
+
+    expect(dialog.style.transform).toBe('translateY(100%)');
+    transitionEnd(dialog);
+    expect(dialog.close).toHaveBeenCalledOnce();
+  });
+
+  it('a tap on a dot (no movement past the intent threshold) never captures the pointer or moves the dialog', () => {
+    const el = mountWithTabs(3);
+    const dot = el.shadowRoot.querySelectorAll('.tab-seg')[1];
+    const dialog = el.shadowRoot.querySelector('dialog');
+    const captureSpy = vi.spyOn(el.shadowRoot.querySelector('.handle'), 'setPointerCapture');
+
+    dot.dispatchEvent(handlePointer('pointerdown', 100, 20));
+    dot.dispatchEvent(handlePointer('pointerup', 100, 20)); // no movement — a tap
+    dot.click(); // the browser's own synthetic click, unaffected by the drag path
+
+    expect(captureSpy).not.toHaveBeenCalled();
+    expect(dialog.style.transform).toBe('');
+    expect(el.activeTab).toBe(1); // click-driven selection still works
+  });
+
+  it('movement below the intent threshold does not classify a direction or move the dialog', () => {
+    const el = mountWithTabs(3);
+    const handle = el.shadowRoot.querySelector('.handle');
+    const dialog = el.shadowRoot.querySelector('dialog');
+
+    handle.dispatchEvent(handlePointer('pointerdown', 100, 20));
+    handle.dispatchEvent(handlePointer('pointermove', 105, 22)); // 5px, below TAB_SWIPE_INTENT_PX
+    expect(dialog.style.transform).toBe('');
+    handle.dispatchEvent(handlePointer('pointerup', 105, 22));
+    expect(el.activeTab).toBe(0);
+  });
+
+  it('a horizontal drag on the handle is a no-op when there is only one tab', () => {
+    const el = mountWithTabs(1);
+    const handle = el.shadowRoot.querySelector('.handle');
+    const dialog = el.shadowRoot.querySelector('dialog');
+    el.show();
+
+    handle.dispatchEvent(pointer('pointerdown', 20)); // tabCount <= 1 → the unchanged vertical-only path
+    handle.dispatchEvent(pointer('pointermove', 25)); // 5px — below the dismiss commit threshold anyway
+    handle.dispatchEvent(pointer('pointerup', 25));
+
+    expect(dialog.close).not.toHaveBeenCalled();
+  });
+
+  it('a rightward drag on the handle goes to the previous tab', () => {
+    const el = mountWithTabs(3);
+    el.activeTab = 1;
+    const handle = el.shadowRoot.querySelector('.handle');
+
+    handle.dispatchEvent(handlePointer('pointerdown', 100, 20));
+    handle.dispatchEvent(handlePointer('pointermove', 180, 20)); // dx = +80
+    handle.dispatchEvent(handlePointer('pointerup', 180, 20));
+
+    expect(el.activeTab).toBe(0);
+  });
+
+  it('pointercancel tears down an in-flight handle drag on a tabbed dialog without side effects', () => {
+    const el = mountWithTabs(3);
+    const handle = el.shadowRoot.querySelector('.handle');
+    const dialog = el.shadowRoot.querySelector('dialog');
+
+    handle.dispatchEvent(handlePointer('pointerdown', 200, 20));
+    handle.dispatchEvent(handlePointer('pointermove', 130, 20));
+    handle.dispatchEvent(handlePointer('pointercancel', 130, 20));
+
+    expect(el.activeTab).toBe(0);
+    expect(dialog.style.transform).toBe('');
+  });
+});
+
+describe('modal-dialog — fixedHeight', () => {
+  it('defaults to false and does not add the fixed-height class', () => {
+    const el = mount();
+    expect(el.fixedHeight).toBe(false);
+    expect(el.shadowRoot.querySelector('dialog').classList.contains('fixed-height')).toBe(false);
+  });
+
+  it('setting fixedHeight true adds the fixed-height class', () => {
+    const el = mount();
+    el.fixedHeight = true;
+    expect(el.fixedHeight).toBe(true);
+    expect(el.shadowRoot.querySelector('dialog').classList.contains('fixed-height')).toBe(true);
+  });
+
+  it('setting fixedHeight back to false removes the class', () => {
+    const el = mount();
+    el.fixedHeight = true;
+    el.fixedHeight = false;
+    expect(el.shadowRoot.querySelector('dialog').classList.contains('fixed-height')).toBe(false);
+  });
+
+  it('.fixed-height reads the same --dialog-block-size-cap variable the max-block-size cap sets, once per breakpoint', () => {
+    const el = mount();
+    const css = el.shadowRoot.querySelector('style').textContent;
+    // One rule, driven by a custom property — not duplicated per breakpoint.
+    expect(css).toMatch(/dialog\.fixed-height\s*\{\s*block-size:\s*var\(--dialog-block-size-cap\);?\s*\}/);
+    // The bare rule defines the desktop value...
+    const bareRule = css.slice(css.indexOf('dialog {'), css.indexOf('dialog[open]'));
+    expect(bareRule).toMatch(/--dialog-block-size-cap:\s*min\(85vh,\s*600px\)/);
+    expect(bareRule).toMatch(/max-block-size:\s*var\(--dialog-block-size-cap\)/);
+    // ...and the mobile media query overrides it to the sheet value.
+    const mediaRule = css.slice(css.indexOf('@media (max-width'), css.indexOf('dialog[open]', css.indexOf('@media (max-width')));
+    expect(mediaRule).toMatch(/--dialog-block-size-cap:\s*85vh/);
+    expect(mediaRule).toMatch(/max-block-size:\s*var\(--dialog-block-size-cap\)/);
+  });
+});
+
 describe('modal-dialog — tabs: setup and rendering', () => {
   it('defaults to tabCount 0, activeTab 0, no tab segments, pill untouched', () => {
     const el = mount();

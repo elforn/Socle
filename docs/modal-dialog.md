@@ -72,6 +72,8 @@ Every dismissal path ends the same way: `close()` → the native `close` event �
 
 In sheet mode, dragging the handle down dismisses the sheet. The gesture is attached to the **handle only**, never the sheet body, so it never competes with scrolling long slotted content. It is a no-op above 600px (the gesture is gated on `matchMedia('(max-width: 600px)')` and the handle is hidden there anyway).
 
+When tabs are in use (see [Tabs](#tabs)), the handle is a shared surface: a drag starting there — on the pill's margin or directly on a tab segment — is classified by direction from its first ~10px of movement, exactly like body-swipe direction is. Vertical resolves to this dismiss-drag, unchanged; horizontal hands off to tab-change instead. A tap that never crosses that threshold is left alone entirely, so a tab segment's own `click` still fires normally.
+
 While dragging, the sheet follows the finger downward via an inline `transform: translateY()`. Upward drags clamp to rest — the sheet cannot rise above its resting position.
 
 On release the drag **commits** (dismisses) when either:
@@ -116,7 +118,7 @@ defineStrings({
 **Three ways to change tabs, all equivalent:**
 - **Tap a segment** — jumps straight to that page.
 - **ArrowLeft/ArrowRight** while focus is on the segment row — pages one at a time, clamped at the first/last tab (no wrapping). Roving `tabindex` keeps only the active segment in the natural Tab order.
-- **Swipe the body** — left advances to the next tab, right goes back, using the same distance/velocity commit thresholds as swipe-down-to-dismiss (20% of the body's width, or a 0.5 px/ms flick), just on the horizontal axis.
+- **Swipe the body or the handle** — left advances to the next tab, right goes back, using the same distance/velocity commit thresholds as swipe-down-to-dismiss (20% of the swipeable width, or a 0.5 px/ms flick), just on the horizontal axis. The handle is a dual-purpose surface here: a horizontal drag changes tabs, a vertical one dismisses (see [Swipe-down-to-dismiss](#swipe-down-to-dismiss)) — direction is classified once, from the first ~10px of movement, so the two gestures never fight each other.
 
 Only genuine user interaction fires `modal-tab-change` — setting `.activeTab` programmatically (e.g. to resync after the consumer changes tabs some other way) does not, so there's no risk of a feedback loop between the property and the event.
 
@@ -132,7 +134,7 @@ Internally the default slot is wrapped in a `.body` element (`flex: 1 1 auto; ov
 
 `overscroll-behavior-y: contain` is set on `.body`, so an overscroll inside the dialog never chains to the page's root scroller or triggers the browser's native pull-to-refresh. The handle sets `touch-action: none`, so a drag starting on the handle is fully owned by the pointer handlers with no native scroll interpretation.
 
-Height caps: the sheet variant (`≤600px`) limits `max-block-size` to `85vh`; the desktop centered variant caps at `min(85vh, 600px)`. Both ensure scrolling activates predictably rather than relying on the browser's UA default.
+Height caps: the sheet variant (`≤600px`) limits `max-block-size` to `85vh`; the desktop centered variant caps at `min(85vh, 600px)`. Both ensure scrolling activates predictably rather than relying on the browser's UA default. By default the dialog is otherwise sized to fit its content up to that ceiling — it does not grow to fill it. Set `fixedHeight` (see [API reference](#api-reference)) to make the ceiling a floor too, when varying content height across tabs would otherwise make the sheet visibly resize.
 
 The module never touches `document.body` or `documentElement` overscroll — root overscroll behaviour is left to the consuming app.
 
@@ -163,6 +165,15 @@ Bubbling and composed. Dispatched on every dismissal. This is where consumers pe
 ### `aria-label` attribute
 
 Forwarded to the inner `<dialog>` when present.
+
+### `fixedHeight` property
+
+Opt-in, defaults to `false`. When `true`, the dialog always renders at its `max-block-size` ceiling (`min(85vh, 600px)` desktop, `85vh` sheet) instead of shrink-wrapping to whichever content is currently slotted in. Use this on tabbed dialogs whose tabs have very different content heights, so switching tabs feels like paging within a stable container rather than resizing it. Leave it `false` (the default) for dialogs that should hug their own content — confirm sheets, action menus, and any non-tabbed dialog.
+
+```js
+dialog.tabCount = 4;
+dialog.fixedHeight = true; // sheet stays a stable height across all 4 tabs
+```
 
 ---
 
