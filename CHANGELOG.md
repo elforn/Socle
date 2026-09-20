@@ -10,6 +10,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.0] — 2026-09-20
+
+### Added
+- `modules/modal-dialog/modal-dialog.js` — opt-in `fixedHeight` property. When `true`, the dialog always renders at its `max-block-size` ceiling instead of shrink-wrapping to whichever tab is currently showing, so switching between tabs of very different content heights no longer visibly resizes the sheet. Defaults to `false`; every existing dialog is unaffected. `reference-app`'s `goal-dialog` now sets it (Edit is a fixed-height form, Activity's height grows with event count).
+
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — a drag starting on the drag handle's tab-row (a tap on a dot, or a swipe on the handle margin) was silently swallowed: `_handleDown` bailed out entirely for `.tab-seg` targets (breaking both dismiss and tab-swipe from that spot), and the handle margin tracked vertical movement only, with no direction classification, so a horizontal swipe there produced a tiny non-committing drag that sprang back instead of changing tabs. The handle now classifies direction from the first ~10px of movement, same as the body already did: vertical still dismisses, horizontal now hands off to tab-change, and a tap below that threshold still resolves to the tab button's own native click. Plain dismiss-drag behaviour for dialogs with no tabs (`tabCount <= 1`, the overwhelming majority) is untouched — it takes the exact same code path as before. Reported on-device (Android Chrome) against a downstream app (Telos); not reproducible via this library's Playwright suite, which only ever exercised the body-swipe path.
+
+---
+
 ## [1.1.1] — 2026-09-20
 
 ### Fixed
