@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.1] — 2026-09-20
+
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — removed the gap between tab segment dashes on the drag handle (introduced during a CSS-token cleanup right after 1.1.0); each segment's own centering padding is enough spacing on its own.
+
+---
+
 ## [1.1.0] — 2026-09-20
 
 ### Added
