@@ -134,7 +134,7 @@ Internally the default slot is wrapped in a `.body` element (`flex: 1 1 auto; ov
 
 `overscroll-behavior-y: contain` is set on `.body`, so an overscroll inside the dialog never chains to the page's root scroller or triggers the browser's native pull-to-refresh. The handle sets `touch-action: none`, so a drag starting on the handle is fully owned by the pointer handlers with no native scroll interpretation.
 
-Height caps: the sheet variant (`≤600px`) limits `max-block-size` to `85vh`; the desktop centered variant caps at `min(85vh, 600px)`. Both ensure scrolling activates predictably rather than relying on the browser's UA default. By default the dialog is otherwise sized to fit its content up to that ceiling — it does not grow to fill it. Set `fixedHeight` (see [API reference](#api-reference)) to make the ceiling a floor too, when varying content height across tabs would otherwise make the sheet visibly resize.
+Height caps: the sheet variant (`≤600px`) limits `max-block-size` to `80vh`; the desktop centered variant caps at `min(85vh, 600px)`. The sheet cap sits a bit further below full viewport height than the desktop one because mobile browser chrome (address bar, etc.) can collapse and expand, and `vh` reflects the largest possible viewport rather than what's actually visible — sitting further under 100% keeps the sheet from feeling oversized once that chrome is showing. Both ensure scrolling activates predictably rather than relying on the browser's UA default. By default the dialog is otherwise sized to fit its content up to that ceiling — it does not grow to fill it. Set `fixedHeight` (see [API reference](#api-reference)) to make the ceiling a floor too, when varying content height across tabs would otherwise make the sheet visibly resize.
 
 The module never touches `document.body` or `documentElement` overscroll — root overscroll behaviour is left to the consuming app.
 
@@ -168,7 +168,7 @@ Forwarded to the inner `<dialog>` when present.
 
 ### `fixedHeight` property
 
-Opt-in, defaults to `false`. When `true`, the dialog always renders at its `max-block-size` ceiling (`min(85vh, 600px)` desktop, `85vh` sheet) instead of shrink-wrapping to whichever content is currently slotted in. Use this on tabbed dialogs whose tabs have very different content heights, so switching tabs feels like paging within a stable container rather than resizing it. Leave it `false` (the default) for dialogs that should hug their own content — confirm sheets, action menus, and any non-tabbed dialog.
+Opt-in, defaults to `false`. When `true`, the dialog always renders at its `max-block-size` ceiling (`min(85vh, 600px)` desktop, `80vh` sheet) instead of shrink-wrapping to whichever content is currently slotted in. Use this on tabbed dialogs whose tabs have very different content heights, so switching tabs feels like paging within a stable container rather than resizing it. Leave it `false` (the default) for dialogs that should hug their own content — confirm sheets, action menus, and any non-tabbed dialog.
 
 ```js
 dialog.tabCount = 4;

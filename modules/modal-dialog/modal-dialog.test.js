@@ -608,7 +608,7 @@ describe('modal-dialog — fixedHeight', () => {
     expect(bareRule).toMatch(/max-block-size:\s*var\(--dialog-block-size-cap\)/);
     // ...and the mobile media query overrides it to the sheet value.
     const mediaRule = css.slice(css.indexOf('@media (max-width'), css.indexOf('dialog[open]', css.indexOf('@media (max-width')));
-    expect(mediaRule).toMatch(/--dialog-block-size-cap:\s*85vh/);
+    expect(mediaRule).toMatch(/--dialog-block-size-cap:\s*80vh/);
     expect(mediaRule).toMatch(/max-block-size:\s*var\(--dialog-block-size-cap\)/);
   });
 });
