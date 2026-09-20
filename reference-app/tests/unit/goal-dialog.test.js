@@ -48,6 +48,11 @@ describe('goal-dialog — open', () => {
 });
 
 describe('goal-dialog — activity tab', () => {
+  it('sets fixedHeight on the modal so switching tabs does not resize the sheet', () => {
+    const el = mount();
+    expect(el.shadowRoot.querySelector('#modal').fixedHeight).toBe(true);
+  });
+
   it('opening with no goal shows no activity tab', () => {
     const el = mount();
     el.open(null);

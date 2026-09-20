@@ -210,6 +210,10 @@ class GoalDialog extends AppElement {
     this._activityList  = this.shadowRoot.querySelector('#activity-list');
     this._saved         = false;
 
+    // Edit is a fixed-height form; Activity's height grows with event count. Without this,
+    // switching tabs would visibly resize the sheet.
+    this._modal.fixedHeight = true;
+
     this._onTabChange = e => this._showPage(e.detail.index);
     this._modal.addEventListener('modal-tab-change', this._onTabChange);
 
