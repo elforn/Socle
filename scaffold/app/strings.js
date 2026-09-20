@@ -6,4 +6,6 @@ defineStrings({
   'update-banner.dismiss':   'Dismiss',
 
   'toast.close':             '×',
+
+  'modal-dialog.tab-label':  'Page {index} of {count}',
 });

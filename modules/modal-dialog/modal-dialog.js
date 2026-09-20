@@ -1,4 +1,5 @@
 import { AppElement } from '../../core/app-element.js';
+import { t } from '../../core/strings.js';
 
 const MOBILE_BREAKPOINT = 600;
 
@@ -7,6 +8,12 @@ const DISMISS_DISTANCE_RATIO = 0.25;      // commit when dragged past 25% of she
 const DISMISS_VELOCITY = 0.5;             // …or a downward flick faster than 0.5 px/ms
 const DRAG_TRANSITION = 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)';
 const DRAG_FALLBACK_MS = 350;             // safety net if transitionend never fires
+
+// Horizontal swipe-to-change-tab thresholds (body drag, tabCount > 1 only) — same
+// shape as the dismiss-drag thresholds above, just on the other axis.
+const TAB_SWIPE_DISTANCE_RATIO = 0.2;     // commit past 20% of the body's width
+const TAB_SWIPE_VELOCITY = 0.5;           // …or a flick faster than 0.5 px/ms
+const TAB_SWIPE_INTENT_PX = 10;           // movement below this is too small to classify yet
 
 class ModalDialog extends AppElement {
   template() {
@@ -49,6 +56,7 @@ class ModalDialog extends AppElement {
         }
 
         .handle { display: none; flex-shrink: 0; }
+        .handle.has-tabs { display: flex; align-items: center; justify-content: center; padding-block: var(--space-2); }
 
         .body {
           flex: 1 1 auto;
@@ -110,9 +118,58 @@ class ModalDialog extends AppElement {
           margin-block-start: var(--space-1);
           flex-shrink: 0;
         }
+
+        /* ── Tabs (opt-in via the tabCount property) ──────────────────────
+           The pill (.handle::before, above) is untouched — has-tabs just
+           hides it and shows this row instead, so a dialog that never sets
+           tabCount renders exactly as before, byte-for-byte. */
+        .handle.has-tabs::before { display: none; }
+
+        .handle-tabs {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: var(--space-2);
+          inline-size: 100%;
+        }
+
+        .tab-seg {
+          border: none;
+          background: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          /* Intentionally below --touch-target (40px): tap is a secondary affordance here —
+             swipe and arrow keys are the primary ways to change pages — so this uses the
+             WCAG 2.5.8 bare minimum (24px) rather than the project's standard touch target,
+             to keep the indicator visually small. */
+          min-inline-size: var(--space-6);
+          min-block-size: var(--space-6);
+          touch-action: manipulation;
+        }
+
+        .tab-seg-dash {
+          inline-size: var(--space-1);
+          block-size: var(--space-1);
+          border-radius: var(--radius-full);
+          background: var(--color-border);
+          transition: inline-size 0.2s ease, background-color 0.2s ease;
+        }
+
+        .tab-seg[aria-selected="true"] .tab-seg-dash {
+          inline-size: var(--space-6);
+          background: var(--color-text-secondary);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .tab-seg-dash { transition: none; }
+        }
       </style>
       <dialog aria-modal="true">
-        <div class="handle" aria-hidden="true"></div>
+        <div class="handle" aria-hidden="true">
+          <div class="handle-tabs" role="tablist" hidden></div>
+        </div>
         <div class="body"><slot></slot></div>
         <div class="footer"><slot name="footer"></slot></div>
       </dialog>
@@ -122,6 +179,11 @@ class ModalDialog extends AppElement {
   subscribe() {
     this._dialog = this.shadowRoot.querySelector('dialog');
     this._handle = this.shadowRoot.querySelector('.handle');
+    this._handleTabs = this.shadowRoot.querySelector('.handle-tabs');
+    this._body = this.shadowRoot.querySelector('.body');
+    this._tabCount = 0;
+    this._activeTab = 0;
+
     const label = this.getAttribute('aria-label');
     if (label) {
       this._dialog.setAttribute('aria-label', label);
@@ -130,6 +192,7 @@ class ModalDialog extends AppElement {
 
     this._onClose = () => {
       this._teardownDrag(); // tear down any in-flight handle drag when closed by any route
+      this._teardownBodyDrag();
       this.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
     };
     this._dialog.addEventListener('close', this._onClose);
@@ -158,14 +221,27 @@ class ModalDialog extends AppElement {
     this._onHandleUp = this._handleUp.bind(this);
     this._onHandleCancel = this._handleCancel.bind(this);
     this._handle.addEventListener('pointerdown', this._onHandleDown);
+
+    // Tabs: keyboard paging on the segment row, swipe paging on the body.
+    this._onTabsKeydown = this._handleTabsKeydown.bind(this);
+    this._handleTabs.addEventListener('keydown', this._onTabsKeydown);
+
+    this._onBodyDown = this._bodyDown.bind(this);
+    this._onBodyMove = this._bodyMove.bind(this);
+    this._onBodyUp = this._bodyUp.bind(this);
+    this._onBodyCancel = this._bodyCancel.bind(this);
+    this._body.addEventListener('pointerdown', this._onBodyDown);
   }
 
   unsubscribe() {
     this._dialog?.removeEventListener('close', this._onClose);
     this._dialog?.removeEventListener('click', this._onBackdrop);
     this._handle?.removeEventListener('pointerdown', this._onHandleDown);
+    this._handleTabs?.removeEventListener('keydown', this._onTabsKeydown);
+    this._body?.removeEventListener('pointerdown', this._onBodyDown);
     this._footerSlot?.removeEventListener('slotchange', this._onFooterSlotChange);
     this._teardownDrag();
+    this._teardownBodyDrag();
   }
 
   _isSheet() {
@@ -176,8 +252,11 @@ class ModalDialog extends AppElement {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  // ── Swipe-down-to-dismiss (handle) ──────────────────────────────────────
+
   _handleDown(e) {
     if (e.button !== 0 || !this._isSheet()) return;
+    if (e.target.closest('.tab-seg')) return; // let the tab button's own click through untouched
     this._handle.setPointerCapture(e.pointerId);
     this._drag = {
       startY: e.clientY,
@@ -271,6 +350,163 @@ class ModalDialog extends AppElement {
     this._removeDragListeners();
     this._drag = null;
     this._clearDragStyles();
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────────────────────
+
+  get tabCount() { return this._tabCount ?? 0; }
+
+  set tabCount(n) {
+    const count = Math.max(0, n | 0);
+    if (count === this._tabCount) return;
+    this._tabCount = count;
+    this._activeTab = Math.min(this._activeTab, Math.max(0, count - 1));
+    this._renderTabSegments();
+  }
+
+  get activeTab() { return this._activeTab ?? 0; }
+
+  // Programmatic assignment — does not dispatch modal-tab-change (that event
+  // is reserved for user-driven interaction: segment tap, arrow key, swipe).
+  set activeTab(i) { this._selectTab(i, { emit: false }); }
+
+  _renderTabSegments() {
+    const on = this._tabCount > 1;
+    this._handle.classList.toggle('has-tabs', on);
+    this._handleTabs.hidden = !on;
+    // The handle is aria-hidden by default (a touch affordance, not a control —
+    // see docs). Once it holds real, independently meaningful buttons, it must
+    // stop being hidden from assistive tech.
+    if (on) this._handle.removeAttribute('aria-hidden');
+    else this._handle.setAttribute('aria-hidden', 'true');
+
+    this._handleTabs.innerHTML = '';
+    if (!on) return;
+
+    for (let i = 0; i < this._tabCount; i++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tab-seg';
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-label', t('modal-dialog.tab-label', { index: i + 1, count: this._tabCount }));
+      btn.setAttribute('aria-selected', String(i === this._activeTab));
+      btn.tabIndex = i === this._activeTab ? 0 : -1;
+      const dash = document.createElement('span');
+      dash.className = 'tab-seg-dash';
+      btn.appendChild(dash);
+      btn.addEventListener('click', () => this._selectTab(i));
+      this._handleTabs.appendChild(btn);
+    }
+  }
+
+  _selectTab(index, { emit = true } = {}) {
+    if (this._tabCount < 1) return;
+    const clamped = Math.max(0, Math.min(this._tabCount - 1, index));
+    const changed = clamped !== this._activeTab;
+    this._activeTab = clamped;
+    this._handleTabs.querySelectorAll('.tab-seg').forEach((btn, i) => {
+      const selected = i === clamped;
+      btn.setAttribute('aria-selected', String(selected));
+      btn.tabIndex = selected ? 0 : -1;
+    });
+    if (changed && emit) {
+      this.dispatchEvent(new CustomEvent('modal-tab-change', { bubbles: true, composed: true, detail: { index: clamped } }));
+    }
+  }
+
+  _handleTabsKeydown(e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); this._selectTab(this._activeTab + 1); this._focusActiveTab(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); this._selectTab(this._activeTab - 1); this._focusActiveTab(); }
+  }
+
+  _focusActiveTab() {
+    this._handleTabs.querySelector('.tab-seg[aria-selected="true"]')?.focus();
+  }
+
+  // ── Swipe-to-change-tab (body) ───────────────────────────────────────────
+  // Deliberately does not set touch-action on .body: doing so would also
+  // suppress native panning on any horizontally-scrollable content a
+  // consumer slots inside it (a chart with its own overflow-x: auto region,
+  // say), since a descendant cannot regain permissions an ancestor's
+  // touch-action already withdrew. Direction is instead disambiguated in JS
+  // from the first ~10px of movement, and any gesture that starts inside an
+  // already-horizontally-scrollable descendant is left alone entirely so
+  // that element's own native scroll handles it uncontested.
+
+  _bodyDown(e) {
+    if (e.button !== 0 || this._tabCount <= 1) return;
+    if (e.target.closest('button, a, input, textarea, select, [contenteditable]')) return;
+    if (this._withinHorizontalScroller(e.target)) return;
+    this._bodyDrag = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startTime: Date.now(),
+      width: this._body.getBoundingClientRect().width,
+      pointerId: e.pointerId,
+      horizontal: null, // undecided until ~10px of movement
+      lastDx: 0,
+    };
+    this._body.addEventListener('pointermove', this._onBodyMove);
+    this._body.addEventListener('pointerup', this._onBodyUp);
+    this._body.addEventListener('pointercancel', this._onBodyCancel);
+  }
+
+  _withinHorizontalScroller(el) {
+    let node = el;
+    while (node && node !== this._body) {
+      if (node.scrollWidth > node.clientWidth + 1) {
+        const overflowX = getComputedStyle(node).overflowX;
+        if (overflowX === 'auto' || overflowX === 'scroll') return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  _bodyMove(e) {
+    const d = this._bodyDrag;
+    if (!d) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+
+    if (d.horizontal === null) {
+      if (Math.abs(dx) < TAB_SWIPE_INTENT_PX && Math.abs(dy) < TAB_SWIPE_INTENT_PX) return;
+      d.horizontal = Math.abs(dx) > Math.abs(dy);
+      if (!d.horizontal) { this._teardownBodyDrag(); return; } // vertical intent — hand off to native scroll
+      this._body.setPointerCapture(d.pointerId);
+    }
+
+    d.lastDx = dx;
+  }
+
+  _bodyUp() {
+    const d = this._bodyDrag;
+    if (!d) return;
+    this._removeBodyDragListeners();
+    this._bodyDrag = null;
+    if (!d.horizontal) return;
+
+    const elapsed = Date.now() - d.startTime;
+    const velocity = elapsed > 0 ? Math.abs(d.lastDx) / elapsed : 0;
+    const commit = Math.abs(d.lastDx) > d.width * TAB_SWIPE_DISTANCE_RATIO || velocity > TAB_SWIPE_VELOCITY;
+    if (!commit) return;
+    this._selectTab(this._activeTab + (d.lastDx < 0 ? 1 : -1));
+  }
+
+  _bodyCancel() {
+    this._removeBodyDragListeners();
+    this._bodyDrag = null;
+  }
+
+  _removeBodyDragListeners() {
+    this._body?.removeEventListener('pointermove', this._onBodyMove);
+    this._body?.removeEventListener('pointerup', this._onBodyUp);
+    this._body?.removeEventListener('pointercancel', this._onBodyCancel);
+  }
+
+  _teardownBodyDrag() {
+    this._removeBodyDragListeners();
+    this._bodyDrag = null;
   }
 
   show(focusEl = null) {

@@ -55,7 +55,7 @@ npx serve dist --single
 - [Reorder](docs/reorder.md) — drag-to-reorder controller, cross-section drags, keyboard reorder
 - [App header](docs/app-header.md) — sticky header, update-banner integration, safe area
 - [Toast](docs/toast.md) — ephemeral feedback messages, actions, top-layer popover
-- [Modal dialog](docs/modal-dialog.md) — centered dialog / bottom sheet, swipe-to-dismiss, scroll containment
+- [Modal dialog](docs/modal-dialog.md) — centered dialog / bottom sheet, swipe-to-dismiss, scroll containment, opt-in tabs/paging
 - [Filter state](docs/filter-state.md) — localStorage-backed filter persistence, isActive() indicator
 - [Notifications](docs/notifications.md) — opt-in digest notifications, dedup, periodic background sync, cold-launch routing
 - [Testing](docs/testing.md) — test environments, fake-indexeddb, component test patterns, E2E setup

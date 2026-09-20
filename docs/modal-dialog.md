@@ -10,6 +10,7 @@ It is content-agnostic — slot in whatever you need. The component owns only th
 - [The two variants](#the-two-variants)
 - [Dismissing](#dismissing)
 - [Swipe-down-to-dismiss](#swipe-down-to-dismiss)
+- [Tabs](#tabs)
 - [Scroll containment](#scroll-containment)
 - [Accessibility](#accessibility)
 - [API reference](#api-reference)
@@ -83,6 +84,43 @@ A commit animates the sheet to `translateY(100%)` and then calls `close()` on `t
 Under `prefers-reduced-motion: reduce`, the follow-transform and slide-out are skipped: a past-threshold release closes immediately, a below-threshold release just resets.
 
 `pointercancel`, and a close by any other route (backdrop, Escape, programmatic), tear the in-flight drag down cleanly. `show()` clears any leftover inline transform, so a prior drag can never leave the sheet mis-positioned on the next open.
+
+---
+
+## Tabs
+
+Opt-in multi-page support. A dialog that never sets `tabCount` renders exactly as it always has — this is purely additive.
+
+```js
+const dialog = document.querySelector('modal-dialog');
+dialog.tabCount = 4;      // replaces the handle's pill with 4 segment dashes
+dialog.activeTab = 0;     // which one is currently shown (no event fires for this assignment)
+
+dialog.addEventListener('modal-tab-change', e => {
+  render(e.detail.index); // swap the slotted content to match
+});
+```
+
+`modal-dialog` does not manage page content itself — it stays content-agnostic, same as everything else about the component. Setting `tabCount`/`activeTab` only drives the segment UI and the swipe/keyboard interaction; the consumer listens for `modal-tab-change` and updates whatever is in the default slot to match `e.detail.index`.
+
+**The segments replace the pill, not sit alongside it.** `tabCount` of 0 or 1 leaves the plain pill exactly as before (nothing to page between). `tabCount > 1` swaps to that many small dashes, the active one elongated — each is a real `role="tab"` `<button>`, independently focusable and clickable, unlike the pill it replaces (which stays `aria-hidden`, a pure touch affordance). The handle itself stops being `aria-hidden` once it holds these real controls. Each segment's hit area is `--space-6` (24px) square regardless of the dash's tiny visual size — the WCAG 2.5.8 bare minimum rather than this library's usual `--touch-target` (40px), a deliberate exception since tap is a secondary affordance behind swipe and arrow keys.
+
+Each segment's `aria-label` comes from `t('modal-dialog.tab-label', { index, count })` — register the default in `app/strings.js`:
+
+```js
+defineStrings({
+  'modal-dialog.tab-label': 'Page {index} of {count}',
+});
+```
+
+**Three ways to change tabs, all equivalent:**
+- **Tap a segment** — jumps straight to that page.
+- **ArrowLeft/ArrowRight** while focus is on the segment row — pages one at a time, clamped at the first/last tab (no wrapping). Roving `tabindex` keeps only the active segment in the natural Tab order.
+- **Swipe the body** — left advances to the next tab, right goes back, using the same distance/velocity commit thresholds as swipe-down-to-dismiss (20% of the body's width, or a 0.5 px/ms flick), just on the horizontal axis.
+
+Only genuine user interaction fires `modal-tab-change` — setting `.activeTab` programmatically (e.g. to resync after the consumer changes tabs some other way) does not, so there's no risk of a feedback loop between the property and the event.
+
+**Body swipe and nested horizontal scrolling.** The body deliberately gets no `touch-action` restriction: an ancestor's `touch-action` value constrains what a descendant is allowed to do, so restricting the body to vertical-only panning would also suppress native horizontal scrolling on anything a consumer slots inside it — a chart with its own `overflow-x: auto` region, say. Instead, direction is disambiguated in JS from the first ~10px of pointer movement (vertical intent hands off to native scroll immediately, before capturing the pointer), and a drag that starts inside an already-horizontally-scrollable descendant (detected via `scrollWidth`/`clientWidth` and computed `overflow-x`) is left alone entirely, deferring to that element's own scrolling. A drag starting on an interactive element (`button`, `a`, `input`, `textarea`, `select`, `[contenteditable]`) is also ignored, so a `<select>` or similar inside the slotted content keeps working normally.
 
 ---
 

@@ -2,6 +2,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import '../../core/app-element.js';
 import './modal-dialog.js';
+import { defineStrings } from '../../core/strings.js';
+
+defineStrings({ 'modal-dialog.tab-label': 'Page {index} of {count}' });
 
 // happy-dom does not implement pointer capture — no-op stubs (see CLAUDE.md testing notes).
 HTMLElement.prototype.setPointerCapture = () => {};
@@ -33,6 +36,19 @@ function mount(attrs = {}) {
 
 function pointer(type, clientY, extra = {}) {
   return new PointerEvent(type, { button: 0, pointerId: 1, clientY, bubbles: true, ...extra });
+}
+
+const BODY_WIDTH = 300;
+
+function pointerXY(type, clientX, clientY = 0, extra = {}) {
+  return new PointerEvent(type, { button: 0, pointerId: 2, clientX, clientY, bubbles: true, ...extra });
+}
+
+function mountWithTabs(count) {
+  const el = mount();
+  el.shadowRoot.querySelector('.body').getBoundingClientRect = () => ({ width: BODY_WIDTH });
+  el.tabCount = count;
+  return el;
 }
 
 function transitionEnd(dialog, propertyName = 'transform') {
@@ -428,5 +444,300 @@ describe('modal-dialog — swipe-down-to-dismiss', () => {
     // further move events are inert after teardown
     handle.dispatchEvent(pointer('pointermove', 300));
     expect(dialog.style.transform).toBe('');
+  });
+});
+
+describe('modal-dialog — tabs: setup and rendering', () => {
+  it('defaults to tabCount 0, activeTab 0, no tab segments, pill untouched', () => {
+    const el = mount();
+    expect(el.tabCount).toBe(0);
+    expect(el.activeTab).toBe(0);
+    expect(el.shadowRoot.querySelector('.handle').classList.contains('has-tabs')).toBe(false);
+    expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(0);
+  });
+
+  it('tabCount of 1 does not switch on tabs mode (nothing to page between)', () => {
+    const el = mountWithTabs(1);
+    expect(el.shadowRoot.querySelector('.handle').classList.contains('has-tabs')).toBe(false);
+    expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(0);
+  });
+
+  it('tabCount > 1 renders that many segment buttons and switches on has-tabs', () => {
+    const el = mountWithTabs(4);
+    expect(el.shadowRoot.querySelector('.handle').classList.contains('has-tabs')).toBe(true);
+    expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(4);
+    expect(el.shadowRoot.querySelector('.handle-tabs').hidden).toBe(false);
+  });
+
+  it('segments are real role="tab" buttons, and the first is selected by default', () => {
+    const el = mountWithTabs(3);
+    const segs = el.shadowRoot.querySelectorAll('.tab-seg');
+    segs.forEach(s => expect(s.getAttribute('role')).toBe('tab'));
+    expect(segs[0].getAttribute('aria-selected')).toBe('true');
+    expect(segs[1].getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('labels each segment via t() with its 1-based position and the total count', () => {
+    const el = mountWithTabs(3);
+    const segs = el.shadowRoot.querySelectorAll('.tab-seg');
+    expect(segs[0].getAttribute('aria-label')).toBe('Page 1 of 3');
+    expect(segs[2].getAttribute('aria-label')).toBe('Page 3 of 3');
+  });
+
+  it('removes aria-hidden from the handle once it holds real controls', () => {
+    const el = mountWithTabs(3);
+    expect(el.shadowRoot.querySelector('.handle').hasAttribute('aria-hidden')).toBe(false);
+  });
+
+  it('going back to tabCount 1 restores aria-hidden and removes the segments', () => {
+    const el = mountWithTabs(3);
+    el.tabCount = 1;
+    expect(el.shadowRoot.querySelector('.handle').getAttribute('aria-hidden')).toBe('true');
+    expect(el.shadowRoot.querySelector('.handle').classList.contains('has-tabs')).toBe(false);
+    expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(0);
+  });
+
+  it('shrinking tabCount clamps an out-of-range activeTab', () => {
+    const el = mountWithTabs(5);
+    el.activeTab = 4;
+    el.tabCount = 2;
+    expect(el.activeTab).toBe(1);
+  });
+
+  it('a negative tabCount clamps to 0 rather than throwing', () => {
+    const el = mountWithTabs(3);
+    el.tabCount = -2;
+    expect(el.tabCount).toBe(0);
+    expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(0);
+  });
+
+  it('setting activeTab while tabCount is 0 is a no-op, not a throw', () => {
+    const el = mount();
+    expect(() => { el.activeTab = 2; }).not.toThrow();
+    expect(el.activeTab).toBe(0);
+  });
+});
+
+describe('modal-dialog — tabs: selection', () => {
+  it('clicking a segment updates activeTab and fires modal-tab-change with its index', () => {
+    const el = mountWithTabs(3);
+    const onChange = vi.fn();
+    el.addEventListener('modal-tab-change', onChange);
+    el.shadowRoot.querySelectorAll('.tab-seg')[2].click();
+    expect(el.activeTab).toBe(2);
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange.mock.calls[0][0].detail).toEqual({ index: 2 });
+  });
+
+  it('modal-tab-change bubbles and is composed', () => {
+    const el = mountWithTabs(3);
+    let captured = null;
+    document.addEventListener('modal-tab-change', e => { captured = e; }, { once: true });
+    el.shadowRoot.querySelectorAll('.tab-seg')[1].click();
+    expect(captured).not.toBeNull();
+    expect(captured.bubbles).toBe(true);
+    expect(captured.composed).toBe(true);
+  });
+
+  it('clicking the already-active segment does not fire modal-tab-change', () => {
+    const el = mountWithTabs(3);
+    const onChange = vi.fn();
+    el.addEventListener('modal-tab-change', onChange);
+    el.shadowRoot.querySelectorAll('.tab-seg')[0].click(); // already active
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('clicking updates aria-selected across all segments, not just the clicked one', () => {
+    const el = mountWithTabs(3);
+    el.shadowRoot.querySelectorAll('.tab-seg')[2].click();
+    const segs = el.shadowRoot.querySelectorAll('.tab-seg');
+    expect(segs[0].getAttribute('aria-selected')).toBe('false');
+    expect(segs[2].getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('the activeTab property setter updates state without dispatching modal-tab-change', () => {
+    const el = mountWithTabs(3);
+    const onChange = vi.fn();
+    el.addEventListener('modal-tab-change', onChange);
+    el.activeTab = 2;
+    expect(el.activeTab).toBe(2);
+    expect(el.shadowRoot.querySelectorAll('.tab-seg')[2].getAttribute('aria-selected')).toBe('true');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('clamps out-of-range indices from either direction', () => {
+    const el = mountWithTabs(3);
+    el.activeTab = 99;
+    expect(el.activeTab).toBe(2);
+    el.activeTab = -5;
+    expect(el.activeTab).toBe(0);
+  });
+});
+
+describe('modal-dialog — tabs: keyboard paging', () => {
+  it('ArrowRight/ArrowLeft on the segment row page through tabs and move focus', () => {
+    const el = mountWithTabs(3);
+    const tabs = el.shadowRoot.querySelector('.handle-tabs');
+    tabs.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(el.activeTab).toBe(1);
+    tabs.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(el.activeTab).toBe(2);
+    tabs.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(el.activeTab).toBe(1);
+  });
+
+  it('arrow keys fire modal-tab-change like a click would', () => {
+    const el = mountWithTabs(3);
+    const onChange = vi.fn();
+    el.addEventListener('modal-tab-change', onChange);
+    el.shadowRoot.querySelector('.handle-tabs').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange.mock.calls[0][0].detail).toEqual({ index: 1 });
+  });
+
+  it('arrow keys clamp at the first and last tab rather than wrapping', () => {
+    const el = mountWithTabs(2);
+    const tabs = el.shadowRoot.querySelector('.handle-tabs');
+    tabs.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })); // already at 0
+    expect(el.activeTab).toBe(0);
+    el.activeTab = 1;
+    tabs.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // already at last
+    expect(el.activeTab).toBe(1);
+  });
+
+  it('only the active segment is keyboard-tabbable (roving tabindex)', () => {
+    const el = mountWithTabs(3);
+    let segs = el.shadowRoot.querySelectorAll('.tab-seg');
+    expect(segs[0].tabIndex).toBe(0);
+    expect(segs[1].tabIndex).toBe(-1);
+    el.activeTab = 1;
+    segs = el.shadowRoot.querySelectorAll('.tab-seg');
+    expect(segs[0].tabIndex).toBe(-1);
+    expect(segs[1].tabIndex).toBe(0);
+  });
+});
+
+describe('modal-dialog — tabs: swipe on the body', () => {
+  it('a horizontal drag past the distance threshold changes tabs (left = next)', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+    const onChange = vi.fn();
+    el.addEventListener('modal-tab-change', onChange);
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 130, 100)); // dx = -70, > 20% of 300
+    body.dispatchEvent(pointerXY('pointerup', 130, 100));
+
+    expect(el.activeTab).toBe(1);
+    expect(onChange.mock.calls[0][0].detail).toEqual({ index: 1 });
+  });
+
+  it('a rightward drag past threshold goes to the previous tab', () => {
+    const el = mountWithTabs(3);
+    el.activeTab = 1;
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 100, 100));
+    body.dispatchEvent(pointerXY('pointermove', 180, 100)); // dx = +80
+    body.dispatchEvent(pointerXY('pointerup', 180, 100));
+
+    expect(el.activeTab).toBe(0);
+  });
+
+  it('a drag below the distance and velocity thresholds does not change tabs', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+    const onChange = vi.fn();
+    el.addEventListener('modal-tab-change', onChange);
+
+    vi.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(2000); // slow drag
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 190, 100)); // dx = -10, well under 20% of 300
+    body.dispatchEvent(pointerXY('pointerup', 190, 100));
+
+    expect(el.activeTab).toBe(0);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('a fast small flick commits via velocity even below the distance threshold', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    vi.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(1050); // 50ms
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 160, 100)); // dx = -40 in 50ms = 0.8 px/ms > 0.5
+    body.dispatchEvent(pointerXY('pointerup', 160, 100));
+
+    expect(el.activeTab).toBe(1);
+  });
+
+  it('a vertical-dominant drag is left alone for native scroll — no tab change', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+    const onChange = vi.fn();
+    el.addEventListener('modal-tab-change', onChange);
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 190, 250)); // dx=-10, dy=+150 — vertical intent
+    body.dispatchEvent(pointerXY('pointerup', 190, 250));
+
+    expect(el.activeTab).toBe(0);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when tabCount is 1 or 0', () => {
+    const el = mount(); // tabCount defaults to 0
+    const body = el.shadowRoot.querySelector('.body');
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 100, 100));
+    body.dispatchEvent(pointerXY('pointerup', 100, 100));
+    expect(el.activeTab).toBe(0); // no throw, no change
+  });
+
+  it('ignores a drag starting on an interactive element (e.g. a <select> inside slotted content)', () => {
+    const el = mountWithTabs(3);
+    const select = document.createElement('select');
+    el.appendChild(select); // lands in the default slot, inside .body
+    const body = el.shadowRoot.querySelector('.body');
+
+    select.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 130, 100));
+    body.dispatchEvent(pointerXY('pointerup', 130, 100));
+
+    expect(el.activeTab).toBe(0);
+  });
+
+  it('defers to a nested horizontally-scrollable descendant instead of paging tabs', () => {
+    const el = mountWithTabs(3);
+    const scroller = document.createElement('div');
+    Object.defineProperty(scroller, 'scrollWidth', { value: 600 });
+    Object.defineProperty(scroller, 'clientWidth', { value: 200 });
+    scroller.style.overflowX = 'auto';
+    el.appendChild(scroller);
+
+    scroller.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    el.shadowRoot.querySelector('.body').dispatchEvent(pointerXY('pointermove', 130, 100));
+    el.shadowRoot.querySelector('.body').dispatchEvent(pointerXY('pointerup', 130, 100));
+
+    expect(el.activeTab).toBe(0);
+  });
+
+  it('pointercancel tears the in-flight body drag down without changing tabs', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 130, 100));
+    body.dispatchEvent(pointerXY('pointercancel', 130, 100));
+    expect(el.activeTab).toBe(0);
+  });
+
+  it('closing the dialog tears down an in-flight body drag', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 130, 100));
+    expect(() => el.close()).not.toThrow();
+    body.dispatchEvent(pointerXY('pointerup', 130, 100));
+    expect(el.activeTab).toBe(0); // teardown already removed the listeners' effect
   });
 });
