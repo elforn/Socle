@@ -10,6 +10,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] — 2026-09-20
+
+### Added
+- `modules/modal-dialog/modal-dialog.js` — optional tabs/paging support: set `.tabCount` (a number) and the drag handle's pill is replaced by that many segment dashes (the active one elongated), each a real `role="tab"` button so it's independently focusable and clickable rather than the purely decorative pill it replaces. Each segment's hit area is 24px square (`--space-6`) regardless of the dash's small visual size, and its `aria-label` comes from `t('modal-dialog.tab-label', { index, count })` — register the default in `app/strings.js` (see `docs/modal-dialog.md`). `.activeTab` (get/set) reads or programmatically sets the current page without dispatching an event; user-driven changes — a segment tap, ArrowLeft/ArrowRight on the segment row, or a horizontal swipe on the body — fire a bubbling, composed `modal-tab-change` event (`detail: { index }`). The body swipe deliberately sets no `touch-action` (an ancestor's restriction would suppress panning on any horizontally-scrollable content a consumer slots inside, since a descendant cannot regain permissions an ancestor withdrew) and instead disambiguates direction in JS from the first ~10px of movement, deferring entirely to any nested horizontally-scrollable descendant it detects under the drag's start point. `tabCount` of 0 or 1 renders byte-for-byte as before — this is purely additive, no existing dialog changes appearance or behaviour. Built for Telos's goal-analytics feature (a swipeable multi-page view inside the goal edit dialog), generalised for any consumer.
+- `reference-app` — `goal-dialog` now uses modal-dialog's tabs to add a real Activity page (Edit / Activity) to the goal edit sheet, built from the goal's own slice of the append-only event log. Demonstrates the new tabs feature and the event log's audit-trail use case end to end.
+
+---
+
 ## [1.0.0] — 2026-09-17
 
 V1 complete: every item in `.claude/technical-context.md`'s Build Order through Session 11 is done. P2P (Session 12) remains deliberately deferred to V2 — the CLI already marks it `disabled: true, hint: 'coming in V2'`, and the append-only event log with `deviceId` is designed for it without requiring any schema change when it lands.
