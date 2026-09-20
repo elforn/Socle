@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [1.2.1] — 2026-09-20
+
 ### Changed
 - `modules/modal-dialog/modal-dialog.js` — the sheet variant's `max-block-size` cap lowered from `85vh` to `80vh`. Mobile browser chrome (address bar, etc.) can collapse and expand, and `vh` reflects the largest possible viewport rather than what's currently visible, so `85vh` could feel oversized once that chrome was showing. The desktop centered variant's `min(85vh, 600px)` cap is unchanged. Reported against a downstream app (Telos).
 
