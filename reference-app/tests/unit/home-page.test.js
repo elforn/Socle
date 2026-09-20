@@ -176,3 +176,42 @@ describe('home-page — store integration', () => {
     );
   });
 });
+
+describe('home-page — goal dialog activity', () => {
+  function stubDialogShow(el) {
+    const dialog = el.shadowRoot.querySelector('#dialog');
+    const modal = dialog.shadowRoot.querySelector('#modal');
+    modal.show = () => {};
+    return dialog;
+  }
+
+  it('opening an existing goal loads its real event history into the dialog', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount(2026);
+    const dialog = stubDialogShow(el);
+    await dispatch('goal:title-set', { year: '2026', id: 'c1', title: 'Grand Capstone' });
+    await dispatch('goal:progress-set', { year: '2026', id: 'c1', percentage: 40 });
+
+    el.shadowRoot.querySelector('#capstone-list').dispatchEvent(new CustomEvent('goal-tap', {
+      detail: { goal: { id: 'c1', title: 'Grand Capstone', percentage: 40 } },
+    }));
+
+    const modal = dialog.shadowRoot.querySelector('#modal');
+    await vi.waitFor(() => expect(modal.tabCount).toBe(2));
+    const items = dialog.shadowRoot.querySelectorAll('#activity-list .activity-item');
+    expect(items.length).toBe(2);
+    expect(items[0].textContent).toContain('40%');       // most recent event first
+    expect(items[1].textContent).toContain('Grand Capstone');
+  });
+
+  it('opening the add-new-goal flow shows no activity tab (nothing has happened yet)', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount(2026);
+    const dialog = stubDialogShow(el);
+
+    el.shadowRoot.querySelector('#add-capstone').click();
+
+    const modal = dialog.shadowRoot.querySelector('#modal');
+    await vi.waitFor(() => expect(modal.tabCount).toBe(1));
+  });
+});

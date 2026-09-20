@@ -7,6 +7,8 @@ defineStrings({
 
   'toast.close':                 '×',
 
+  'modal-dialog.tab-label':      'Pàgina {index} de {count}',
+
   'home-page.capstone-section':  'Objectiu principal',
   'home-page.prev-year':         'Any anterior',
   'home-page.next-year':         'Any següent',
@@ -17,6 +19,11 @@ defineStrings({
   'goal-dialog.save':            'Desa',
   'goal-dialog.cancel':          'Cancel·la',
   'goal-dialog.delete':          'Elimina',
+  'goal-dialog.activity-heading':      'Activitat',
+  'goal-dialog.activity-empty':        'Encara no hi ha activitat',
+  'goal-dialog.activity-title-set':    'Canviat a "{title}"',
+  'goal-dialog.activity-progress-set': 'Progrés establert al {percentage}%',
+  'goal-dialog.activity-deleted':      'Eliminat',
 
   'home-page.milestone-section': 'Fites de 3 mesos',
   'home-page.wow-section':       'Wow de 8 setmanes',

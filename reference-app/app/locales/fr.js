@@ -7,6 +7,8 @@ defineStrings({
 
   'toast.close':                 '×',
 
+  'modal-dialog.tab-label':      'Page {index} sur {count}',
+
   'home-page.capstone-section':  'Objectif phare',
   'home-page.prev-year':         'Année précédente',
   'home-page.next-year':         'Année suivante',
@@ -17,6 +19,11 @@ defineStrings({
   'goal-dialog.save':            'Enregistrer',
   'goal-dialog.cancel':          'Annuler',
   'goal-dialog.delete':          'Supprimer',
+  'goal-dialog.activity-heading':      'Activité',
+  'goal-dialog.activity-empty':        'Aucune activité',
+  'goal-dialog.activity-title-set':    'Renommé en « {title} »',
+  'goal-dialog.activity-progress-set': 'Progression réglée à {percentage} %',
+  'goal-dialog.activity-deleted':      'Supprimé',
 
   'home-page.milestone-section': 'Jalons de 3 mois',
   'home-page.wow-section':       'Wow de 8 semaines',

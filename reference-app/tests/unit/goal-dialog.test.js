@@ -47,6 +47,59 @@ describe('goal-dialog — open', () => {
   });
 });
 
+describe('goal-dialog — activity tab', () => {
+  it('opening with no goal shows no activity tab', () => {
+    const el = mount();
+    el.open(null);
+    expect(el.shadowRoot.querySelector('#modal').tabCount).toBe(1);
+  });
+
+  it('opening an existing goal enables the activity tab even with no events yet', () => {
+    const el = mount();
+    el.open({ id: '1', title: 'My goal' });
+    expect(el.shadowRoot.querySelector('#modal').tabCount).toBe(2);
+    expect(el.shadowRoot.querySelector('#activity-list').textContent).toContain('No activity yet');
+  });
+
+  it('renders the given activity events, most recent first', () => {
+    const el = mount();
+    el.open({ id: '1', title: 'My goal' }, [
+      { type: 'goal:title-set', occurredAt: 1000, payload: { title: 'My goal' } },
+      { type: 'goal:progress-set', occurredAt: 2000, payload: { percentage: 50 } },
+    ]);
+    const items = el.shadowRoot.querySelectorAll('#activity-list .activity-item');
+    expect(items.length).toBe(2);
+    expect(items[0].textContent).toContain('50%');
+    expect(items[1].textContent).toContain('My goal');
+  });
+
+  it('renders a deleted event description', () => {
+    const el = mount();
+    el.open({ id: '1', title: 'My goal' }, [
+      { type: 'goal:deleted', occurredAt: 1000, payload: {} },
+    ]);
+    expect(el.shadowRoot.querySelector('#activity-list').textContent).toContain('Deleted');
+  });
+
+  it('switching to the activity page via modal-tab-change shows it and hides the edit page', () => {
+    const el = mount();
+    el.open({ id: '1', title: 'My goal' });
+    const modal = el.shadowRoot.querySelector('#modal');
+    modal.dispatchEvent(new CustomEvent('modal-tab-change', { detail: { index: 1 } }));
+    expect(el.shadowRoot.querySelector('#page-edit').hidden).toBe(true);
+    expect(el.shadowRoot.querySelector('#page-activity').hidden).toBe(false);
+  });
+
+  it('reopening resets back to the edit page', () => {
+    const el = mount();
+    el.open({ id: '1', title: 'My goal' });
+    el.shadowRoot.querySelector('#modal').dispatchEvent(new CustomEvent('modal-tab-change', { detail: { index: 1 } }));
+    el.open({ id: '2', title: 'Another goal' });
+    expect(el.shadowRoot.querySelector('#page-edit').hidden).toBe(false);
+    expect(el.shadowRoot.querySelector('#page-activity').hidden).toBe(true);
+  });
+});
+
 describe('goal-dialog — save', () => {
   it('save button is disabled when input is empty', () => {
     const el = mount();

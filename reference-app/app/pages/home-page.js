@@ -223,12 +223,20 @@ class HomePage extends AppElement {
     };
     Store.subscribe('wow', this._onWow);
 
+    // A goal's activity tab shows its own slice of the append-only event log —
+    // home-page owns Store access, so it fetches and filters before handing the
+    // dialog an already-resolved list; goal-dialog itself stays store-agnostic.
+    this._openDialog = async goal => {
+      const activity = goal ? (await Store.getAllEvents()).filter(e => e.payload?.id === goal.id) : [];
+      this._dialog.open(goal, activity);
+    };
+
     // ── Capstone events ───────────────────────────────────────────────────
 
     this._onCapstoneGoalTap = e => {
       this._editingSection = 'capstone';
       this._editingGoal    = e.detail.goal;
-      this._dialog.open(e.detail.goal);
+      this._openDialog(e.detail.goal);
     };
     this._capstoneList.addEventListener('goal-tap', this._onCapstoneGoalTap);
 
@@ -245,7 +253,7 @@ class HomePage extends AppElement {
     this._onAddCapstone = () => {
       this._editingSection = 'capstone';
       this._editingGoal    = null;
-      this._dialog.open(null);
+      this._openDialog(null);
     };
     this.shadowRoot.querySelector('#add-capstone').addEventListener('click', this._onAddCapstone);
 
@@ -254,7 +262,7 @@ class HomePage extends AppElement {
     this._onMilestoneGoalTap = e => {
       this._editingSection = 'milestone';
       this._editingGoal    = e.detail.goal;
-      this._dialog.open(e.detail.goal);
+      this._openDialog(e.detail.goal);
     };
     this._milestoneList.addEventListener('goal-tap', this._onMilestoneGoalTap);
 
@@ -271,7 +279,7 @@ class HomePage extends AppElement {
     this._onAddMilestone = () => {
       this._editingSection = 'milestone';
       this._editingGoal    = null;
-      this._dialog.open(null);
+      this._openDialog(null);
     };
     this.shadowRoot.querySelector('#add-milestone').addEventListener('click', this._onAddMilestone);
 
@@ -280,7 +288,7 @@ class HomePage extends AppElement {
     this._onWowGoalTap = e => {
       this._editingSection = 'wow';
       this._editingGoal    = e.detail.goal;
-      this._dialog.open(e.detail.goal);
+      this._openDialog(e.detail.goal);
     };
     this._wowList.addEventListener('goal-tap', this._onWowGoalTap);
 
@@ -297,7 +305,7 @@ class HomePage extends AppElement {
     this._onAddWow = () => {
       this._editingSection = 'wow';
       this._editingGoal    = null;
-      this._dialog.open(null);
+      this._openDialog(null);
     };
     this.shadowRoot.querySelector('#add-wow').addEventListener('click', this._onAddWow);
 
