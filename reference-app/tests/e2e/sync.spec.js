@@ -215,7 +215,7 @@ test.describe('Sync — export', () => {
     expect(download.suggestedFilename()).toMatch(/^\d{12}_youryear-all\.youryear$/);
   });
 
-  test('exported file starts with SCLE magic bytes', async ({ page }) => {
+  test('exported file starts with ZIP magic bytes', async ({ page }) => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       (async () => {
@@ -226,13 +226,11 @@ test.describe('Sync — export', () => {
     const tmpPath = path.join(os.tmpdir(), download.suggestedFilename());
     await download.saveAs(tmpPath);
     const bytes = fs.readFileSync(tmpPath);
-    // First 4 bytes: SCLE (uncompressed magic), then gzip payload starts at byte 4
-    expect(bytes[0]).toBe(0x53); // S
-    expect(bytes[1]).toBe(0x43); // C
-    expect(bytes[2]).toBe(0x4c); // L
-    expect(bytes[3]).toBe(0x45); // E
-    expect(bytes[4]).toBe(0x1f); // gzip magic
-    expect(bytes[5]).toBe(0x8b);
+    // modules/sync/sync.js produces a standard ZIP archive: PK\x03\x04
+    expect(bytes[0]).toBe(0x50); // P
+    expect(bytes[1]).toBe(0x4b); // K
+    expect(bytes[2]).toBe(0x03);
+    expect(bytes[3]).toBe(0x04);
     fs.unlinkSync(tmpPath);
   });
 

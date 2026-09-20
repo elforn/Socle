@@ -38,12 +38,24 @@ async function openAndSaveGoal(page, title) {
 }
 
 async function openGoalForDelete(page) {
+  // goal-item.onTap() only dispatches goal-tap (opening the edit dialog) while the
+  // item is in edit mode — enable it first, same as tests/e2e/goals.spec.js does.
   await page.evaluate(() => {
     document.querySelector('app-router').shadowRoot
       .querySelector('home-page').shadowRoot
-      .querySelector('#capstone-list goal-item')
-      .click();
+      .querySelector('#capstone-edit-btn').click();
   });
+  // goal-item uses the Gestures mixin, which detects taps from real pointer events —
+  // a synthetic element.click() never reaches it, so this needs a real mouse click
+  // on the bar (same technique as tests/e2e/goals.spec.js's dialog-open tests).
+  const barBounds = await page.evaluate(() => {
+    const bar = document.querySelector('app-router').shadowRoot
+      .querySelector('home-page').shadowRoot
+      .querySelector('#capstone-list goal-item').shadowRoot
+      .querySelector('.bar');
+    return bar.getBoundingClientRect().toJSON();
+  });
+  await page.mouse.click(barBounds.x + barBounds.width / 2, barBounds.y + barBounds.height / 2);
   await page.waitForFunction(() => {
     const d = document.querySelector('app-router')?.shadowRoot
       ?.querySelector('home-page')?.shadowRoot
