@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [1.2.2] — 2026-09-22
+
 ### Fixed
 - `modules/modal-dialog/modal-dialog.js` — swiping the tab body on a real touch device did nothing (only tapping a segment worked): `.body` set no `touch-action` at all, so the browser's compositor claimed the gesture natively from the first touch sample, ahead of and independent from JS — by the time `_bodyMove`'s ~10px direction classification ran, the browser had often already committed the gesture to native panning and fired `pointercancel`, which `setPointerCapture()` cannot override (it only redirects event delivery, not the browser's own gesture claim). `.body` now sets `touch-action: pan-y` for the duration of a tracked drag — claiming horizontal for JS while leaving vertical fully native — released the moment the drag ends, is cancelled, or turns out to be vertical. Still gated by the existing nested-horizontal-scroller check, so a chart or similar slotted inside the body is unaffected. Not reproducible via this library's Playwright suite (mouse-simulated drags never engage the browser's native touch-action arbitration); root-caused on-device against a downstream app (Telos) via temporary console logging in `_bodyDown`/`_bodyMove`/`_bodyCancel`.
 
