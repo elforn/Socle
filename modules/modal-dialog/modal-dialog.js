@@ -507,29 +507,37 @@ class ModalDialog extends AppElement {
   }
 
   // ── Swipe-to-change-tab (body) ───────────────────────────────────────────
-  // touch-action is set on .body dynamically, only for the duration of a
-  // single gesture, and only when that gesture didn't start inside a nested
+  // touch-action is set to none on .body for the duration of a single
+  // gesture, only when that gesture didn't start inside a nested
   // horizontally-scrollable descendant (still gated by the same
   // _withinHorizontalScroller check below — that element's own native
   // panning is never touched, since the function returns before reaching
-  // the touch-action line). This is load-bearing, not an optimisation: the
-  // browser's compositor claims touch-action: auto gestures natively at the
-  // very first touch sample, ahead of and independent from JS — by the time
-  // _bodyMove's ~10px classification below even runs, a real touch device
-  // has often already committed the gesture to native panning and fires
-  // pointercancel, no matter what setPointerCapture() does afterward (it
-  // only redirects event delivery, it can't reclaim a gesture the browser
-  // already owns). pan-y claims horizontal for JS while leaving vertical
-  // fully native, so the vertical-intent hand-off in _bodyMove below still
-  // works unchanged. Confirmed on-device: unlike this element, .handle
-  // already has a static touch-action: none in its mobile CSS rule, which
-  // is why handle-drag never had this problem.
+  // the touch-action line). none, not pan-y: the browser's compositor can
+  // claim a touch as a native vertical pan from its very first sample the
+  // instant it sees any vertical component at all — a real swipe is almost
+  // never perfectly horizontal, so pan-y still lost most genuinely-
+  // horizontal swipes to native panning before _bodyMove's ~10px
+  // classification below ever ran a single time (confirmed on-device:
+  // horizontal: null at pointercancel, meaning _bodyMove never fired).
+  // setPointerCapture() can't help either way — it only redirects event
+  // delivery, it can't reclaim a gesture the browser already owns.
+  //
+  // The cost: browsers don't hand a touch-action: none gesture back to
+  // native scrolling mid-touch even after this reverts to '' below, so a
+  // vertical classification can no longer hand off to native scroll — JS
+  // drives .body.scrollTop itself for the rest of that gesture instead
+  // (mirroring how .handle's dismiss-drag has always manually driven its
+  // own transform, for the same reason). This costs a ~10px dead zone
+  // during the undecided phase (nothing scrolls until direction is known),
+  // which is the standard, unavoidable cost of JS-driven axis
+  // disambiguation. Unlike this element, .handle has always had a static
+  // touch-action: none in its mobile CSS rule and never had this problem.
 
   _bodyDown(e) {
     if (e.button !== 0 || this._tabCount <= 1) return;
     if (e.target.closest('button, a, input, textarea, select, [contenteditable]')) return;
     if (this._withinHorizontalScroller(e.target)) return;
-    this._body.style.touchAction = 'pan-y';
+    this._body.style.touchAction = 'none';
     this._bodyDrag = {
       startX: e.clientX,
       startY: e.clientY,
@@ -565,11 +573,19 @@ class ModalDialog extends AppElement {
     if (d.horizontal === null) {
       if (Math.abs(dx) < TAB_SWIPE_INTENT_PX && Math.abs(dy) < TAB_SWIPE_INTENT_PX) return;
       d.horizontal = Math.abs(dx) > Math.abs(dy);
-      if (!d.horizontal) { this._teardownBodyDrag(); return; } // vertical intent — hand off to native scroll
       this._body.setPointerCapture(d.pointerId);
+      // Vertical: dead-zone this classifying move (nothing to scroll relative to
+      // yet) and pick scroll-replication up from the next one. Horizontal falls
+      // through below so this same move's dx still counts toward the swipe.
+      if (!d.horizontal) { d.lastY = e.clientY; return; }
     }
 
-    d.lastDx = dx;
+    if (d.horizontal) {
+      d.lastDx = dx;
+    } else {
+      this._body.scrollTop -= e.clientY - d.lastY;
+      d.lastY = e.clientY;
+    }
   }
 
   _bodyUp() {

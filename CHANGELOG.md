@@ -8,6 +8,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — supersedes 1.2.2's `touch-action: pan-y` fix, which turned out to only narrow the race rather than close it: a real swipe is almost never perfectly straight, so the browser could still claim it as a native vertical pan from the first sample's incidental drift, before the body's own direction classification ever ran — confirmed on-device (`horizontal: null` at the moment of `pointercancel` means `_bodyMove` never fired once). The body now sets `touch-action: none` instead, blocking native handling on both axes until JS has classified the gesture. Since a `touch-action: none` gesture can no longer hand off to native scrolling mid-touch, a drag that turns out vertical is now driven manually via `.body.scrollTop` for the rest of that gesture (same technique the drag handle has always used for its own dismiss-drag). Costs a small (~10px) dead zone at the very start of a vertical drag; horizontal commit behaviour and the nested-horizontal-scroller carve-out are unchanged. Root-caused on-device against a downstream app (Telos) via the same temporary logging approach as 1.2.2.
+
 ---
 
 ## [1.2.2] — 2026-09-22

@@ -837,18 +837,25 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     expect(el.activeTab).toBe(1);
   });
 
-  it('a vertical-dominant drag is left alone for native scroll — no tab change', () => {
+  it('a vertical-dominant drag drives .body\'s own scroll manually (no native hand-off) and does not change tabs', () => {
     const el = mountWithTabs(3);
     const body = el.shadowRoot.querySelector('.body');
     const onChange = vi.fn();
     el.addEventListener('modal-tab-change', onChange);
+    body.scrollTop = 0;
 
     body.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    body.dispatchEvent(pointerXY('pointermove', 190, 250)); // dx=-10, dy=+150 — vertical intent
-    body.dispatchEvent(pointerXY('pointerup', 190, 250));
+    body.dispatchEvent(pointerXY('pointermove', 190, 250)); // dx=-10, dy=+150 — classifies vertical here
+    expect(body.scrollTop).toBe(0); // the classifying move itself doesn't scroll yet (the ~10px dead zone)
+    expect(body.style.touchAction).toBe('none'); // stays none — can't hand back to native mid-touch
 
+    body.dispatchEvent(pointerXY('pointermove', 190, 200)); // finger moves up 50px from its last position
+    expect(body.scrollTop).toBe(50); // content follows the finger, same direction native scroll would
+
+    body.dispatchEvent(pointerXY('pointerup', 190, 200));
     expect(el.activeTab).toBe(0);
     expect(onChange).not.toHaveBeenCalled();
+    expect(body.style.touchAction).toBe(''); // released once the gesture actually ends
   });
 
   it('does nothing when tabCount is 1 or 0', () => {
@@ -907,22 +914,24 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     expect(el.activeTab).toBe(0); // teardown already removed the listeners' effect
   });
 
-  // touch-action: auto lets a real touch device's compositor claim a horizontal drag
-  // natively before _bodyMove's ~10px classification ever runs — setPointerCapture()
-  // can't reclaim a gesture the browser already committed to. pan-y is set for the
-  // duration of a tracked gesture so the browser never gets the chance.
-  it('claims pan-y on the body for the duration of a tracked drag, then releases it on release', () => {
+  // touch-action: auto lets a real touch device's compositor claim a gesture
+  // natively from its very first sample — before _bodyMove's ~10px classification
+  // ever runs — and setPointerCapture() can't reclaim a gesture the browser
+  // already committed to. none (not pan-y) is set for the duration of a tracked
+  // gesture so the browser never gets the chance on either axis; see the comment
+  // above _bodyDown for why pan-y wasn't sufficient on real hardware.
+  it('claims touch-action: none on the body for the duration of a tracked drag, then releases it on release', () => {
     const el = mountWithTabs(3);
     const body = el.shadowRoot.querySelector('.body');
 
     body.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    expect(body.style.touchAction).toBe('pan-y');
+    expect(body.style.touchAction).toBe('none');
     body.dispatchEvent(pointerXY('pointermove', 130, 100));
     body.dispatchEvent(pointerXY('pointerup', 130, 100));
     expect(body.style.touchAction).toBe('');
   });
 
-  it('releases pan-y on pointercancel', () => {
+  it('releases touch-action on pointercancel', () => {
     const el = mountWithTabs(3);
     const body = el.shadowRoot.querySelector('.body');
 
@@ -932,13 +941,15 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     expect(body.style.touchAction).toBe('');
   });
 
-  it('releases pan-y as soon as a drag is classified vertical (native scroll hand-off)', () => {
+  it('keeps touch-action: none through a vertical-classified drag, and releases it on cancel mid-scroll', () => {
     const el = mountWithTabs(3);
     const body = el.shadowRoot.querySelector('.body');
 
     body.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    expect(body.style.touchAction).toBe('pan-y');
     body.dispatchEvent(pointerXY('pointermove', 190, 250)); // vertical intent
+    expect(body.style.touchAction).toBe('none'); // no native hand-off once none has started a gesture
+    body.dispatchEvent(pointerXY('pointermove', 190, 220)); // mid manual-scroll replication
+    expect(() => body.dispatchEvent(pointerXY('pointercancel', 190, 220))).not.toThrow();
     expect(body.style.touchAction).toBe('');
   });
 
