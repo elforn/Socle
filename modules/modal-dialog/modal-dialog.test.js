@@ -460,8 +460,8 @@ describe('modal-dialog — tabs: swipe and tap on the handle', () => {
     el.addEventListener('modal-tab-change', onChange);
 
     handle.dispatchEvent(handlePointer('pointerdown', 200, 20));
-    handle.dispatchEvent(handlePointer('pointermove', 130, 20)); // dx = -70, > 20% of 300
-    handle.dispatchEvent(handlePointer('pointerup', 130, 20));
+    handle.dispatchEvent(handlePointer('pointermove', 110, 20)); // dx = -90, > 28% of 300
+    handle.dispatchEvent(handlePointer('pointerup', 110, 20));
 
     expect(el.activeTab).toBe(1);
     expect(onChange.mock.calls[0][0].detail).toEqual({ index: 1 });
@@ -474,8 +474,8 @@ describe('modal-dialog — tabs: swipe and tap on the handle', () => {
     const handle = el.shadowRoot.querySelector('.handle');
 
     dot.dispatchEvent(handlePointer('pointerdown', 200, 20));
-    handle.dispatchEvent(handlePointer('pointermove', 130, 20));
-    handle.dispatchEvent(handlePointer('pointerup', 130, 20));
+    handle.dispatchEvent(handlePointer('pointermove', 110, 20));
+    handle.dispatchEvent(handlePointer('pointerup', 110, 20));
 
     expect(el.activeTab).toBe(1);
   });
@@ -556,8 +556,8 @@ describe('modal-dialog — tabs: swipe and tap on the handle', () => {
     const handle = el.shadowRoot.querySelector('.handle');
 
     handle.dispatchEvent(handlePointer('pointerdown', 100, 20));
-    handle.dispatchEvent(handlePointer('pointermove', 180, 20)); // dx = +80
-    handle.dispatchEvent(handlePointer('pointerup', 180, 20));
+    handle.dispatchEvent(handlePointer('pointermove', 190, 20)); // dx = +90
+    handle.dispatchEvent(handlePointer('pointerup', 190, 20));
 
     expect(el.activeTab).toBe(0);
   });
@@ -798,8 +798,8 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     el.addEventListener('modal-tab-change', onChange);
 
     body.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    body.dispatchEvent(pointerXY('pointermove', 130, 100)); // dx = -70, > 20% of 300
-    body.dispatchEvent(pointerXY('pointerup', 130, 100));
+    body.dispatchEvent(pointerXY('pointermove', 110, 100)); // dx = -90, > 28% of 300
+    body.dispatchEvent(pointerXY('pointerup', 110, 100));
 
     expect(el.activeTab).toBe(1);
     expect(onChange.mock.calls[0][0].detail).toEqual({ index: 1 });
@@ -811,10 +811,86 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     const body = el.shadowRoot.querySelector('.body');
 
     body.dispatchEvent(pointerXY('pointerdown', 100, 100));
-    body.dispatchEvent(pointerXY('pointermove', 180, 100)); // dx = +80
-    body.dispatchEvent(pointerXY('pointerup', 180, 100));
+    body.dispatchEvent(pointerXY('pointermove', 190, 100)); // dx = +90
+    body.dispatchEvent(pointerXY('pointerup', 190, 100));
 
     expect(el.activeTab).toBe(0);
+  });
+
+  it('follows the finger live during a horizontal drag', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 170, 100)); // dx = -30, classifies horizontal
+    expect(body.style.transform).toBe('translateX(-30px)');
+    expect(body.style.transition).toBe('none');
+
+    body.dispatchEvent(pointerXY('pointermove', 150, 100)); // dx = -50
+    expect(body.style.transform).toBe('translateX(-50px)');
+
+    body.dispatchEvent(pointerXY('pointerup', 150, 100));
+  });
+
+  it('a below-threshold release springs the body back to rest via the drag transition', () => {
+    vi.useFakeTimers(); // freezes Date.now() too, so elapsed is 0 — a slow drag, below the velocity threshold
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 190, 100)); // dx = -10, below threshold
+    body.dispatchEvent(pointerXY('pointerup', 190, 100));
+
+    expect(body.style.transform).toBe('translateX(0)');
+    expect(body.style.transition).not.toBe('');
+    expect(el.activeTab).toBe(0);
+
+    transitionEnd(body);
+    expect(body.style.transform).toBe('');
+    expect(body.style.transition).toBe('');
+    vi.useRealTimers();
+  });
+
+  it('spring-back falls back to setTimeout when transitionend never fires', () => {
+    vi.useFakeTimers(); // freezes Date.now() too, so elapsed is 0 — a slow drag, below the velocity threshold
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 190, 100));
+    body.dispatchEvent(pointerXY('pointerup', 190, 100));
+
+    vi.runAllTimers();
+    expect(body.style.transform).toBe('');
+    vi.useRealTimers();
+  });
+
+  it('reduced motion: a below-threshold release resets the transform instantly without animating', () => {
+    stubMatchMedia({ reduced: true });
+    vi.useFakeTimers(); // freezes Date.now() too, so elapsed is 0 — a slow drag, below the velocity threshold
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 190, 100));
+    body.dispatchEvent(pointerXY('pointerup', 190, 100));
+
+    expect(body.style.transform).toBe('');
+    expect(body.style.transition).toBe('');
+    vi.useRealTimers();
+  });
+
+  it('a committing release resets the transform immediately with no transition', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 110, 100)); // dx = -90, past threshold
+    body.dispatchEvent(pointerXY('pointerup', 110, 100));
+
+    expect(el.activeTab).toBe(1);
+    expect(body.style.transform).toBe('');
+    expect(body.style.transition).toBe('');
   });
 
   it('a drag below the distance and velocity thresholds does not change tabs', () => {
@@ -905,8 +981,11 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     const body = el.shadowRoot.querySelector('.body');
     body.dispatchEvent(pointerXY('pointerdown', 200, 100));
     body.dispatchEvent(pointerXY('pointermove', 130, 100));
+    expect(body.style.transform).toBe('translateX(-70px)');
     body.dispatchEvent(pointerXY('pointercancel', 130, 100));
     expect(el.activeTab).toBe(0);
+    expect(body.style.transform).toBe('');
+    expect(body.style.transition).toBe('');
   });
 
   it('pointercancel mid vertical-scroll-replication tears down cleanly without changing tabs', () => {
@@ -925,8 +1004,21 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     body.dispatchEvent(pointerXY('pointerdown', 200, 100));
     body.dispatchEvent(pointerXY('pointermove', 130, 100));
     expect(() => el.close()).not.toThrow();
+    expect(body.style.transform).toBe(''); // teardown clears the live drag transform too
     body.dispatchEvent(pointerXY('pointerup', 130, 100));
     expect(el.activeTab).toBe(0); // teardown already removed the listeners' effect
+  });
+
+  it('show() clears a stale body transform left by a prior drag', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 130, 100));
+    el.close();
+
+    el.show();
+    expect(body.style.transform).toBe('');
+    expect(body.style.transition).toBe('');
   });
 
 });

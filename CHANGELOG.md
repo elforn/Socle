@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.5] — 2026-09-23
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — tab-swipe (body drag) felt too easy to trigger and gave no visual feedback while dragging, once vertical/horizontal classification itself was confirmed reliable on-device (1.2.4). `TAB_SWIPE_DISTANCE_RATIO` raised from 20% to 28% of the body's width. `.body` now follows the finger live via `translateX` during the drag — mirroring the existing vertical dismiss-drag — and springs back to rest via the same `DRAG_TRANSITION`/`prefers-reduced-motion` handling on a below-threshold release. A committing release resets `.body`'s transform instantly with no animation, so it doesn't compete with the incoming tab's own entrance animation. Reported against a downstream app (Telos).
+
+---
+
 ## [1.2.4] — 2026-09-22
 
 ### Fixed

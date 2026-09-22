@@ -1,6 +1,6 @@
 {
   "name": "socle",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "type": "module",
   "bin": {
     "socle": "./cli/index.js"

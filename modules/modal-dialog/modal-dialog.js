@@ -11,7 +11,7 @@ const DRAG_FALLBACK_MS = 350;             // safety net if transitionend never f
 
 // Horizontal swipe-to-change-tab thresholds (body drag, tabCount > 1 only) — same
 // shape as the dismiss-drag thresholds above, just on the other axis.
-const TAB_SWIPE_DISTANCE_RATIO = 0.2;     // commit past 20% of the body's width
+const TAB_SWIPE_DISTANCE_RATIO = 0.28;    // commit past 28% of the body's width
 const TAB_SWIPE_VELOCITY = 0.5;           // …or a flick faster than 0.5 px/ms
 const TAB_SWIPE_INTENT_PX = 10;           // movement below this is too small to classify yet
 
@@ -597,11 +597,13 @@ class ModalDialog extends AppElement {
       // Vertical: dead-zone this classifying move (nothing to scroll relative to
       // yet) and pick scroll-replication up from the next one. Horizontal falls
       // through below so this same move's dx still counts toward the swipe.
-      if (!d.horizontal) { d.lastY = e.clientY; return; }
+      if (d.horizontal) this._body.style.transition = 'none';
+      else { d.lastY = e.clientY; return; }
     }
 
     if (d.horizontal) {
       d.lastDx = dx;
+      this._body.style.transform = `translateX(${dx}px)`;
     } else {
       this._body.scrollTop -= e.clientY - d.lastY;
       d.lastY = e.clientY;
@@ -618,13 +620,37 @@ class ModalDialog extends AppElement {
     const elapsed = Date.now() - d.startTime;
     const velocity = elapsed > 0 ? Math.abs(d.lastDx) / elapsed : 0;
     const commit = Math.abs(d.lastDx) > d.width * TAB_SWIPE_DISTANCE_RATIO || velocity > TAB_SWIPE_VELOCITY;
-    if (!commit) return;
-    this._selectTab(this._activeTab + (d.lastDx < 0 ? 1 : -1));
+
+    if (commit) {
+      // No animation on this path: _selectTab swaps in the new tab's content at
+      // .body's natural position, and Telos's own entrance animation on that
+      // incoming content takes over from there — see the module feedback.
+      this._clearBodyDragStyles();
+      this._selectTab(this._activeTab + (d.lastDx < 0 ? 1 : -1));
+      return;
+    }
+
+    if (this._reducedMotion()) { this._clearBodyDragStyles(); return; }
+    this._bodySpringBack();
+  }
+
+  _bodySpringBack() {
+    const body = this._body;
+    const onEnd = () => {
+      clearTimeout(this._bodyDragFallback);
+      body.removeEventListener('transitionend', onEnd);
+      this._clearBodyDragStyles();
+    };
+    body.addEventListener('transitionend', onEnd);
+    body.style.transition = DRAG_TRANSITION;
+    body.style.transform = 'translateX(0)';
+    this._bodyDragFallback = setTimeout(onEnd, DRAG_FALLBACK_MS);
   }
 
   _bodyCancel() {
     this._removeBodyDragListeners();
     this._bodyDrag = null;
+    this._clearBodyDragStyles();
   }
 
   _removeBodyDragListeners() {
@@ -633,15 +659,25 @@ class ModalDialog extends AppElement {
     this._body?.removeEventListener('pointercancel', this._onBodyCancel);
   }
 
+  _clearBodyDragStyles() {
+    if (!this._body) return;
+    this._body.style.transition = '';
+    this._body.style.transform = '';
+  }
+
   _teardownBodyDrag() {
+    clearTimeout(this._bodyDragFallback);
     this._removeBodyDragListeners();
     this._bodyDrag = null;
+    this._clearBodyDragStyles();
   }
 
   show(focusEl = null) {
     // Clear any leftover inline transform/transition so a prior drag can't leave the
-    // sheet mis-positioned on the next open.
+    // sheet — or, since the body swipe animates .body directly, its content —
+    // mis-positioned on the next open.
     this._clearDragStyles();
+    this._clearBodyDragStyles();
     this._justOpened = true;
     this._dialog?.showModal();
     // setTimeout(0) rather than rAF: on Android Chrome the synthetic click from the
