@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.6] — 2026-09-23
+
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — with `fixedHeight = true`, the sheet's top edge visibly shifted by a few pixels when the on-screen keyboard opened or closed while switching tabs. `--dialog-block-size-cap` was defined in plain `vh`, which recomputes against the *layout* viewport — a value some consuming apps deliberately shrink under the keyboard via `<meta name="viewport" content="interactive-widget=resizes-content">`. Since the sheet is bottom-anchored, a shorter cap (keyboard open) or taller cap (keyboard closed) moved the top edge, defeating the point of `fixedHeight`. Both the mobile cap (`80vh` → `80lvh`) and the desktop cap (`min(85vh, 600px)` → `min(85lvh, 600px)`) now use `lvh`, which ignores transient UI like the keyboard. Reported against a downstream app (Telos).
+
+---
+
 ## [1.2.5] — 2026-09-23
 
 ### Changed

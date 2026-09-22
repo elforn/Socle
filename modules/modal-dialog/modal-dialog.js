@@ -40,7 +40,7 @@ class ModalDialog extends AppElement {
           font-family: var(--font-family);
           font-size: var(--font-size-body);
           box-shadow: var(--shadow-sheet);
-          --dialog-block-size-cap: min(85vh, 600px);
+          --dialog-block-size-cap: min(85lvh, 600px);
           max-block-size: var(--dialog-block-size-cap);
           overflow: hidden;
         }
@@ -94,7 +94,7 @@ class ModalDialog extends AppElement {
             border-start-end-radius: var(--radius-lg);
             padding-block-start: var(--space-2);
           padding-block-end: calc(var(--space-2) + var(--safe-area-bottom, 0px));
-            --dialog-block-size-cap: 80vh;
+            --dialog-block-size-cap: 80lvh;
             max-block-size: var(--dialog-block-size-cap);
           }
 
