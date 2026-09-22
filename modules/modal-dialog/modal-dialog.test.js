@@ -906,4 +906,54 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     body.dispatchEvent(pointerXY('pointerup', 130, 100));
     expect(el.activeTab).toBe(0); // teardown already removed the listeners' effect
   });
+
+  // touch-action: auto lets a real touch device's compositor claim a horizontal drag
+  // natively before _bodyMove's ~10px classification ever runs — setPointerCapture()
+  // can't reclaim a gesture the browser already committed to. pan-y is set for the
+  // duration of a tracked gesture so the browser never gets the chance.
+  it('claims pan-y on the body for the duration of a tracked drag, then releases it on release', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    expect(body.style.touchAction).toBe('pan-y');
+    body.dispatchEvent(pointerXY('pointermove', 130, 100));
+    body.dispatchEvent(pointerXY('pointerup', 130, 100));
+    expect(body.style.touchAction).toBe('');
+  });
+
+  it('releases pan-y on pointercancel', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 130, 100));
+    body.dispatchEvent(pointerXY('pointercancel', 130, 100));
+    expect(body.style.touchAction).toBe('');
+  });
+
+  it('releases pan-y as soon as a drag is classified vertical (native scroll hand-off)', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    expect(body.style.touchAction).toBe('pan-y');
+    body.dispatchEvent(pointerXY('pointermove', 190, 250)); // vertical intent
+    expect(body.style.touchAction).toBe('');
+  });
+
+  it('never touches touch-action for a drag that never starts tracking (no tabs, interactive target, nested scroller)', () => {
+    const el = mountWithTabs(3);
+    const select = document.createElement('select');
+    el.appendChild(select);
+    const body = el.shadowRoot.querySelector('.body');
+
+    select.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    expect(body.style.touchAction).toBe('');
+
+    const noTabs = mount();
+    const noTabsBody = noTabs.shadowRoot.querySelector('.body');
+    noTabsBody.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    expect(noTabsBody.style.touchAction).toBe('');
+  });
 });

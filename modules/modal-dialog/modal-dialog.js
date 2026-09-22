@@ -507,19 +507,29 @@ class ModalDialog extends AppElement {
   }
 
   // ── Swipe-to-change-tab (body) ───────────────────────────────────────────
-  // Deliberately does not set touch-action on .body: doing so would also
-  // suppress native panning on any horizontally-scrollable content a
-  // consumer slots inside it (a chart with its own overflow-x: auto region,
-  // say), since a descendant cannot regain permissions an ancestor's
-  // touch-action already withdrew. Direction is instead disambiguated in JS
-  // from the first ~10px of movement, and any gesture that starts inside an
-  // already-horizontally-scrollable descendant is left alone entirely so
-  // that element's own native scroll handles it uncontested.
+  // touch-action is set on .body dynamically, only for the duration of a
+  // single gesture, and only when that gesture didn't start inside a nested
+  // horizontally-scrollable descendant (still gated by the same
+  // _withinHorizontalScroller check below — that element's own native
+  // panning is never touched, since the function returns before reaching
+  // the touch-action line). This is load-bearing, not an optimisation: the
+  // browser's compositor claims touch-action: auto gestures natively at the
+  // very first touch sample, ahead of and independent from JS — by the time
+  // _bodyMove's ~10px classification below even runs, a real touch device
+  // has often already committed the gesture to native panning and fires
+  // pointercancel, no matter what setPointerCapture() does afterward (it
+  // only redirects event delivery, it can't reclaim a gesture the browser
+  // already owns). pan-y claims horizontal for JS while leaving vertical
+  // fully native, so the vertical-intent hand-off in _bodyMove below still
+  // works unchanged. Confirmed on-device: unlike this element, .handle
+  // already has a static touch-action: none in its mobile CSS rule, which
+  // is why handle-drag never had this problem.
 
   _bodyDown(e) {
     if (e.button !== 0 || this._tabCount <= 1) return;
     if (e.target.closest('button, a, input, textarea, select, [contenteditable]')) return;
     if (this._withinHorizontalScroller(e.target)) return;
+    this._body.style.touchAction = 'pan-y';
     this._bodyDrag = {
       startX: e.clientX,
       startY: e.clientY,
@@ -582,6 +592,7 @@ class ModalDialog extends AppElement {
   }
 
   _removeBodyDragListeners() {
+    if (this._body) this._body.style.touchAction = '';
     this._body?.removeEventListener('pointermove', this._onBodyMove);
     this._body?.removeEventListener('pointerup', this._onBodyUp);
     this._body?.removeEventListener('pointercancel', this._onBodyCancel);
