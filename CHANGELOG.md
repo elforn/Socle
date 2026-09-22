@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — supersedes 1.2.3's reactive `touch-action: none`, which still failed on-device: setting `touch-action` inside the `pointerdown` handler races Chrome's compositor thread, which makes its own gesture-ownership decision on a separate thread using whatever `touch-action` was already in effect *before* that handler runs — a value changed reactively, in response to a touch that's already begun, isn't guaranteed to apply to that same gesture. Confirmed via parallel raw `touchstart`/`touchmove`/`touchend` logging showing an uninterrupted touch stream while `pointercancel` fired anyway, and via a controlled on-device isolation test: switching to a *static* CSS class (`.body.has-tabs`, toggled in lockstep with the handle's own `has-tabs` class, exactly like `.handle`'s always-static `touch-action: none`) fixed it, with no other change. The vertical-drag `scrollTop` fallback added in 1.2.3 is unchanged and still needed — only the mechanism for applying `touch-action` changed, not the classification or scroll-replication logic.
+  **Behaviour change:** this is no longer scoped to a single gesture — for as long as a dialog has `tabCount > 1`, any nested horizontally-scrollable content in the body (e.g. a chart) permanently loses native panning, not just during a swipe attempt, since CSS `touch-action` intersects down the ancestor chain and a descendant can't loosen what an ancestor restricts. A consumer with that kind of content needs its own manual scroll-replication for it (see `docs/modal-dialog.md`). Whether this also affects native text-selection-via-drag on a nested `<textarea>`/`<input>` is unverified. Root-caused on-device against a downstream app (Telos).
+
 ---
 
 ## [1.2.3] — 2026-09-22

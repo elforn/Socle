@@ -619,18 +619,24 @@ describe('modal-dialog — tabs: setup and rendering', () => {
     expect(el.tabCount).toBe(0);
     expect(el.activeTab).toBe(0);
     expect(el.shadowRoot.querySelector('.handle').classList.contains('has-tabs')).toBe(false);
+    expect(el.shadowRoot.querySelector('.body').classList.contains('has-tabs')).toBe(false);
     expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(0);
   });
 
   it('tabCount of 1 does not switch on tabs mode (nothing to page between)', () => {
     const el = mountWithTabs(1);
     expect(el.shadowRoot.querySelector('.handle').classList.contains('has-tabs')).toBe(false);
+    expect(el.shadowRoot.querySelector('.body').classList.contains('has-tabs')).toBe(false);
     expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(0);
   });
 
-  it('tabCount > 1 renders that many segment buttons and switches on has-tabs', () => {
+  it('tabCount > 1 renders that many segment buttons and switches on has-tabs (handle and body alike)', () => {
     const el = mountWithTabs(4);
     expect(el.shadowRoot.querySelector('.handle').classList.contains('has-tabs')).toBe(true);
+    // .body gets the same class — it's what gives .body its static touch-action: none
+    // (see the CSS rule and the comment above _bodyDown); it must switch on in lockstep
+    // with the handle's, not independently.
+    expect(el.shadowRoot.querySelector('.body').classList.contains('has-tabs')).toBe(true);
     expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(4);
     expect(el.shadowRoot.querySelector('.handle-tabs').hidden).toBe(false);
   });
@@ -655,11 +661,12 @@ describe('modal-dialog — tabs: setup and rendering', () => {
     expect(el.shadowRoot.querySelector('.handle').hasAttribute('aria-hidden')).toBe(false);
   });
 
-  it('going back to tabCount 1 restores aria-hidden and removes the segments', () => {
+  it('going back to tabCount 1 restores aria-hidden, removes the segments, and lifts .body\'s touch-action restriction', () => {
     const el = mountWithTabs(3);
     el.tabCount = 1;
     expect(el.shadowRoot.querySelector('.handle').getAttribute('aria-hidden')).toBe('true');
     expect(el.shadowRoot.querySelector('.handle').classList.contains('has-tabs')).toBe(false);
+    expect(el.shadowRoot.querySelector('.body').classList.contains('has-tabs')).toBe(false);
     expect(el.shadowRoot.querySelectorAll('.tab-seg').length).toBe(0);
   });
 
@@ -847,7 +854,6 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     body.dispatchEvent(pointerXY('pointerdown', 200, 100));
     body.dispatchEvent(pointerXY('pointermove', 190, 250)); // dx=-10, dy=+150 — classifies vertical here
     expect(body.scrollTop).toBe(0); // the classifying move itself doesn't scroll yet (the ~10px dead zone)
-    expect(body.style.touchAction).toBe('none'); // stays none — can't hand back to native mid-touch
 
     body.dispatchEvent(pointerXY('pointermove', 190, 200)); // finger moves up 50px from its last position
     expect(body.scrollTop).toBe(50); // content follows the finger, same direction native scroll would
@@ -855,7 +861,6 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     body.dispatchEvent(pointerXY('pointerup', 190, 200));
     expect(el.activeTab).toBe(0);
     expect(onChange).not.toHaveBeenCalled();
-    expect(body.style.touchAction).toBe(''); // released once the gesture actually ends
   });
 
   it('does nothing when tabCount is 1 or 0', () => {
@@ -904,6 +909,16 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     expect(el.activeTab).toBe(0);
   });
 
+  it('pointercancel mid vertical-scroll-replication tears down cleanly without changing tabs', () => {
+    const el = mountWithTabs(3);
+    const body = el.shadowRoot.querySelector('.body');
+    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
+    body.dispatchEvent(pointerXY('pointermove', 190, 250)); // classifies vertical
+    body.dispatchEvent(pointerXY('pointermove', 190, 220)); // mid manual-scroll replication
+    expect(() => body.dispatchEvent(pointerXY('pointercancel', 190, 220))).not.toThrow();
+    expect(el.activeTab).toBe(0);
+  });
+
   it('closing the dialog tears down an in-flight body drag', () => {
     const el = mountWithTabs(3);
     const body = el.shadowRoot.querySelector('.body');
@@ -914,57 +929,4 @@ describe('modal-dialog — tabs: swipe on the body', () => {
     expect(el.activeTab).toBe(0); // teardown already removed the listeners' effect
   });
 
-  // touch-action: auto lets a real touch device's compositor claim a gesture
-  // natively from its very first sample — before _bodyMove's ~10px classification
-  // ever runs — and setPointerCapture() can't reclaim a gesture the browser
-  // already committed to. none (not pan-y) is set for the duration of a tracked
-  // gesture so the browser never gets the chance on either axis; see the comment
-  // above _bodyDown for why pan-y wasn't sufficient on real hardware.
-  it('claims touch-action: none on the body for the duration of a tracked drag, then releases it on release', () => {
-    const el = mountWithTabs(3);
-    const body = el.shadowRoot.querySelector('.body');
-
-    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    expect(body.style.touchAction).toBe('none');
-    body.dispatchEvent(pointerXY('pointermove', 130, 100));
-    body.dispatchEvent(pointerXY('pointerup', 130, 100));
-    expect(body.style.touchAction).toBe('');
-  });
-
-  it('releases touch-action on pointercancel', () => {
-    const el = mountWithTabs(3);
-    const body = el.shadowRoot.querySelector('.body');
-
-    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    body.dispatchEvent(pointerXY('pointermove', 130, 100));
-    body.dispatchEvent(pointerXY('pointercancel', 130, 100));
-    expect(body.style.touchAction).toBe('');
-  });
-
-  it('keeps touch-action: none through a vertical-classified drag, and releases it on cancel mid-scroll', () => {
-    const el = mountWithTabs(3);
-    const body = el.shadowRoot.querySelector('.body');
-
-    body.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    body.dispatchEvent(pointerXY('pointermove', 190, 250)); // vertical intent
-    expect(body.style.touchAction).toBe('none'); // no native hand-off once none has started a gesture
-    body.dispatchEvent(pointerXY('pointermove', 190, 220)); // mid manual-scroll replication
-    expect(() => body.dispatchEvent(pointerXY('pointercancel', 190, 220))).not.toThrow();
-    expect(body.style.touchAction).toBe('');
-  });
-
-  it('never touches touch-action for a drag that never starts tracking (no tabs, interactive target, nested scroller)', () => {
-    const el = mountWithTabs(3);
-    const select = document.createElement('select');
-    el.appendChild(select);
-    const body = el.shadowRoot.querySelector('.body');
-
-    select.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    expect(body.style.touchAction).toBe('');
-
-    const noTabs = mount();
-    const noTabsBody = noTabs.shadowRoot.querySelector('.body');
-    noTabsBody.dispatchEvent(pointerXY('pointerdown', 200, 100));
-    expect(noTabsBody.style.touchAction).toBe('');
-  });
 });
