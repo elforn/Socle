@@ -10,6 +10,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.7] — 2026-09-27
+
+### Changed
+- `modules/modal-dialog/modal-dialog.js` — tab-swipe's distance threshold is now 28% of the **sheet's** width rather than 28% of the body's content box, a consequence of the scrollbar-clearance fix below: `_bodyDown`/`_handleDown` measure `.body`, which now spans the full sheet. A swipe needs ~11% more travel to commit (measured denominator 350 → 390 at 390px, 360 → 400 on desktop); the 0.5 px/ms flick escape hatch is unchanged. Kept deliberately rather than compensated for — the denominator is now the travel actually available to the finger, since the padding is part of `.body`'s own hit area.
+
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — the body's vertical scrollbar painted *on top of* slotted content instead of beside it. `.body` is the scroll container but had no padding of its own: the dialog's inline inset lived on the `<dialog>`, so `.body`'s content box ran edge to edge and the bar — which paints at the scroll container's inline-end padding edge — landed exactly on the content (measured clearance: 0px, at both breakpoints). On overlay-scrollbar platforms nothing is reserved for the bar (`offsetWidth - clientWidth === 0`), so `scrollbar-gutter: stable` is spec'd to zero there and cannot help, and `.body` has no `part`/`exportparts`/custom-property hook, so a consuming app could not reach it to inset or thin it — every app-side workaround had to inset the *slotted content* instead, costing content width in every dialog. The `<dialog>` now keeps only its `padding-block` (`padding-inline: 0`) and the inline inset moves onto the three children (`.handle`, `.body`, `.footer`), so `.body` spans the full sheet and its own `padding-inline` is the gutter the scrollbar paints in. Verified in-browser against the reference app: slotted content does not move at all (desktop `332→692`, sheet `20→370`, unchanged), `.body` grows to the full sheet (`312→712` / `0→390`), content gains the full `--space-5` of scrollbar clearance, and horizontal overflow stays at 0. The mobile `@media` block needed no change — it only overrides the `padding-block-start`/`padding-block-end` longhands. Reported against a downstream app (Telos).
+
+---
+
 ## [1.2.6] — 2026-09-23
 
 ### Fixed

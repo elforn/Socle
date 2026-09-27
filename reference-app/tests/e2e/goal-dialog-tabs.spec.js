@@ -136,3 +136,43 @@ test.describe('Goal dialog activity tab', () => {
     expect(await dialogTabCount(page)).toBe(1);
   });
 });
+
+test.describe('Goal dialog layout', () => {
+  test('slotted content clears the scroll container\'s inline-end edge, so the scrollbar never paints on it', async ({ page }) => {
+    // The inline inset lives on modal-dialog's children, not on the <dialog>, so .body
+    // (the scroll container) spans the full sheet and its own padding is the gutter the
+    // scrollbar paints in. Overlay scrollbars reserve no space, so without that padding
+    // the bar lands directly on the content — a CSS-text unit test can't catch it.
+    await page.goto(`/${currentYear}`);
+    await waitForPage(page);
+    await enableEditMode(page, '#capstone-edit-btn');
+    await openDialog(page, '#add-capstone');
+    await page.waitForFunction(() => {
+      const d = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('goal-dialog')?.shadowRoot
+        ?.querySelector('#modal')?.shadowRoot?.querySelector('dialog');
+      return d?.open;
+    });
+
+    const box = await page.evaluate(() => {
+      const sr = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('goal-dialog').shadowRoot
+        .querySelector('#modal').shadowRoot;
+      const dialog = sr.querySelector('dialog');
+      const body = sr.querySelector('.body');
+      const slotted = body.querySelector('slot').assignedElements()[0];
+      return {
+        dialogWidth: dialog.getBoundingClientRect().width,
+        bodyWidth: body.getBoundingClientRect().width,
+        clearance: body.getBoundingClientRect().right - slotted.getBoundingClientRect().right,
+        horizontalOverflow: body.scrollWidth - body.clientWidth,
+      };
+    });
+
+    expect(box.bodyWidth).toBe(box.dialogWidth);
+    expect(box.clearance).toBeGreaterThanOrEqual(16);
+    expect(box.horizontalOverflow).toBe(0);
+  });
+});
