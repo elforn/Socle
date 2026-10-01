@@ -228,6 +228,49 @@ test.describe('Axis ownership — pointer-driven tab swipe', () => {
     expect(await activeTab(page)).toBe(0);
   });
 
+  test('a drag inside a consumer\'s shadow-root scroller does not page tabs', async ({ page }) => {
+    // Reported from a downstream app: .body's listener sees the target retargeted to the
+    // slotted host, so walking parentElement never descends into the consumer's own
+    // shadow tree and the dialog paged tabs while the user scrolled a chart. Only a real
+    // browser reproduces this — happy-dom does not propagate composed events through a slot.
+    await waitForDialogSettled(page);
+    expect(await activeTab(page)).toBe(0);
+
+    const box = await page.evaluate(() => {
+      const modal = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('goal-dialog').shadowRoot.querySelector('#modal');
+
+      class ShadowScroller extends HTMLElement {
+        connectedCallback() {
+          if (this.shadowRoot) return;
+          const sr = this.attachShadow({ mode: 'open' });
+          sr.innerHTML = `
+            <div id="scroller" style="overflow-x:auto;width:100%;height:60px;background:#333">
+              <div style="width:2000px;height:40px"></div>
+            </div>`;
+        }
+      }
+      if (!customElements.get('shadow-scroller')) {
+        customElements.define('shadow-scroller', ShadowScroller);
+      }
+      const host = document.createElement('shadow-scroller');
+      modal.appendChild(host);           // slotted into modal-dialog's default slot
+      const inner = host.shadowRoot.querySelector('#scroller');
+      return inner.getBoundingClientRect().toJSON();
+    });
+
+    // A genuine horizontal drag, started inside the nested scroller.
+    const y = box.y + box.height / 2;
+    const startX = box.x + box.width - 6;
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    for (let dx = 20; dx <= 200; dx += 20) await page.mouse.move(startX - dx, y);
+    await page.mouse.up();
+
+    expect(await activeTab(page)).toBe(0); // the chart scrolled; the dialog did not page
+  });
+
   test('a vertical drag is conceded — no tab change and no transform applied', async ({ page }) => {
     await waitForDialogSettled(page);
     const { box } = await modalPart(page, '.body');
