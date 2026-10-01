@@ -32,6 +32,13 @@ test('icon declared in manifest is reachable', async ({ page, baseURL }) => {
 
 test('service worker registers successfully', async ({ page, baseURL }) => {
   await page.goto(baseURL);
+  // Registration is async and this assertion used to race it — it read 'none' whenever the
+  // registration had not landed yet, which surfaced as an order-dependent flake. Every other
+  // spec waits for the controller; wait for a registration here for the same reason.
+  await page.waitForFunction(async () => {
+    if (!('serviceWorker' in navigator)) return true;
+    return !!(await navigator.serviceWorker.getRegistration());
+  });
   const swState = await page.evaluate(async () => {
     if (!('serviceWorker' in navigator)) return 'unsupported';
     const reg = await navigator.serviceWorker.getRegistration();
