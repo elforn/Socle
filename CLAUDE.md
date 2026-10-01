@@ -57,7 +57,7 @@ These are settled decisions. Do not propose alternatives unless explicitly asked
 ```
 Socle/
   core/               # Runtime library → copied to _lib/core/ in every scaffolded app
-                      # Browser code only: AppElement, Router, Store, IDB, sw.js, styles/
+                      # Browser code only: AppElement, Router, Store, IDB, sw.js, scroll-claim.js, styles/
   modules/            # Optional runtime modules → copied to _lib/modules/
     gestures/         # Touch and gesture library
     modal-dialog/     # Responsive modal / bottom-sheet component
@@ -80,7 +80,7 @@ Socle/
   cli/
     index.js          # npx socle entry point (Phase 8)
   library_tests/      # Library infrastructure tests (run by library developers only, never shipped)
-                      # scaffold-parity, lib-boundary, css-logical-props, scaffold-tokens
+                      # scaffold-parity, lib-boundary, css-logical-props, scaffold-tokens, touch-action
   reference-app/      # Real app instance using the library. _lib/ is symlinked to core/ and modules/.
   docs/
   .claude/
@@ -92,7 +92,7 @@ Socle/
 ```
 my-app/
   _lib/                     ← library owned. Never edit these files.
-    core/                   ← AppElement, Router, Store, IDB, sw.js, styles/
+    core/                   ← AppElement, Router, Store, IDB, sw.js, scroll-claim.js, styles/
     modules/                ← selected modules (gestures, sync, etc.)
     lib-version.json        ← tracks library version and selected modules
   app/
@@ -279,9 +279,10 @@ Normalised event object passed to all handlers:
 `touch-action` is set automatically on the element based on which gestures are active:
 - tap only → `'manipulation'`
 - longPress → additionally sets `user-select: none`
-- swipe (horizontal) → `'manipulation'` (not `pan-y` — `manipulation` suppresses double-tap-to-zoom so shadow DOM descendants such as swipe-revealed action buttons get immediate `click` events. Horizontal swipe detection is unaffected because browsers only pan-x when a container is actually horizontally scrollable.)
-- hold-drag → `'manipulation'` (set automatically by `Gestures.attach`; was `pan-y` before — same shadow DOM click-delay reasoning applies to inner gesture elements)
-- drag → `'none'`
+- swipe (horizontal) → `'pan-y pinch-zoom'` — drops `pan-x` so the compositor can't claim diagonal swipes, keeps vertical scrolling (and its momentum) native, and still suppresses double-tap-to-zoom so shadow DOM descendants get immediate `click` events
+- hold-drag → `'manipulation'` so the page can still scroll before the 500ms hold completes; the gesture claims the sequence on activation instead
+
+**Claiming the gesture (`core/scroll-claim.js`).** `touch-action` alone is not enough: on a diagonal start the browser can still take the gesture as a vertical scroll. The gesture must call `preventDefault()` on the first `touchmove`, which suppresses scrolling — and therefore the fling — for the whole sequence. Pointer events cannot do this; only a non-passive `touchmove` listener can. One shared primitive in `core/` (not in `modules/gestures/`, so no module depends on another module) is used by the gesture mixin, `Gestures.attach`, `modal-dialog` and `toast`. Two details are load-bearing, both established on-device: the axis decision uses its own **6px** threshold (at flick speed the first `touchmove` is already a ~50px jump, so an 18px decision arrives too late), and the listener is registered **permanently on the element**, never per-gesture on `pointerdown` (Chrome only leaves `touchmove` cancelable when a blocking listener existed as the sequence began).
 
 **Implemented:** tap, long press, swipe, hold-drag, `Gestures.attach`.
 
@@ -434,6 +435,7 @@ Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, 
 - **CSS custom properties for all design values.** No hardcoded colours, spacing, or typography values in component styles.
 - **Every key feature has a test before the feature is considered done.** Not full TDD, but no unfinished feature without coverage.
 - **Fail loudly.** Silent failures and fallbacks that hide errors are not acceptable, especially in the data layer.
+- **Never `touch-action: none` on anything that scrolls, or that sits over something that scrolls.** `touch-action` declares which axes the *browser* keeps, and it is read before any handler runs — so it must be static CSS, never set reactively inside a pointer handler. `none` takes both axes: with nothing able to scroll, a flick still makes the browser start a fling, the fling has nothing to move, and it runs invisibly while spending the user's next tap cancelling itself. A horizontal gesture uses `touch-action: pan-y pinch-zoom` and claims the axis explicitly via `core/scroll-claim.js`; a vertical gesture uses `pan-x pinch-zoom`. `none` would only be defensible on a small, non-scrolling affordance that genuinely owns both axes — and the library currently has **none**: the one case that looked like it (modal-dialog's drag handle, which also did a horizontal tab swipe) turned out to be better fixed by removing the second gesture, so it could concede an axis like everything else. `library_tests/touch-action.test.js` enforces an empty exemption list. This shipped wrong three times before it was understood — see `docs/gestures.md` → Axis ownership.
 - **Fixed-position components must account for safe area insets.** Any element using `position: fixed` with `inset-block-start: 0` must use `padding-block-start: calc(var(--space-N) + var(--safe-area-top))` to avoid overlapping device notches or dynamic islands. `--safe-area-top` resolves to `0px` on flat screens — zero cost.
 - **`prefers-reduced-motion` in shadow DOM:** `animations.css` suppresses transitions globally but cannot reach `@keyframes` defined inside a shadow root. Any component that defines its own `@keyframes` inline (slide-up, fade-in, etc.) must include a `@media (prefers-reduced-motion: reduce)` block disabling them. This is the correct pattern — not a bypass of the global file.
 - **`[hidden]` must always win in shadow DOM.** Component CSS using `display: flex` or similar on list items will silently override the UA `[hidden] { display: none }` inside a shadow root. `core/styles/base.js` includes `[hidden] { display: none !important; }` which every shadow root inherits via `adoptedStyleSheets`. Never override `[hidden]` in component CSS.
@@ -493,6 +495,7 @@ Four distinct test scopes — do not mix them:
 - `lib-boundary.test.js` — verifies no `core/` or `modules/` file imports from `app/` or uses bare module specifiers
 - `css-logical-props.test.js` — verifies no directional CSS properties in `core/styles/`
 - `scaffold-tokens.test.js` — verifies all `%%TOKEN%%` placeholders are present in scaffold files
+- `touch-action.test.js` — verifies no `touch-action: none` on a scroll container, that horizontal gestures declare `pan-y pinch-zoom`, and that no module imports from another module
 - These tests run automatically with `npm test` and act as a build-time guardrail
 
 **Reference app tests** (library developer, proves features work end-to-end):

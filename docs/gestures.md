@@ -124,7 +124,7 @@ onLongPress(e) {
 
 ### Swipe
 
-A directional horizontal move. Fires at the end of a pointer sequence that moved more than 18px horizontally. Yields to native scroll when the movement is more vertical than horizontal — `touch-action: pan-y` allows the browser to take over for vertical scroll.
+A directional horizontal move. Fires at the end of a pointer sequence that moved more than 18px horizontally. Yields to native scroll when the movement is more vertical than horizontal: `touch-action: pan-y pinch-zoom` leaves the vertical axis with the browser, so native scrolling — and its momentum — keeps working normally.
 
 Two handlers work together for smooth real-time feedback:
 
@@ -181,7 +181,7 @@ onHoldDragEnd(e) {
 }
 ```
 
-`touch-action: none` is set — hold-drag takes full control of the pointer, no native scroll.
+`touch-action` stays permissive (`manipulation`) so the page can still be scrolled by a finger that lands on the element *before* the 500ms hold completes. Once the hold fires, the gesture claims the touch sequence (see **Axis ownership** below) so the browser cannot pan underneath the drag.
 
 **Note on haptics:** the library calls `navigator.vibrate?.(40)` automatically on hold-drag activation. Do not call it from app code — it will double-fire.
 
@@ -210,21 +210,79 @@ All handlers receive a normalised event object. Not all fields are meaningful fo
 These rules apply within a single pointer-down sequence:
 
 - **Movement threshold is 18px.** Below this, the gesture stays in tracking phase and a tap can still fire.
-- **Horizontal vs vertical discrimination.** Once movement exceeds 18px, the gesture checks `|dx|` vs `|dy|`. If `|dy| >= |dx|`, the pointer is released to native scroll and the gesture is cancelled. If `|dx| > |dy|`, a swipe begins.
+- **Horizontal vs vertical discrimination.** Once movement exceeds 18px, the gesture checks `|dx|` vs `|dy|`. If `|dy| >= |dx|`, the pointer is released to native scroll and the gesture is cancelled. If `|dx| > |dy|`, a swipe begins. The *scroll claim* is decided separately and earlier, at 6px — see **Axis ownership**.
 - **Hold timer fires first → hold-drag.** If the 500ms timer fires before any movement exceeds 18px, the gesture enters hold-drag phase. Moving the finger after this drives `onHoldDrag`.
 - **Only one gesture fires per pointer-down.** Once any gesture fires or is cancelled, no others fire until the next pointer-down.
 - **`onHoldDragStart` takes priority over `onLongPress`.** Defining both would be a logic error — the mixin uses `onHoldDragStart` if present and ignores `onLongPress`.
 
-## touch-action summary
+## Axis ownership
+
+`touch-action` declares which axes the **browser** keeps, and it is read before any handler
+runs — a value changed in response to a touch that has already begun is not guaranteed to
+apply to it. So it is always static, never reactive.
+
+**Never `touch-action: none` on anything that scrolls, or that sits over something that
+scrolls.** `none` takes both axes. With nothing able to scroll, a flick still makes the
+browser start a fling; the fling has nothing to move, so it runs invisibly for several
+hundred milliseconds and spends the user's next tap cancelling itself. The tap is lost with
+no visible cause. This shipped three times in this library before it was understood.
 
 | Handlers defined | touch-action set |
 |-----------------|-----------------|
 | `onTap` only | `manipulation` |
 | `onLongPress` | `manipulation` + `user-select: none` |
-| `onSwipe` (any) | `pan-y` |
-| `onHoldDragStart` (any) | `none` + `user-select: none` |
+| `onSwipe` (any) | `pan-y pinch-zoom` |
+| `onHoldDragStart` (any) | `manipulation` + `user-select: none` |
 
-`Gestures.attach` sets `touch-action: pan-y` when swipe handlers are present, `none` otherwise.
+`Gestures.attach` follows the same table: `pan-y pinch-zoom` when swipe handlers are
+present, `manipulation` otherwise.
+
+`pan-y pinch-zoom` rather than plain `pan-y` because including `pinch-zoom` keeps
+double-tap-to-zoom disabled, so there is no 300ms click delay on shadow DOM descendants
+(revealed action buttons and the like). It is the reason `manipulation` was used here
+previously; the only thing that changes is dropping `pan-x`, which is what the compositor
+was using to claim diagonal swipes before JS ever saw them.
+
+### Claiming the gesture
+
+Declaring the axis is only half of it. Removing `pan-x` stops the browser panning
+horizontally, but on a diagonal start the browser can still decide the gesture is a
+vertical scroll. To take it, the gesture must call `preventDefault()` on the first
+`touchmove` — per the Touch Events spec that suppresses scrolling for the whole sequence,
+and no scroll means no fling.
+
+**Pointer events cannot do this.** They are passive with respect to scrolling, so
+`preventDefault()` on `pointermove` has no effect. Only a non-passive `touchmove` listener
+can, which is what [`core/scroll-claim.js`](../core/scroll-claim.js) provides — one
+primitive, used by the gesture mixin, `Gestures.attach`, `modal-dialog` and `toast`. It
+lives in `core/` rather than here so that no module depends on another module.
+
+Two details of it are load-bearing and were both established on-device:
+
+- The axis decision uses its own **6px** threshold, not the 18px tap/swipe threshold. At
+  flick speed the first `touchmove` is already a ~50px jump, so a decision taken at 18px
+  arrives after the browser has committed and there is no earlier move left to claim on.
+- The listener is registered **permanently on the element**, not per-gesture on
+  `pointerdown`. Chrome only leaves `touchmove` cancelable when a blocking listener already
+  existed as the touch sequence began. Registering inside `pointerdown` missed the claim on
+  a 3.2 px/ms diagonal flick; permanent registration missed none in ten at the same speeds.
+
+A vertical gesture is **conceded**: no `preventDefault`, the browser scrolls natively with
+its own momentum, and the component stops tracking. Multi-touch sequences are never
+claimed, so pinch-zoom is untouched.
+
+### The one cost of deciding early
+
+Because the decision happens at 6px and `preventDefault()` suppresses scrolling for the
+*whole* touch sequence, a drag whose first 6px are more horizontal than vertical is claimed
+— and stays claimed even if the finger then travels straight down. That touch will not
+scroll natively.
+
+This is inherent to early claiming, and it is the trade every production gesture library
+makes: deciding later means the browser has already committed and the claim silently fails.
+In practice a deliberate vertical scroll crosses 6px vertically first, so it is conceded
+correctly; on-device testing showed native momentum working normally. But if "sometimes my
+scroll sticks" is ever reported, this is the first thing to look at.
 
 ## Keyboard alternatives
 
