@@ -10,6 +10,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.3.1] — 2026-10-02
+
+### Fixed
+- `modules/modal-dialog/modal-dialog.js` — a horizontal drag inside a consumer's own shadow root changed tabs instead of being left alone, so a slotted chart with its own `overflow-x: auto` region could not be scrolled while `tabCount > 1`. `_withinHorizontalScroller` walked `parentElement` from `e.target`, but pointer events are composed and the target `.body`'s listener receives is retargeted to the **slotted node** — so the walk could never descend into the consumer's shadow tree and the bail-out silently never fired for shadow-DOM consumers. It now walks `composedPath()`, which crosses those boundaries and ends at `.body`, which is also the correct place to stop. Reported from a downstream app (Telos).
+
+  Worth being precise about the scope: this stops the dialog fighting the consumer, it does **not** make the chart pan natively. `touch-action` still intersects down the ancestor chain, so `pan-y` removes `pan-x` from everything inside `.body` and the consumer still drives its own horizontal scrolling with pointer events — the fix is that the dialog now stays out of the way while it does.
+
+  Only reproducible in a real browser: happy-dom does not propagate a composed event from a nested shadow root through a slot, so the first unit test written for this passed without ever reaching the handler. The integration case lives in `reference-app/tests/e2e/axis-ownership.spec.js` and was confirmed to fail before the fix; the unit tests drive `_withinHorizontalScroller` directly instead.
+
+---
+
 ## [1.3.0] — 2026-10-01
 
 ### Added
