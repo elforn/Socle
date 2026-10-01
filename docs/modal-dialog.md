@@ -139,7 +139,11 @@ Two costs of the old `none` are gone: there is no JS `scrollTop` replication (so
 
 > **One cost is unchanged.** CSS `touch-action` intersects down the whole ancestor chain and a descendant can never loosen what an ancestor restricted — so `pan-y` removes `pan-x` from everything inside `.body`, exactly as `none` did. Nested horizontally-scrollable slotted content — a chart with its own `overflow-x: auto` region, say — still loses native horizontal panning for as long as `tabCount > 1`. A consumer with that kind of content still needs its own pointer-driven horizontal scroll replication. This module can't solve it generically, since it doesn't know what a consumer slots in.
 
-A drag starting inside an already-horizontally-scrollable descendant (detected via `scrollWidth`/`clientWidth` and computed `overflow-x`) still skips this module's tab-swipe tracking, so a chart-scroll gesture doesn't accidentally change tabs. A drag starting on an interactive element (`button`, `a`, `input`, `textarea`, `select`, `[contenteditable]`) is likewise ignored, so a `<select>` or similar inside the slotted content keeps working normally.
+A drag starting inside an already-horizontally-scrollable descendant (detected via `scrollWidth`/`clientWidth` and computed `overflow-x`) skips this module's tab-swipe tracking, so a chart-scroll gesture doesn't accidentally change tabs. The detection walks `composedPath()`, so it finds the scroller **even when it lives inside a consumer's own shadow root** — pointer events are composed, and the target `.body`'s listener receives is retargeted to the slotted node, so a `parentElement` walk could never descend into the consumer's shadow tree.
+
+> **This stops the dialog fighting you; it does not make the chart pan natively.** Those are two separate things, and only the first is in this module's gift. The `touch-action` restriction above still removes `pan-x` from everything inside `.body`, so the consumer still has to drive its own horizontal scrolling with pointer events. What the bail-out guarantees is that when it does, the dialog stays out of the way instead of paging tabs underneath it.
+
+A drag starting on an interactive element (`button`, `a`, `input`, `textarea`, `select`, `[contenteditable]`) is likewise ignored, so a `<select>` or similar inside the slotted content keeps working normally.
 
 ### The handle's axis
 
