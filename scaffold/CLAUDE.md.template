@@ -66,6 +66,23 @@ npm run test:e2e     # Playwright E2E tests
 
 ---
 
+## Importing from _lib/
+
+Two forms work, and relative is the default:
+
+```js
+import { AppElement } from '../../_lib/core/app-element.js';   // from app/components/foo/
+import { AppElement } from 'socle/core/app-element.js';         // resolves from anywhere
+```
+
+Use relative paths for ordinary `app/` code. Reach for `socle/` when a file cannot know its own depth relative to `_lib/` — most commonly code shared with another app, kept outside this project's tree and linked in. A relative specifier encodes the importing file's depth, so it cannot resolve from there.
+
+`socle/` is wired in `utils/build.js` (library-owned), `vitest.config.js` and `jsconfig.json` (both yours). If you scaffolded before Socle 1.4.0, `npx socle update` prints the lines to add.
+
+**Never put shared code in `_lib/`.** That directory is library-owned and `npx socle update` overwrites it without warning. Shared code belongs under `app/`, which is never touched.
+
+---
+
 ## Components
 
 Three tiers:
