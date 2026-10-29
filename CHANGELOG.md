@@ -10,6 +10,29 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.0] — 2026-10-29
+
+### Added
+- **`socle/` — a stable, depth-independent specifier for the library.** `import { AppElement } from 'socle/core/app-element.js'` now resolves to your project's `_lib/` from anywhere, including from code outside the app tree. Relative imports keep working and remain what the scaffold generates, so this is purely additive.
+
+  The reason it exists is that a relative specifier encodes the importing file's depth. `../../core/app-element.js` only resolves from a directory exactly two levels below one containing `core/`, which in practice means from inside `_lib/` itself — so shared components used by several apps had nowhere correct to live, and the only layout that worked was symlinking them into `_lib/`, the one directory `socle update` overwrites. That in turn needed a `preserveSymlinks: true` line added to `utils/build.js`, which the update also overwrites. A downstream app (one of the BladeNCode fencing apps) had both wiped by the 1.3.1 update and its build broke.
+
+  The alias removes the need for that flag rather than coexisting with it: it maps to an absolute path regardless of where the importing file physically sits, so esbuild following a symlink to its real location no longer matters. Node subpath imports (`#socle/*`) were evaluated and rejected — they resolve from the symlink's real path, so the nearest-`package.json` walk climbs out of the shared repo and never reaches the app's, making them work *only* with the same `preserveSymlinks` flag, and break outright the day the shared repo gains a `package.json`.
+
+  Wired in three places. `utils/build.js` carries the esbuild `alias` and is library-owned, so it arrives with every update. `vitest.config.js` and `jsconfig.json` are app-owned — new apps get them scaffolded, and `socle update` prints the lines for an existing app to add. The target is absolute in all three: esbuild anchors relative alias targets to the current working directory, not to the config file, so a relative target silently breaks when the build runs from elsewhere.
+
+  Do not use `socle/` inside `_lib/`. Library code imports relatively because `_lib/` must resolve with no build configuration at all — the scaffolded app's Vitest loads `_lib/**/*.test.js` directly. `library_tests/lib-boundary.test.js` already enforces this.
+- `jsconfig.json` in the scaffold — maps `socle/*` to `./_lib/*` so editors resolve the specifier. Without it the build and tests still pass but every `socle/` import shows as an unresolved module in VS Code.
+- [`docs/shared-code.md`](docs/shared-code.md) — guidance for sharing code across several apps: what belongs in a shared repo (event vocabulary, pure fold functions, store-agnostic UI components), how to link it, and why the shared event vocabulary becomes a wire protocol once apps exchange logs. **None of it is enforced** — Socle is a PWA generator, not a monorepo tool. The recommendations are there because the library previously gave no guidance and symlinking into `_lib/` was the default outcome.
+- `library_tests/socle-alias.test.js` — scaffolds a real app with a shared module outside its tree, symlinks it in, and builds it. Confirmed to fail with esbuild's own resolution error when the alias is removed.
+
+### Fixed
+- **`socle update` no longer downgrades a devDependency you have moved ahead of the template.** The merge was `{ ...projectDeps, ...scaffoldDeps }` with the scaffold spread last, and the only comparison was string inequality — so an app on `@playwright/test: 1.60.0` was offered `^1.52.0` and applying it went backwards. `devDependencies` is developer-owned; the template may add a package or raise a version, never lower one. A version ahead of the template is now kept and reported as `= pkg: 1.60.0 (ahead of template ^1.52.0 — keeping)` so the non-action is visible rather than silent. Reported from a downstream app (BladeNCode fencing).
+- `_semverLt` mis-compared any npm range. `'^1.52.0'.split('.').map(Number)` yields `[NaN, 52, 0]`, and every comparison against NaN is false, so the major version was skipped entirely — it would claim `^2.0.0 < 1.60.0`. It now strips the leading range operator before comparing. This only affected the new dependency comparison; the existing migration gates compare bare versions and were never wrong.
+- `docs/architecture.md` described `dist/` as containing copies of `_lib/` and `app/`. Both have been bundled into `main.[hash].js` since the esbuild migration; `dist/app/` holds only `icons/`.
+
+---
+
 ## [1.3.1] — 2026-10-02
 
 ### Fixed
