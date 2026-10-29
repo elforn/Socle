@@ -52,9 +52,10 @@ dist/
   version.json      ← { version, buildTime } for the update-notification flow
   index.html        ← processed with hashed asset filenames
   manifest.json     ← copied from project root
-  _lib/             ← copy of _lib/ (ES modules need all imports present in dist/)
-  app/              ← copy of app/ (page components imported by main.[hash].js)
+  app/icons/        ← copied from app/icons/, referenced by the manifest
 ```
+
+Everything under `_lib/` and `app/` is bundled into `main.[hash].js` by esbuild and tree-shaken. Neither directory is copied into `dist/`.
 
 Content hashing means browsers cache aggressively — a filename only changes when its content changes, so unchanged files are served from cache indefinitely.
 
