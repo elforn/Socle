@@ -69,9 +69,19 @@ function readAccentColor(tokensPath) {
   return m ? m[1].trim() : null;
 }
 
+// npm ranges carry a leading operator ('^1.52.0'), which Number() turns into NaN
+// and silently makes every comparison false.
+function _semverParts(v) {
+  const [maj = 0, min = 0, pat = 0] = String(v)
+    .replace(/^\D*/, '')
+    .split('.')
+    .map(n => parseInt(n, 10) || 0);
+  return [maj, min, pat];
+}
+
 function _semverLt(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
+  const pa = _semverParts(a);
+  const pb = _semverParts(b);
   for (let i = 0; i < 3; i++) {
     if (pa[i] < pb[i]) return true;
     if (pa[i] > pb[i]) return false;
@@ -624,17 +634,33 @@ export async function updateLib(projectDir, ask) {
   const projectDeps  = projectPkg.devDependencies ?? {};
   const depsAdded    = [];
   const depsChanged  = [];
+  const depsAhead    = [];
+  // devDependencies are developer-owned: the template may add a package or raise a
+  // version, never lower one the app has deliberately moved ahead of.
+  const depsToApply  = {};
   for (const [pkg, ver] of Object.entries(scaffoldPkg.devDependencies)) {
-    if (!projectDeps[pkg])              depsAdded.push(`  + ${pkg}: ${ver}`);
-    else if (projectDeps[pkg] !== ver)  depsChanged.push(`  ~ ${pkg}: ${projectDeps[pkg]} → ${ver}`);
+    const have = projectDeps[pkg];
+    // An equal version — including one pinned with a different range operator —
+    // matches no branch and is left exactly as the app wrote it.
+    if (!have) {
+      depsAdded.push(`  + ${pkg}: ${ver}`);
+      depsToApply[pkg] = ver;
+    } else if (_semverLt(have, ver)) {
+      depsChanged.push(`  ~ ${pkg}: ${have} → ${ver}`);
+      depsToApply[pkg] = ver;
+    } else if (_semverLt(ver, have)) {
+      depsAhead.push(`  = ${pkg}: ${have} (ahead of template ${ver} — keeping)`);
+    }
   }
   let depsUpdated = false;
-  if (depsAdded.length || depsChanged.length) {
+  if (depsAdded.length || depsChanged.length || depsAhead.length) {
     console.log('\n  package.json devDependencies:');
-    [...depsAdded, ...depsChanged].forEach(l => console.log(l));
+    [...depsAdded, ...depsChanged, ...depsAhead].forEach(l => console.log(l));
+  }
+  if (depsAdded.length || depsChanged.length) {
     const answer = await ask('  Apply these changes? [y/N]: ');
     if (answer.trim().toLowerCase().startsWith('y')) {
-      projectPkg.devDependencies = { ...projectDeps, ...scaffoldPkg.devDependencies };
+      projectPkg.devDependencies = { ...projectDeps, ...depsToApply };
       fs.writeFileSync(projectPkgPath, JSON.stringify(projectPkg, null, 2) + '\n');
       depsUpdated = true;
       console.log('  ✔ package.json devDependencies updated');

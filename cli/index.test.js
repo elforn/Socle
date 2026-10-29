@@ -370,6 +370,130 @@ describe('updateLib', () => {
 
 // ── unit: findModuleImports ───────────────────────────────────────────────────
 
+// ── regression: devDependencies are developer-owned ───────────────────────────
+
+describe('updateLib devDependencies', () => {
+  function stale(dest, deps) {
+    const lvPath = join(dest, '_lib', 'lib-version.json');
+    const lv = JSON.parse(readFileSync(lvPath, 'utf8'));
+    lv.version = '0.0.1';
+    writeFileSync(lvPath, JSON.stringify(lv, null, 2));
+
+    const pkgPath = join(dest, 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    Object.assign(pkg.devDependencies, deps);
+    writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+    return pkgPath;
+  }
+
+  async function runUpdate(dest) {
+    let logged = '';
+    const orig = console.log;
+    console.log = s => { logged += s + '\n'; };
+    try { await updateLib(dest, () => Promise.resolve('y')); }
+    finally { console.log = orig; }
+    return logged;
+  }
+
+  function scaffoldDeps() {
+    return JSON.parse(
+      readFileSync(new URL('../scaffold/package.json', import.meta.url), 'utf8')
+    ).devDependencies;
+  }
+
+  it('keeps a version the app has moved ahead of the template', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    const pkgPath = stale(dest, { '@playwright/test': '1.60.0' });
+
+    await runUpdate(dest);
+
+    expect(JSON.parse(readFileSync(pkgPath, 'utf8')).devDependencies['@playwright/test'])
+      .toBe('1.60.0');
+  });
+
+  it('keeps an ahead range even when the template pins a different range', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    const pkgPath = stale(dest, { vitest: '^9.0.0' });
+
+    await runUpdate(dest);
+
+    expect(JSON.parse(readFileSync(pkgPath, 'utf8')).devDependencies.vitest).toBe('^9.0.0');
+  });
+
+  it('raises a version the app is behind the template on', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    const pkgPath = stale(dest, { vitest: '^4.0.0' });
+
+    await runUpdate(dest);
+
+    expect(JSON.parse(readFileSync(pkgPath, 'utf8')).devDependencies.vitest)
+      .toBe(scaffoldDeps().vitest);
+  });
+
+  it('adds a devDependency the app is missing', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    const pkgPath = join(dest, 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    delete pkg.devDependencies['fake-indexeddb'];
+    writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+    stale(dest, {});
+
+    await runUpdate(dest);
+
+    expect(JSON.parse(readFileSync(pkgPath, 'utf8')).devDependencies)
+      .toHaveProperty('fake-indexeddb');
+  });
+
+  it('writes nothing when the developer declines the prompt', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    const pkgPath = stale(dest, { vitest: '^4.0.0' });
+
+    const orig = console.log;
+    console.log = () => {};
+    try { await updateLib(dest, () => Promise.resolve('n')); }
+    finally { console.log = orig; }
+
+    expect(JSON.parse(readFileSync(pkgPath, 'utf8')).devDependencies.vitest).toBe('^4.0.0');
+  });
+
+  it('leaves a numerically equal version with a different range operator alone', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    const pinned = scaffoldDeps().vitest.replace(/^\D+/, '');
+    const pkgPath = stale(dest, { vitest: pinned });
+
+    const logged = await runUpdate(dest);
+
+    expect(JSON.parse(readFileSync(pkgPath, 'utf8')).devDependencies.vitest).toBe(pinned);
+    expect(logged).not.toContain('ahead of template');
+  });
+
+  it('proposes nothing when every version is already in step', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    stale(dest, {});
+
+    const logged = await runUpdate(dest);
+
+    expect(logged).not.toContain('package.json devDependencies:');
+  });
+
+  it('reports an ahead-of-template version so the non-action is visible', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    stale(dest, { '@playwright/test': '1.60.0' });
+
+    const logged = await runUpdate(dest);
+
+    expect(logged).toContain('ahead of template');
+  });
+});
+
 describe('findModuleImports', () => {
   it('returns files that import from the given module', () => {
     const dest = makeTmpDir();
