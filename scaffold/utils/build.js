@@ -25,6 +25,11 @@ const { outputFiles } = await esbuild.build({
   sourcemap:   true,
   format:      'esm',
   define:      { __APP_VERSION__: `"${version}"`, __BASE_PATH__: JSON.stringify(BASE_PATH) },
+  // Depth-independent specifier for the library, so app code and shared code kept
+  // outside the app tree can import 'socle/core/...' without encoding their own
+  // position relative to _lib/. Absolute because esbuild anchors relative alias
+  // targets to the CWD, not to this file.
+  alias:       { socle: join(root, '_lib') },
   outdir:      dist,
   write:       false,
 });

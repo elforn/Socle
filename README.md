@@ -58,6 +58,7 @@ npx serve dist --single
 - [Modal dialog](docs/modal-dialog.md) — centered dialog / bottom sheet, swipe-to-dismiss, scroll containment, opt-in tabs/paging
 - [Filter state](docs/filter-state.md) — localStorage-backed filter persistence, isActive() indicator
 - [Notifications](docs/notifications.md) — opt-in digest notifications, dedup, periodic background sync, cold-launch routing
+- [Sharing code across apps](docs/shared-code.md) — the `socle/` specifier, multi-app layout, shared event vocabulary
 - [Testing](docs/testing.md) — test environments, fake-indexeddb, component test patterns, E2E setup
 - [Claude Code](docs/claude.md) — slash commands, workflow, /setup-claude
 - [Theming](docs/theming.md) — CSS tokens, custom properties, retheming

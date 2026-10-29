@@ -273,6 +273,15 @@ describe('scaffoldApp', () => {
 
 // ── integration: updateLib ────────────────────────────────────────────────────
 
+describe('scaffoldApp jsconfig.json', () => {
+  it('writes a jsconfig.json mapping socle/* so editors resolve the alias', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    const cfg = JSON.parse(readFileSync(join(dest, 'jsconfig.json'), 'utf8'));
+    expect(cfg.compilerOptions.paths['socle/*']).toEqual(['./_lib/*']);
+  });
+});
+
 describe('updateLib', () => {
   it('throws when _lib/lib-version.json is missing', async () => {
     const dest = makeTmpDir();

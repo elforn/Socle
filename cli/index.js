@@ -680,6 +680,18 @@ export async function updateLib(projectDir, ask) {
     console.log('     Then add the anti-FOUC inline script — see CHANGELOG.md for the snippet.');
     if (depsUpdated) console.log('  3. Run: npm install   (adds esbuild for the new build pipeline)');
   }
+  if (_semverLt(current.version, '1.4.0')) {
+    console.log('\n  ── socle/ import alias (one manual step) ──');
+    console.log('  utils/build.js now resolves a depth-independent specifier for the library:');
+    console.log("       import { AppElement } from 'socle/core/app-element.js';");
+    console.log('  vitest.config.js is app-owned, so add the matching alias by hand:');
+    console.log("       import { fileURLToPath } from 'url';");
+    console.log("       resolve: { alias: { socle: fileURLToPath(new URL('./_lib', import.meta.url)) } },");
+    console.log('  Add a jsconfig.json alongside it so your editor resolves socle/ too:');
+    console.log('       { "compilerOptions": { "baseUrl": ".", "paths": { "socle/*": ["./_lib/*"] } } }');
+    console.log('  Existing relative _lib/ imports keep working — the alias is additive.');
+    console.log('  See docs/shared-code.md for the multi-app layout it enables.');
+  }
   // ── end migrations ──────────────────────────────────────────────────────────
 
   fs.writeFileSync(libVersionPath, JSON.stringify({ ...current, version: latest }, null, 2) + '\n');

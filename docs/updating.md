@@ -35,7 +35,7 @@ The command:
 4. Replaces `_lib/core/` and each installed module
 5. Preserves your customised `--color-accent` value in `tokens.css`
 6. Replaces `utils/build.js` — shows a warning and asks for confirmation if it has local modifications
-7. Syncs `package.json` devDependencies — shows added/changed packages and asks for confirmation; never touches `name`, `version`, `scripts`, or any other field
+7. Syncs `package.json` devDependencies — adds missing packages and raises versions the template is ahead on, asks for confirmation, and never touches `name`, `version`, `scripts`, or any other field. A version you have deliberately moved **ahead** of the template is kept and reported, never downgraded.
 8. Updates `lib-version.json`
 9. Prints a commit command and an `npm install` reminder if devDependencies changed
 
@@ -49,7 +49,8 @@ If the update includes a new IDB schema version, the changelog will say so. Run 
 | `_lib/modules/<mod>/` | ✅ For each module listed in `lib-version.json` |
 | `_lib/lib-version.json` | ✅ Version field updated; modules list preserved |
 | `utils/build.js` | ✅ With confirmation if locally modified |
-| `package.json` devDependencies | ✅ Merged in (with confirmation) |
+| `package.json` devDependencies | ✅ Added / raised only, with confirmation — never downgraded |
+| `vitest.config.js`, `jsconfig.json` | ❌ Never — app-owned; `socle update` prints any lines to add |
 | `app/` | ❌ Never |
 | `index.html`, `manifest.json` | ❌ Never |
 | `package.json` name/version/scripts | ❌ Never |

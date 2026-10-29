@@ -42,6 +42,12 @@ describe('scaffold/utils/build.js', () => {
     expect(indexBlock).toContain(".replaceAll('%%BASE_PATH%%', BASE_PATH)");
   });
 
+  it('declares the socle/ alias so _lib/ has a depth-independent specifier', () => {
+    const src = read(scaffold, 'utils/build.js');
+    expect(src).toContain("alias:");
+    expect(src).toContain("socle: join(root, '_lib')");
+  });
+
   it('build.js is identical between scaffold and reference-app', () => {
     expect(read(scaffold, 'utils/build.js')).toBe(read(refApp, 'utils/build.js'));
   });
@@ -96,6 +102,29 @@ describe('scaffold/vitest.config.js', () => {
     const src = read(scaffold, 'vitest.config.js');
     expect(src).toContain('setupFiles');
     expect(src).toContain('_lib/core/test-setup.js');
+  });
+
+  it('declares the socle/ alias, mirroring utils/build.js', () => {
+    const src = read(scaffold, 'vitest.config.js');
+    expect(src).toContain('resolve:');
+    expect(src).toContain('socle:');
+  });
+
+  it('vitest.config.js is identical between scaffold and reference-app', () => {
+    expect(read(scaffold, 'vitest.config.js')).toBe(read(refApp, 'vitest.config.js'));
+  });
+});
+
+// ─── jsconfig.json ───────────────────────────────────────────────────────────
+
+describe('scaffold/jsconfig.json', () => {
+  it('maps socle/* to _lib/* so editors resolve the alias', () => {
+    const cfg = JSON.parse(read(scaffold, 'jsconfig.json'));
+    expect(cfg.compilerOptions.paths['socle/*']).toEqual(['./_lib/*']);
+  });
+
+  it('jsconfig.json is identical between scaffold and reference-app', () => {
+    expect(read(scaffold, 'jsconfig.json')).toBe(read(refApp, 'jsconfig.json'));
   });
 });
 

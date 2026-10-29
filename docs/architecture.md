@@ -59,6 +59,22 @@ Everything under `_lib/` and `app/` is bundled into `main.[hash].js` by esbuild 
 
 Content hashing means browsers cache aggressively — a filename only changes when its content changes, so unchanged files are served from cache indefinitely.
 
+### The `socle/` specifier
+
+The build resolves `socle/` to your project's `_lib/` directory, so library imports do not have to encode where the importing file sits:
+
+```js
+import { AppElement } from 'socle/core/app-element.js';
+```
+
+Relative imports (`../../_lib/core/app-element.js`) work everywhere and remain what the scaffold generates. The alias matters when code lives **outside** the app tree — shared components used by more than one app — because a relative specifier encodes the importer's depth and cannot resolve from there.
+
+It is wired in three places: an esbuild `alias` in `utils/build.js` (library-owned), the matching `resolve.alias` in `vitest.config.js`, and `paths` in `jsconfig.json` for editor resolution. The last two are app-owned, so an existing project adds them by hand — `socle update` prints the lines.
+
+Library code never uses `socle/`. `_lib/` imports relatively, because it must resolve with no build configuration at all.
+
+See [sharing code across several apps](shared-code.md).
+
 ### BASE_PATH
 
 Apps deployed to GitHub Pages live at `https://user.github.io/repo-name/`, not `/`. The build script reads `BASE_PATH` from the environment and prefixes all asset URLs:
