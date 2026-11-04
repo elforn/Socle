@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.1] — 2026-11-04
+
+### Changed
+- [`docs/shared-code.md`](docs/shared-code.md) — documents that test coverage silently mis-attributes symlinked shared code. V8 reports execution against the real path of each file, which for a symlink lies outside the project root, so it never reconciles with the project-relative entry in the report: the shared files score 0% despite being fully tested, or vanish from the report entirely depending on whether `coverage.all` and `include` discovered them statically. Verified on a fixture — identical code and identical tests scored 0% through a symlink and 33% as a real directory. This is now the third argument for the submodule layout and the quietest of the three: a coverage threshold passes or fails for reasons unrelated to the tests. Reported by a consuming app that lost roughly 1,500 lines from its headline number this way.
+
+---
+
 ## [1.4.0] — 2026-10-29
 
 ### Added

@@ -110,10 +110,20 @@ Pages, routes, `manifest.json`, store boot, and theming stay per-app.
 | Clean single-repo clone | yes | **no — dangles** | yes |
 | CI needs no special layout | yes | no | yes |
 | Version is explicit | yes (pinned SHA) | no | no |
+| Test coverage attributes correctly | yes | **no** | yes |
 | Live editing across apps | one command | instant | sync step |
 | Needs `socle/` | yes | yes | no |
 
 **A committed symlink is stored as its target path**, so a checkout of one app alone produces a dangling link unless the build host reproduces the exact parent layout. That makes the symlink a good choice while co-developing locally and a poor one in CI.
+
+**Test coverage silently mis-attributes symlinked code.** V8 reports execution against each file's *real* path. A symlink resolves outside the project root, so that data never reconciles with the project-relative entry in the report. The shared files then score **0% despite being fully tested**, or disappear from the report altogether if `coverage.all` and `include` never statically discovered them. Which of the two you get depends on your coverage config; both are wrong and neither warns you. Measured on a fixture — identical code and identical tests:
+
+```
+app/shared via symlink     fold.js    0%   ← fully tested
+app/shared as a real dir   fold.js   33%   ← correct
+```
+
+There is no good workaround while the directory is a symlink; the fix is to make it a real directory. Treat this as the third and quietest argument for the submodule — a coverage threshold will pass or fail for reasons unrelated to your tests. Reported by a consuming app that lost roughly 1,500 lines from its headline number this way.
 
 **Recommended: a git submodule at `app/shared/`.** Put `branch = main` in `.gitmodules`, edit inside `app/shared/` in whichever app you are working in — it is a real checkout — commit there, then `git submodule update --remote` in the others. One command to pull, one commit to publish.
 
