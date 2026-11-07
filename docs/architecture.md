@@ -6,7 +6,7 @@
 - [The `_lib/` boundary](#the-_lib-boundary)
 - [Build system](#build-system)
 - [Router](#router)
-- [Store and IDB](#store-and-idb) — [event-log store](#event-log-store) · [simple store](#simple-store)
+- [Store and IDB](#store-and-idb) — [event-log store](#event-log-store) · [app-owned stores](#app-owned-object-stores) · [simple store](#simple-store)
 - [Strings and locale](#strings-and-locale)
 - [Multi-tap](#multi-tap)
 - [Sync module](#sync-module-modulessync)
@@ -279,23 +279,58 @@ The reducer must be a pure function — no side effects, no IDB calls, no mutati
 
 ### Schema migrations
 
-The IDB schema is versioned from day one. Migrations live in `core/idb/migrations.js` — add a new function to the array when you need a new object store or index:
+The IDB schema is versioned from day one. `_lib/core/idb/migrations.js` holds the **library-owned** chain — it creates the `events` and `images` stores that the Store API itself depends on:
 
 ```js
-// core/idb/migrations.js
+// _lib/core/idb/migrations.js — library-owned, never edit in an app
 const migrations = [
   null,       // slot 0 — IDB versions start at 1
-  db => {     // version 1 — initial schema
+  db => {     // version 1 — event log
     const store = db.createObjectStore('events', { keyPath: 'id' });
     store.createIndex('by_recordedAt', 'recordedAt');
   },
-  db => {     // version 2 — add a new store
-    db.createObjectStore('snapshots', { keyPath: 'id' });
+  db => {     // version 2 — blob attachments
+    db.createObjectStore('images', { keyPath: 'id' });
   },
 ];
 ```
 
 Migrations run inside `boot()` before any state is replayed and before any UI renders. A failed migration throws, halting app startup visibly — it never silently corrupts data.
+
+**Do not add app object stores to this file.** It lives under `_lib/`, so `npx socle update` replaces it wholesale and your store disappears — and because the failure surfaces later, at the first read of a missing store rather than at update time, it is easy to ship. Use an app-owned database instead.
+
+### App-owned object stores
+
+When your app needs a store of its own, open your own database. It gets its own version counter, so it evolves completely independently of the library's:
+
+```js
+// app/local-tags.js — app-owned schema, app-owned version counter
+import { openDB, get, put, del } from '../_lib/core/idb/idb.js';
+
+const migrations = [
+  null, // slot 0 — IDB versions start at 1
+  db => db.createObjectStore('localTags', { keyPath: 'tagId' }),
+];
+
+let _db;
+const db = () => (_db ??= openDB('myapp-local', migrations.length - 1,
+  (database, oldV, newV) => {
+    for (let v = oldV + 1; v <= newV; v++) migrations[v](database);
+  }));
+
+export const getTag = async id        => get(await db(), 'localTags', id);
+export const setTag = async (id, tag) => put(await db(), 'localTags', { tagId: id, ...tag });
+export const delTag = async id        => del(await db(), 'localTags', id);
+```
+
+The file lives in `app/`, so no library update can touch it. Caching the *promise* rather than the resolved handle means concurrent callers share a single open. This is the same pattern `modules/notifications/notification-dedup.js` uses for its own dedup database.
+
+Two consequences to decide deliberately rather than discover later:
+
+- **App-owned stores are not in `exportData()`.** The sync module exports the `events` and `images` stores only. For local-only data (device-specific preferences, scratch state, caches) that is usually what you want. If the data must survive a backup/restore or reach another device, it belongs in the event log as events — not in a sidecar store. Where data must *never* leave the device, this is a reason to choose an app-owned store rather than a caveat of it: the exclusion holds by construction, with no strip step to remember on each new export or share path.
+- **There is no transaction spanning two databases.** Note that `idb.js` exposes no multi-store transaction either — `put`, `get`, `getAll`, and `del` each open their own single-store transaction — so a write to an app store and a `dispatch()` are already independent operations today, within one database or across two.
+
+Do not try to extend the library chain by passing a higher `version` to `boot()`. IndexedDB gives you one integer and one `oldVersion` checkpoint, which cannot encode two independently-evolving sequences: whichever side numbers a migration second gets skipped on existing installs and applied on fresh ones, diverging silently. `boot({ version })` is for pinning or downgrading in tests only — a version above `CURRENT_VERSION` throws `No migration defined for schema version N`.
 
 ### API reference
 

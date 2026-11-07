@@ -5,39 +5,67 @@ Scaffold a new IDB schema migration.
 ## Usage
 /migration <version> <description>
 
-Example: `/migration 2 add-goal-index`
+Example: `/migration 3 add-snapshots-store`
 
 ## What to do
 
-1. **Read `core/idb/migrations.js`** to understand the existing migration chain and current schema version.
+### Step 0 — Decide which chain this belongs to
 
-2. **Scaffold the new migration** as an entry in the migrations array:
+This is the first question, and getting it wrong ships a bug that only surfaces after a `socle update`.
+
+| The store is for... | Goes in | Who owns it |
+|---|---|---|
+| The Store API itself (`events`, `images`, a future `snapshots` cache) | `core/idb/migrations.js` | Library |
+| Anything app-specific | The app's **own database**, opened from `app/` | App developer |
+
+**Library migrations are for library infrastructure only.** `_lib/` contains zero domain concepts — if the store holds app data, it does not belong in this chain at any version. An app that adds a store here is overwritten on every `socle update` — since 1.4.2 the update warns first instead of doing it silently, but the app is then answering that prompt forever, and one `y` still loses the store.
+
+If the request is for app data, do not scaffold a library migration. Point at the app-owned pattern in `docs/architecture.md` → App-owned object stores and stop.
+
+### Step 1 — Read the existing chain
+
+Read `core/idb/migrations.js`. It is a positional array of plain functions:
 
 ```js
-{
-  version: <version>,
-  description: '<description>',
-  up(db, transaction) {
-    // implement upgrade logic here
-    // use db.createObjectStore() or transaction.objectStore() as appropriate
-    // never delete data in a migration — append-only principle applies here too
-  }
-}
+const migrations = [
+  null, // slot 0 — IDB versions start at 1
+  db => { /* version 1 */ },
+  db => { /* version 2 */ },
+];
 ```
 
-3. **Rules for migrations:**
-   - Migrations run in version order on SW activation, before any UI renders
-   - A migration must never delete or overwrite existing records
-   - A migration that fails must throw — it will be caught and will halt app startup with a visible error
-   - New object stores get the standard event log schema by default:
-     `{ keyPath: 'id', autoIncrement: false }` with an index on `recordedAt`
-   - If adding an index to an existing store, use the existing transaction, do not recreate the store
+`CURRENT_VERSION` is derived (`migrations.length - 1`). There is **no version constant to update** — appending to the array is what bumps the version.
 
-4. **Update the schema version constant** in `core/idb/idb.js`.
+### Step 2 — Append the migration
 
-5. **Write a test** in `core/idb/migrations.test.js` that:
-   - Runs the migration on a fresh in-memory IDB
-   - Verifies the new store or index exists
-   - Verifies existing data in previous stores is untouched
+Add one function at the end of the array. The index is the version:
 
-6. **Report** what was added, the new schema version, and what the developer needs to fill in (the actual upgrade logic if it requires business context).
+```js
+  db => {
+    // version <N> — <description>
+    const store = db.createObjectStore('<name>', { keyPath: 'id' });
+    store.createIndex('by_recordedAt', 'recordedAt');
+  },
+```
+
+Never insert in the middle or renumber an existing entry — positions are checkpoints that installed databases have already recorded.
+
+### Step 3 — Rules for migrations
+
+- Migrations run inside `Store.boot()`, on IDB version upgrade, before state is replayed and before any UI renders. **Not** in SW activate — migrations are data-layer concerns, not service-worker concerns.
+- A migration must never delete or overwrite existing records.
+- A migration that fails must throw. `openDB` aborts the upgrade transaction and rejects, halting app startup visibly rather than corrupting data.
+- New event-log-shaped stores use `{ keyPath: 'id' }` with an index on `recordedAt`.
+- **Known limit:** migration functions receive only `db`, not the `versionchange` transaction, so they can create and delete object stores but cannot add an index to an existing one. If a migration genuinely needs that, `runMigrations` has to pass the transaction through first — treat it as a library change with its own `/scope`, not as part of the migration.
+
+### Step 4 — Write a test
+
+In `core/idb/migrations.test.js`:
+
+- Run the migration on a fresh `fake-indexeddb` database and verify the new store or index exists.
+- Open at the previous version, write a record, reopen at the new version, and verify the record survived.
+- Verify `CURRENT_VERSION` reflects the new length.
+
+### Step 5 — Report
+
+State what was added, the new schema version, and anything the developer must fill in that needs business context.

@@ -105,6 +105,36 @@ Its contents are appended verbatim to the end of the built `dist/sw.js`, after t
 
 `app/sw-extensions.js` is not part of the scaffold template and is never touched by `socle update`, so customisations here survive library upgrades.
 
+### Custom object stores
+
+Your app's own IndexedDB stores go in their own database, opened from `app/`. Do **not** add them to `_lib/core/idb/migrations.js` — that file is library-owned, so `socle update` replaces it and your store disappears, and the failure only surfaces later when a read hits a missing store.
+
+```js
+// app/local-tags.js
+import { openDB, get, put } from '../_lib/core/idb/idb.js';
+
+const migrations = [
+  null, // slot 0 — IDB versions start at 1
+  db => db.createObjectStore('localTags', { keyPath: 'tagId' }),
+];
+
+let _db;
+const db = () => (_db ??= openDB('myapp-local', migrations.length - 1,
+  (database, oldV, newV) => {
+    for (let v = oldV + 1; v <= newV; v++) migrations[v](database);
+  }));
+
+export const getTag = async id        => get(await db(), 'localTags', id);
+export const setTag = async (id, tag) => put(await db(), 'localTags', { tagId: id, ...tag });
+```
+
+Your database carries its own version counter, so your schema and the library's evolve independently — add a function to your array and existing installs upgrade on next boot, keeping their data.
+
+Anything in your own database is outside `exportData()`, which covers the `events` and `images` stores only. That suits device-local data (preferences, caches, scratch state); data that must survive a backup or reach another device belongs in the event log as events.
+
+See [App-owned object stores](architecture.md#app-owned-object-stores) for the full rationale and caveats.
+
+
 ## Testing on a real device
 
 Service workers only register on HTTPS or `localhost`. If you test at `http://192.168.x.x:3000` from a phone, the SW silently fails to register and offline mode never works. Use a locally-trusted HTTPS cert instead.

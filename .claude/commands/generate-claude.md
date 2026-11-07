@@ -61,7 +61,7 @@ the last generation run — this table is the record of every decision made.
 | `commit.md` | Yes | Adapt | Remove monorepo note. Update: one repo for the app, no reference app, no `/integrate` step. |
 | `docs.md` | Yes | Adapt | Replace library docs structure with app docs structure (README + user guide). Remove `/generate-claude` reference. |
 | `status.md` | Yes | Rewrite | Build phases don't apply. Replace with app completeness checks (see Step 4). |
-| `migration.md` | Yes | Copy with review | Verify no library-specific content. |
+| `migration.md` | Yes | Rewrite | **Deliberately divergent — do not path-rewrite the library version.** The library command branches between the library chain and app-owned databases; the app version must present the app-owned database as the only correct answer and explicitly forbid editing `_lib/core/idb/migrations.js`. Preserve the `%%APP_NAME%%` token in the example DB name. |
 | `i18n.md` | Yes | Adapt | Remove `_lib/` ownership checks and the `defineStrings()`/`t()` scaffolding steps — app devs don't write `_lib/` components. Keep the hardcoded-string audit and the `app/locales/` key-parity check. |
 | `integrate.md` | No | Exclude | Reference app concept does not exist in user projects. |
 | `sync.md` | No | Exclude | Reference-app → scaffold sync concept does not exist in user projects. |
