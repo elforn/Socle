@@ -79,7 +79,7 @@ Use relative paths for ordinary `app/` code. Reach for `socle/` when a file cann
 
 `socle/` is wired in `utils/build.js` (library-owned), `vitest.config.js` and `jsconfig.json` (both yours). If you scaffolded before Socle 1.4.0, `npx socle update` prints the lines to add.
 
-**Never put shared code in `_lib/`.** That directory is library-owned and `npx socle update` overwrites it without warning. Shared code belongs under `app/`, which is never touched.
+**Never put shared code in `_lib/`.** That directory is library-owned and `npx socle update` overwrites it. The update compares `_lib/` against a checksum receipt and will warn you first — including about files you added or committed — but the warning recurs on every update and answering `y` still overwrites. Shared code belongs under `app/`, which is never touched.
 
 ---
 
@@ -212,3 +212,7 @@ npx socle update
 
 Replaces `_lib/` files only. Your `app/` code is never touched.
 If the update includes a new IDB schema version, run `/migration` to review and apply it.
+
+Before overwriting, the update compares `_lib/` and `utils/build.js` against the checksums in
+`_lib/.lib-manifest.json` and lists anything modified, deleted, or added. Commit that file with
+the rest of the update — it is how the next update knows what it gave you.

@@ -3,6 +3,7 @@ import readline from 'readline';
 import fs, { realpathSync } from 'fs';
 import path from 'path';
 import { execSync, execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import { createServer } from 'http';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -67,6 +68,100 @@ function readAccentColor(tokensPath) {
   if (!fs.existsSync(tokensPath)) return null;
   const m = fs.readFileSync(tokensPath, 'utf8').match(/--color-accent:\s*([^;]+);/);
   return m ? m[1].trim() : null;
+}
+
+// ── library file manifest ────────────────────────────────────────────────────
+// A receipt of exactly what the CLI last wrote into _lib/ and utils/build.js.
+// The guard this replaced asked git "what has the app changed since its last
+// commit?", which is a different question from "is this file still the one we
+// wrote?" — a patch the app committed read as clean, and a file the app added
+// was untracked and invisible. Both were overwritten without warning in 1.3.1
+// and 1.4.0. Hashes are taken from disk after the CLI's own rewrites (accent
+// colour, simple-store rename), so an app's custom accent never reads as a
+// local modification.
+const MANIFEST_NAME = '.lib-manifest.json';
+const MANIFEST_SKIP = new Set(['lib-version.json', MANIFEST_NAME, '.DS_Store']);
+
+function hashFile(filepath) {
+  return createHash('sha256').update(fs.readFileSync(filepath)).digest('hex');
+}
+
+function libOwnedFiles(projectDir) {
+  const out = [];
+  const walk = (dir, prefix) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(path.join(dir, entry.name), rel);
+      else if (!MANIFEST_SKIP.has(rel) && !MANIFEST_SKIP.has(entry.name)) out.push(`_lib/${rel}`);
+    }
+  };
+  walk(path.join(projectDir, '_lib'), '');
+  if (fs.existsSync(path.join(projectDir, 'utils', 'build.js'))) out.push('utils/build.js');
+  return out.sort();
+}
+
+function manifestPath(projectDir) {
+  return path.join(projectDir, '_lib', MANIFEST_NAME);
+}
+
+export function writeLibManifest(projectDir, version, overrides = {}) {
+  const files = {};
+  for (const rel of libOwnedFiles(projectDir)) files[rel] = hashFile(path.join(projectDir, rel));
+  Object.assign(files, overrides);
+  fs.writeFileSync(manifestPath(projectDir), JSON.stringify({ version, files }, null, 2) + '\n');
+}
+
+export function readLibManifest(projectDir) {
+  const p = manifestPath(projectDir);
+  if (!fs.existsSync(p)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
+    return parsed?.files && typeof parsed.files === 'object' ? parsed : null;
+  } catch { return null; }
+}
+
+export function verifyLibFiles(projectDir, manifest, scope) {
+  const inScope = rel => scope === 'build' ? rel === 'utils/build.js' : rel.startsWith('_lib/');
+  const changed = [], missing = [], extra = [];
+  for (const [rel, hash] of Object.entries(manifest.files)) {
+    if (!inScope(rel)) continue;
+    const full = path.join(projectDir, rel);
+    if (!fs.existsSync(full)) missing.push(rel);
+    else if (hashFile(full) !== hash) changed.push(rel);
+  }
+  for (const rel of libOwnedFiles(projectDir)) {
+    if (inScope(rel) && !(rel in manifest.files)) extra.push(rel);
+  }
+  return { changed, missing, extra, any: changed.length + missing.length + extra.length > 0 };
+}
+
+// Only the entries under one module directory, so adding or removing a module
+// never records — and thereby blesses — an unrelated local modification.
+function syncManifestModule(projectDir, { addDir, removeDir }) {
+  const manifest = readLibManifest(projectDir);
+  if (!manifest) return;
+  if (removeDir) {
+    for (const rel of Object.keys(manifest.files)) {
+      if (rel.startsWith(`${removeDir}/`)) delete manifest.files[rel];
+    }
+  }
+  if (addDir) {
+    for (const rel of libOwnedFiles(projectDir)) {
+      if (rel.startsWith(`${addDir}/`)) manifest.files[rel] = hashFile(path.join(projectDir, rel));
+    }
+  }
+  fs.writeFileSync(manifestPath(projectDir), JSON.stringify(manifest, null, 2) + '\n');
+}
+
+// Pre-manifest projects only. git status sees the staged and untracked files
+// git diff missed, but still cannot see a committed patch — hence the warning
+// at the call site that this run's verification is partial.
+function gitDirtyFallback(projectDir, pathspec) {
+  try {
+    return execSync(`git status --porcelain -- ${pathspec}`, { cwd: projectDir, stdio: ['pipe', 'pipe', 'pipe'] })
+      .toString().trim().split('\n').filter(Boolean).map(l => l.slice(3));
+  } catch { return null; }
 }
 
 // npm ranges carry a leading operator ('^1.52.0'), which Number() turns into NaN
@@ -537,6 +632,8 @@ export function scaffoldApp(options, destDir) {
   );
 
   patchAccentColor(path.join(destDir, '_lib', 'core', 'styles', 'tokens.css'), accentColor);
+
+  writeLibManifest(destDir, version);
 }
 
 // ── updateLib (exported for tests) ───────────────────────────────────────────
@@ -557,16 +654,34 @@ export async function updateLib(projectDir, ask) {
 
   console.log(`Socle update: ${current.version} → ${latest}`);
 
-  try {
-    const modified = execSync('git diff --name-only _lib/', { cwd: projectDir, stdio: ['pipe', 'pipe', 'pipe'] })
-      .toString().trim();
-    if (modified) {
-      console.log('\nLocally modified _lib/ files:');
-      modified.split('\n').forEach(f => console.log(`  ${f}`));
-      const answer = await ask('\nThese will be overwritten. Continue? [y/N]: ');
+  const manifest = readLibManifest(projectDir);
+  if (manifest) {
+    const { changed, missing, extra, any } = verifyLibFiles(projectDir, manifest, 'lib');
+    if (any) {
+      console.log('\n_lib/ no longer matches what Socle wrote. These will be overwritten:');
+      changed.forEach(f => console.log(`  modified  ${f}`));
+      missing.forEach(f => console.log(`  deleted   ${f}`));
+      extra.forEach(f  => console.log(`  added     ${f}`));
+      const answer = await ask('\nContinue? [y/N]: ');
       if (!answer.trim().toLowerCase().startsWith('y')) { console.log('Aborted.'); return; }
     }
-  } catch { /* git unavailable or not a repo — skip check */ }
+  } else {
+    const dirty = gitDirtyFallback(projectDir, '_lib/');
+    console.log('\n  This project has no _lib/.lib-manifest.json, so this update cannot');
+    console.log('  verify _lib/ exactly. A manifest is written at the end of this run,');
+    console.log('  making the next update exact.');
+    if (dirty === null) {
+      console.log('  Not a git repository either — local _lib/ changes cannot be detected at all.');
+    } else {
+      if (dirty.length) {
+        console.log('  Uncommitted _lib/ changes git can see:');
+        dirty.forEach(f => console.log(`    ${f}`));
+      }
+      console.log('  Any _lib/ edit already committed is invisible on this run.');
+    }
+    const answer = await ask('\n  Continue? [y/N]: ');
+    if (!answer.trim().toLowerCase().startsWith('y')) { console.log('Aborted.'); return; }
+  }
 
   const tokensPath = path.join(projectDir, '_lib', 'core', 'styles', 'tokens.css');
   const preservedAccent = readAccentColor(tokensPath);
@@ -609,17 +724,16 @@ export async function updateLib(projectDir, ask) {
   const utilsBuildSrc  = path.join(ROOT, 'scaffold', 'utils', 'build.js');
   const utilsBuildDest = path.join(projectDir, 'utils', 'build.js');
   let utilsUpdated = false;
+  let skipUtils    = false;
   if (fs.existsSync(utilsBuildDest)) {
-    let skipUtils = false;
-    try {
-      const utilsModified = execSync('git diff --name-only utils/build.js', { cwd: projectDir, stdio: ['pipe', 'pipe', 'pipe'] })
-        .toString().trim();
-      if (utilsModified) {
-        console.log('\n  utils/build.js has local modifications.');
-        const answer = await ask('  Overwrite with library version? [y/N]: ');
-        if (!answer.trim().toLowerCase().startsWith('y')) skipUtils = true;
-      }
-    } catch { /* git unavailable — proceed */ }
+    const buildModified = manifest
+      ? verifyLibFiles(projectDir, manifest, 'build').any
+      : (gitDirtyFallback(projectDir, 'utils/build.js') ?? []).length > 0;
+    if (buildModified) {
+      console.log('\n  utils/build.js has local modifications.');
+      const answer = await ask('  Overwrite with library version? [y/N]: ');
+      if (!answer.trim().toLowerCase().startsWith('y')) skipUtils = true;
+    }
     if (!skipUtils) {
       fs.copyFileSync(utilsBuildSrc, utilsBuildDest);
       utilsUpdated = true;
@@ -697,6 +811,12 @@ export async function updateLib(projectDir, ask) {
   fs.writeFileSync(libVersionPath, JSON.stringify({ ...current, version: latest }, null, 2) + '\n');
   console.log(`  ✔ lib-version.json updated to ${latest}`);
 
+  // A kept build.js records the hash of the version we would have written, not
+  // the app's — otherwise its receipt would read as pristine and the next
+  // update would overwrite it silently, which is the bug this guard fixes.
+  writeLibManifest(projectDir, latest, skipUtils ? { 'utils/build.js': hashFile(utilsBuildSrc) } : {});
+  console.log('  ✔ _lib/.lib-manifest.json written');
+
   const stagedFiles = ['_lib/', utilsUpdated && 'utils/build.js', depsUpdated && 'package.json']
     .filter(Boolean).join(' ');
   console.log(`\nDone. Review the changelog, then commit:`);
@@ -733,6 +853,7 @@ export function addModule(projectDir, moduleName) {
 
   meta.modules.push(moduleName);
   fs.writeFileSync(libVersionPath, JSON.stringify(meta, null, 2) + '\n');
+  syncManifestModule(projectDir, { addDir: `_lib/modules/${moduleName}` });
   console.log(`  ✔ Added: ${moduleName}`);
 }
 
@@ -767,6 +888,7 @@ export async function removeModule(projectDir, moduleName, ask) {
   fs.rmSync(path.join(projectDir, '_lib', 'modules', moduleName), { recursive: true, force: true });
   meta.modules = meta.modules.filter(m => m !== moduleName);
   fs.writeFileSync(libVersionPath, JSON.stringify(meta, null, 2) + '\n');
+  syncManifestModule(projectDir, { removeDir: `_lib/modules/${moduleName}` });
   console.log(`  ✔ Removed: ${moduleName}`);
 }
 

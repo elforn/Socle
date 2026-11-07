@@ -7,7 +7,7 @@
 - [socle manage — add or remove modules interactively](#socle-manage--add-or-remove-modules-interactively)
 - [socle add — add a single module](#socle-add--add-a-single-module)
 - [socle remove — remove a module](#socle-remove--remove-a-module)
-- [lib-version.json](#lib-versionjson)
+- [lib-version.json](#lib-versionjson) — [.lib-manifest.json](#lib-manifestjson)
 - [After updating](#after-updating)
 
 ---
@@ -31,12 +31,12 @@ socle update
 The command:
 1. Reads `_lib/lib-version.json` to find your current version and installed modules
 2. Compares it against the CLI's version — exits early if already up to date
-3. Checks `git diff --name-only _lib/` — if you have local modifications, it lists them and asks before overwriting
+3. Compares `_lib/` against `_lib/.lib-manifest.json` — the checksums of exactly what Socle last wrote — and lists anything modified, deleted, or added before asking to continue
 4. Replaces `_lib/core/` and each installed module
 5. Preserves your customised `--color-accent` value in `tokens.css`
 6. Replaces `utils/build.js` — shows a warning and asks for confirmation if it has local modifications
 7. Syncs `package.json` devDependencies — adds missing packages and raises versions the template is ahead on, asks for confirmation, and never touches `name`, `version`, `scripts`, or any other field. A version you have deliberately moved **ahead** of the template is kept and reported, never downgraded.
-8. Updates `lib-version.json`
+8. Updates `lib-version.json` and rewrites `.lib-manifest.json`
 9. Prints a commit command and an `npm install` reminder if devDependencies changed
 
 If the update includes a new IDB schema version, the changelog will say so. Run `/migration` to review and apply it before committing.
@@ -48,6 +48,7 @@ If the update includes a new IDB schema version, the changelog will say so. Run 
 | `_lib/core/` | ✅ Always |
 | `_lib/modules/<mod>/` | ✅ For each module listed in `lib-version.json` |
 | `_lib/lib-version.json` | ✅ Version field updated; modules list preserved |
+| `_lib/.lib-manifest.json` | ✅ Rewritten at the end of every update |
 | `utils/build.js` | ✅ With confirmation if locally modified |
 | `package.json` devDependencies | ✅ Added / raised only, with confirmation — never downgraded |
 | `vitest.config.js`, `jsconfig.json` | ❌ Never — app-owned; `socle update` prints any lines to add |
@@ -145,6 +146,31 @@ Every scaffolded project has `_lib/lib-version.json`:
 - `version` — the library version currently installed
 - `modules` — which modules are installed; used by `update` and `manage`
 - `scaffolded` — date the project was first created; never changed by subsequent commands
+
+### .lib-manifest.json
+
+Alongside it sits `_lib/.lib-manifest.json` — a `path → sha256` receipt of every file Socle wrote into `_lib/` and `utils/build.js`:
+
+```json
+{
+  "version": "1.4.1",
+  "files": {
+    "_lib/core/app-element.js": "9f2a…",
+    "utils/build.js": "c17b…"
+  }
+}
+```
+
+`socle update` re-hashes those files and compares them to the receipt, so it can tell you what diverged before it overwrites anything. **Commit it** — it is how the next update knows what it gave you.
+
+It replaces an earlier check that ran `git diff`, which asked a subtly different question: *what has the app changed since its last commit?* A modification you committed read as clean, a file you added inside `_lib/` was untracked and invisible, and outside a git repository the check was skipped entirely. Checksums are indifferent to all three.
+
+Hashes are taken from disk **after** the CLI's own rewrites, so your custom `--color-accent` and the simple-store file rename never read as local modifications.
+
+Two things worth knowing:
+
+- **A project scaffolded before 1.4.2 has no receipt**, and one cannot be reconstructed after the fact. That first update warns you that verification is partial, falls back to `git status`, and writes a receipt at the end — so exact checking starts from your *second* update.
+- **If you decline the `utils/build.js` overwrite**, the receipt records the version Socle *would* have written, not yours. Your file stays on disk and keeps being flagged on every future update, rather than silently reading as pristine and being overwritten later.
 
 ---
 

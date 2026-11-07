@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll, vi } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import os from 'os';
-import { replaceTokens, replaceBlockTokens, scaffoldApp, updateLib, addModule, removeModule, findModuleImports, ensureDevHttps } from './index.js';
+import { replaceTokens, replaceBlockTokens, scaffoldApp, updateLib, addModule, removeModule, findModuleImports, ensureDevHttps, readLibManifest, verifyLibFiles } from './index.js';
 
 // ── unit: replaceTokens ───────────────────────────────────────────────────────
 
@@ -708,5 +708,154 @@ describe('ensureDevHttps', () => {
     expect(pkg.scripts.build).toBe('node utils/build.js');
     expect(pkg.scripts.test).toBe('vitest run');
     expect(pkg.scripts['dev:https']).toBeTruthy();
+  });
+});
+
+// ── integration: _lib/ manifest guard ────────────────────────────────────────
+// None of these tests initialise a git repository. That is the point: the guard
+// they cover replaced a `git diff` that could not see a committed patch, an
+// added file, or anything at all outside a repo.
+
+describe('_lib/ manifest guard', () => {
+  const MF = ['_lib', '.lib-manifest.json'];
+
+  function outdate(dest) {
+    const lvPath = join(dest, '_lib', 'lib-version.json');
+    const lv = JSON.parse(readFileSync(lvPath, 'utf8'));
+    lv.version = '0.0.1';
+    writeFileSync(lvPath, JSON.stringify(lv, null, 2));
+  }
+
+  function patch(file, suffix = '\n// local patch\n') {
+    writeFileSync(file, readFileSync(file, 'utf8') + suffix);
+  }
+
+  async function updateCapturingLog(dest, answer) {
+    let logged = '';
+    const orig = console.log;
+    console.log = s => { logged += s + '\n'; };
+    try { await updateLib(dest, answer); } finally { console.log = orig; }
+    return logged;
+  }
+
+  it('scaffold writes a receipt covering _lib/ and utils/build.js', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    const m = JSON.parse(readFileSync(join(dest, ...MF), 'utf8'));
+    expect(m.files['_lib/core/app-element.js']).toMatch(/^[0-9a-f]{64}$/);
+    expect(m.files['utils/build.js']).toMatch(/^[0-9a-f]{64}$/);
+    expect(m.files['_lib/lib-version.json']).toBeUndefined();
+    expect(m.files['_lib/.lib-manifest.json']).toBeUndefined();
+  });
+
+  it('a custom accent colour is not a local modification', () => {
+    const dest = makeTmpDir();
+    scaffoldApp({ ...BASE_OPTIONS, accentColor: '#123456' }, dest);
+    expect(verifyLibFiles(dest, readLibManifest(dest), 'lib').any).toBe(false);
+  });
+
+  it('a simple-store project is not a local modification', () => {
+    const dest = makeTmpDir();
+    scaffoldApp({ ...BASE_OPTIONS, storeType: 'simple' }, dest);
+    expect(verifyLibFiles(dest, readLibManifest(dest), 'lib').any).toBe(false);
+  });
+
+  it('detects an edited _lib/ file — the case a committed patch used to hide', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    outdate(dest);
+    patch(join(dest, '_lib', 'core', 'idb', 'migrations.js'));
+
+    const logged = await updateCapturingLog(dest, () => Promise.resolve('n'));
+    expect(logged).toContain('modified  _lib/core/idb/migrations.js');
+    expect(logged).toContain('Aborted.');
+  });
+
+  it('detects a file the app added inside _lib/', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    outdate(dest);
+    writeFileSync(join(dest, '_lib', 'core', 'idb', 'app-migrations.js'), 'export const x = 1;\n');
+
+    const logged = await updateCapturingLog(dest, () => Promise.resolve('n'));
+    expect(logged).toContain('added     _lib/core/idb/app-migrations.js');
+  });
+
+  it('detects a library file the app deleted', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    outdate(dest);
+    rmSync(join(dest, '_lib', 'core', 'idb', 'migrations.js'));
+
+    const logged = await updateCapturingLog(dest, () => Promise.resolve('n'));
+    expect(logged).toContain('deleted   _lib/core/idb/migrations.js');
+  });
+
+  it('declining the prompt leaves the modified file intact', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    outdate(dest);
+    const target = join(dest, '_lib', 'core', 'idb', 'migrations.js');
+    patch(target);
+
+    await updateCapturingLog(dest, () => Promise.resolve('n'));
+    expect(readFileSync(target, 'utf8')).toContain('// local patch');
+  });
+
+  it('a pristine project updates without asking about _lib/', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    outdate(dest);
+
+    const logged = await updateCapturingLog(dest, () => Promise.resolve('y'));
+    expect(logged).not.toContain('no longer matches');
+    expect(verifyLibFiles(dest, readLibManifest(dest), 'lib').any).toBe(false);
+  });
+
+  it('warns that a pre-manifest project cannot be verified, then writes a receipt', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    rmSync(join(dest, ...MF));
+    outdate(dest);
+
+    const logged = await updateCapturingLog(dest, () => Promise.resolve('y'));
+    expect(logged).toContain('no _lib/.lib-manifest.json');
+    expect(logged).toContain('Not a git repository');
+    expect(existsSync(join(dest, ...MF))).toBe(true);
+  });
+
+  it('keeping a modified utils/build.js keeps it flagged for the next update', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    outdate(dest);
+    patch(join(dest, 'utils', 'build.js'), '\n// app tweak\n');
+
+    await updateCapturingLog(dest, q => Promise.resolve(q.includes('Overwrite') ? 'n' : 'y'));
+
+    expect(readFileSync(join(dest, 'utils', 'build.js'), 'utf8')).toContain('// app tweak');
+    expect(verifyLibFiles(dest, readLibManifest(dest), 'build').any).toBe(true);
+  });
+
+  it('add records the new module without blessing an unrelated modification', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    patch(join(dest, '_lib', 'core', 'idb', 'migrations.js'));
+
+    addModule(dest, 'toast');
+
+    const m = readLibManifest(dest);
+    expect(m.files['_lib/modules/toast/toast.js']).toMatch(/^[0-9a-f]{64}$/);
+    expect(verifyLibFiles(dest, m, 'lib').changed).toContain('_lib/core/idb/migrations.js');
+  });
+
+  it('remove drops the module entries', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+    addModule(dest, 'toast');
+    await removeModule(dest, 'toast', () => Promise.resolve('y'));
+
+    const m = readLibManifest(dest);
+    expect(Object.keys(m.files).some(f => f.startsWith('_lib/modules/toast/'))).toBe(false);
+    expect(verifyLibFiles(dest, m, 'lib').any).toBe(false);
   });
 });
