@@ -10,6 +10,33 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.2] — 2026-11-07
+
+### Changed
+- **App-owned IDB object stores are now documented, and the docs no longer tell apps to patch `_lib/`.** [`docs/architecture.md`](docs/architecture.md#app-owned-object-stores) gains an *App-owned object stores* section, [`docs/getting-started.md`](docs/getting-started.md) gains *Custom object stores* as a third app extension point beside `utils/extra-assets.js` and `app/sw-extensions.js`, and both `/migration` commands were rewritten.
+
+  An app needing its own object store had nowhere to put it but `_lib/core/idb/migrations.js` — and that was not the app developer improvising, it was the library's documented instruction: `docs/architecture.md` said to add a function to that array for a new store, and both `/migration` commands scaffolded directly into it (the app-facing copy explicitly said `_lib/core/idb/migrations.js`). `socle update` then replaced the file, the store disappeared, and nothing failed until a later read hit a missing store. Reported by a BladeNCode fencing app that had been re-applying a `createObjectStore` call by hand after every update.
+
+  The answer is that an app opens its **own database**, which carries its own version counter and is never touched by an update — the pattern `modules/notifications/notification-dedup.js` already uses internally. Imports `openDB` from `_lib/core/idb/idb.js`, which was app-importable but undocumented, and so invisible as a route.
+
+  No library code changed. An `app/migrations.js` hook composing into the library chain was proposed and declined: IndexedDB exposes one integer and one `oldVersion` checkpoint, which cannot encode two independently-evolving sequences. Numbering app migrations above the library's (or in a reserved offset range) means a later library migration is skipped on existing installs and applied on fresh ones; concatenating the two arrays shifts app positions whenever the library appends, re-running an applied app migration and skipping the new library one. Both diverge silently, which is a worse failure than the one being fixed. Separate databases make the question not arise.
+
+### Fixed
+- **`socle update` could not see a `_lib/` modification you had committed, and overwrote it without warning.** The modified-file guard ran `git diff --name-only _lib/`, which answers *what has the app changed since its last commit?* — a different question from *is this file still the one we wrote?* It now compares `_lib/` and `utils/build.js` against `_lib/.lib-manifest.json`, a `path → sha256` receipt written at the end of every `scaffold` and `update`.
+
+  The old check caught exactly one of five cases. A committed edit read as clean. A staged edit read as clean too — `git diff` with no revision compares against the index, so `git add` alone was enough to hide it. A file the app *added* inside `_lib/` was untracked and invisible, then destroyed by the `rmSync` that precedes the copy. Outside a git repository, or on any git error, the bare `catch {}` skipped the check silently. Only an uncommitted, unstaged edit to a tracked file was ever reported — so the guard protected carelessness and missed diligence, which is backwards.
+
+  Both known instances were committed and therefore silent: a BladeNCode fencing app lost an app-owned `localTags` object store twice, and in 1.4.0 another app lost `preserveSymlinks: true` from `utils/build.js` — a line the second guard, which had the same bug, was supposed to protect. Reported by the app that noticed the guard had flagged its *un*-patch as a false positive while having missed the real patch twice.
+
+  Checksums are indifferent to git entirely: no repository needed, nothing to stage, and detection covers modified, deleted, and added files. Hashes come from disk **after** the CLI's own rewrites, so a custom `--color-accent` and the simple-store rename never read as local modifications. `add` and `remove` patch only their own module's entries, so neither blesses an unrelated edit. Declining the `utils/build.js` overwrite records the hash of the version Socle *would* have written — a kept customisation keeps being flagged rather than silently reading as pristine and being overwritten on a later run.
+
+  **Projects scaffolded before 1.4.2 have no receipt and one cannot be reconstructed**, since the CLI only has its own version on disk. Their next update says verification is partial, falls back to `git status --porcelain` (which at least sees staged and untracked files), and writes a receipt at the end — so exact checking begins at the *second* update. Commit `_lib/.lib-manifest.json` along with the rest.
+
+- `/migration` scaffolded a migration shape that does not exist — an object with `version`, `description`, and `up(db, transaction)`, where `core/idb/migrations.js` holds plain `db => {}` functions in a positional array and passes no transaction. Its step 4 also directed updating "the schema version constant in `core/idb/idb.js`"; there is no such constant, `CURRENT_VERSION` is derived from `migrations.length`. The command additionally claimed migrations run "on SW activation", contradicting the settled decision that migrations run inside `boot()` — data-layer concerns, not service-worker concerns.
+- `/generate-claude` classified `migration.md` as "Copy with review", which would have flattened the app-facing command back into a path-rewritten copy of the library one. Reclassified as a deliberate divergence.
+
+---
+
 ## [1.4.1] — 2026-11-04
 
 ### Changed
