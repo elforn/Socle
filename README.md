@@ -108,7 +108,7 @@ Firefox and Chrome on Android and desktop. iOS Safari is not supported — users
 
 ## Status
 
-**Current version: 1.5.0** — see [CHANGELOG.md](CHANGELOG.md)
+**Current version: 1.5.1** — see [CHANGELOG.md](CHANGELOG.md)
 
 | Module | Status |
 |--------|--------|

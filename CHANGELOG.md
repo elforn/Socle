@@ -10,6 +10,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.5.1] — 2026-11-09
+
+Repository housekeeping only — no changes to `core/`, `modules/`, `utils/build.js`, or the scaffold. An app already on 1.5.0 gains nothing by updating.
+
+### Fixed
+- Removed a dangling entry from the library's own `memory/MEMORY.md` index, which pointed at a `project_review_findings.md` that no longer exists.
+
+---
+
 ## [1.5.0] — 2026-11-09
 
 ### Fixed
