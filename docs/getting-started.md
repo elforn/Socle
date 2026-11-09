@@ -13,7 +13,7 @@
 - [Add a page](#add-a-page)
 - [Set up Claude Code](#set-up-claude-code)
 - [Run the tests](#run-the-tests)
-- [Update the library](#update-the-library)
+- [Manage the library](#manage-the-library)
 
 ---
 

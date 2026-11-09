@@ -11,7 +11,7 @@ Gestures are added to a component via a class mixin. There is no separate setup 
 - [Implemented gestures](#implemented-gestures)
 - [Gesture event object](#gesture-event-object)
 - [Gesture coordination](#gesture-coordination)
-- [touch-action summary](#touch-action-summary)
+- [Axis ownership](#axis-ownership)
 - [Keyboard alternatives](#keyboard-alternatives)
 - [Testing components with gestures](#testing-components-with-gestures)
 - [API reference](#api-reference)
