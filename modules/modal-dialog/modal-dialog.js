@@ -237,7 +237,8 @@ class ModalDialog extends AppElement {
 
     // Collapse the footer wrapper when nothing is slotted into it (action sheets / menus),
     // so it contributes no margin or height. [hidden] collapses to display:none via the
-    // base stylesheet's `[hidden] { display: none !important; }` rule.
+    // base stylesheet's `[hidden] { display: none; }` rule, which outranks `.footer`
+    // on cascade order (adopted sheets come after the component's <style>).
     this._footer = this.shadowRoot.querySelector('.footer');
     this._footerSlot = this.shadowRoot.querySelector('slot[name="footer"]');
     this._onFooterSlotChange = () => {

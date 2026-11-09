@@ -61,6 +61,7 @@ npm run test:e2e     # Playwright E2E tests
 - No full re-renders after initial mount — targeted DOM updates only
 - CSS logical properties throughout (`margin-inline-start`, not `margin-left`)
 - Fixed-position elements use `calc(var(--space-N) + var(--safe-area-top/bottom))` on the inset edge
+- Hide elements with the `hidden` attribute and toggle it from JS — the base sheet collapses `[hidden]`. Never override it in component CSS: an id selector or a two-class rule outranks it, and the element then renders while hidden (and stays in the accessibility tree)
 - All custom events must use `{ bubbles: true, composed: true }` — without `composed: true`, events fired inside a shadow root are swallowed and never reach parent listeners
 - Every new feature passes `/test`, `/a11y`, `/review`, and `/docs` before `/commit`
 

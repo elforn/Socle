@@ -78,7 +78,7 @@ The shadow root is attached exactly once. If the element is removed from the DOM
 
 ## Styles and tokens
 
-Every shadow root automatically adopts the base structural stylesheet from `_lib/core/styles/base.js`. This gives your component `:host { display: block }`, box-sizing, and tap-highlight reset with no extra imports.
+Every shadow root automatically adopts the base structural stylesheet from `_lib/core/styles/base.js`. This gives your component `:host { display: block }`, box-sizing, and tap-highlight reset with no extra imports. Its defaults carry zero specificity, so your own rules always win — see [base reset](#base-reset).
 
 Design tokens — colours, spacing, typography — are defined in `_lib/core/styles/tokens.css` and linked in `index.html`. CSS custom properties cascade into shadow DOM, so every token is available in your component's styles without any extra setup:
 
@@ -192,7 +192,7 @@ Import the file wherever the component is used — the registration happens as a
 
 ### Base reset
 
-`:host` is already set to `display: block`. Add layout styles for your component on top:
+`:host` is already set to `display: block`, as a zero-specificity default. Any `:host` rule in your own component overrides it — add layout styles on top:
 
 ```css
 :host {
@@ -201,6 +201,26 @@ Import the file wherever the component is used — the registration happens as a
   gap: var(--space-sm);
 }
 ```
+
+The base sheet writes that default as `:where(:host)`. The `:where()` matters: adopted stylesheets are ordered *after* your component's `<style>`, so at equal specificity the base sheet would win and your `display: flex` would silently do nothing. Zero specificity means it loses to anything you write, which is what you want from a default.
+
+### Hiding elements
+
+Use the `hidden` attribute, and toggle it from JS:
+
+```js
+this._footer.hidden = slot.assignedNodes().length === 0;
+```
+
+The base sheet's `[hidden] { display: none; }` collapses it. This is a plain attribute selector, which matters: at one class worth of specificity it ties a rule like `.footer { display: flex }` and wins on ordering, so you do not have to think about it. A rule *above* that weight still wins, so an id selector or a two-class rule will render a hidden element:
+
+```css
+.footer           { display: flex; }   /* [hidden] wins — element stays collapsed */
+#footer           { display: flex; }   /* ⚠️ beats [hidden] — element renders while hidden */
+.footer.is-open   { display: flex; }   /* ⚠️ beats [hidden] — use this deliberately or not at all */
+```
+
+Do not reach for `display: none !important` to force the issue, and do not override `[hidden]` in component CSS. Both make the attribute unreliable as the single switch for whether an element exists, and a hidden element that still renders is also still in the accessibility tree.
 
 ### CSS logical properties
 
