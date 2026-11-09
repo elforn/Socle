@@ -10,6 +10,22 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.0] — 2026-11-09
+
+`Gestures.attach` reaches capability parity with the gesture mixin. If your app passes `onTap`, `onLongPress`, or a standalone `onHoldDragKey` to `Gestures.attach`, those handlers fire now where they previously did nothing.
+
+### Fixed
+- `modules/gestures/gestures.js` — `Gestures.attach` accepted `onTap` and `onLongPress` and never called them. The mixin implemented both; `attach` read neither, so a tap handler on a child element was a dead control with no error, no warning, and nothing in the docs to contradict it — `.claude/commands/gesture.md` actively said unrecognised keys are ignored. Reported by a downstream app that lost weeks to a list row that did nothing. `attach` now has the mixin's full gesture set: tap, long press (suppressed when `onHoldDragStart` is present, as in the mixin), swipe, hold-drag. Tap and long-press events carry `direction: null`, matching the mixin's event shape.
+- `modules/gestures/gestures.js` — `Gestures.attach` no longer calls `setPointerCapture` on `pointerdown`. Capturing that early redirects `click` to the captured element and breaks clicks on interactive children — the mixin learned this and deferred capture; `attach` did not, which would have made the new tap support unusable on exactly the composite elements it is for. Capture now happens on gesture confirmation: when the hold timer fires, or when the swipe threshold is crossed. The matching `releasePointerCapture` calls on vertical cancel are gone with it — nothing is captured at that point. Touch pointers have implicit capture from `pointerdown`, so drag tracking off the element's bounds is unaffected.
+- `modules/gestures/gestures.js` — `Gestures.attach` ignored `onHoldDragKey` unless a pointer hold-drag handler was passed alongside it, so a keyboard-only consumer got no `keydown` listener and no `tabindex` — the same dead-control class as the `onTap` bug, found while reviewing the fix for it. Arrow-key wiring and the `tabindex` fallback are now keyed off `onHoldDragKey` as well.
+
+### Changed
+- `modules/gestures/gestures.js` — `Gestures.attach` warns (`console.warn`) on any handler key outside `ATTACH_HANDLERS`. A misspelled handler was previously indistinguishable from a working one.
+- `docs/gestures.md`, `.claude/commands/gesture.md` — document the shared capability set, correct the claim that unrecognised keys are ignored, note that `stopPropagation` on `pointerdown` affects ancestor listeners only (child clicks are unaffected), and require `ATTACH_HANDLERS` to be updated when a new gesture is added.
+- `docs/gestures.md` — haptics guidance no longer implies `navigator.vibrate` is real coverage. Firefox has been a silent no-op since v79 and removed the API in v129, and it has never existed on iOS, so roughly half of Socle's primary browsers get nothing. Hold-drag activation must always carry a visible state change as well; the hold-drag example now adds a `.hold-active` class instead of calling `vibrate` by hand.
+
+---
+
 ## [1.5.1] — 2026-11-09
 
 Repository housekeeping only — no changes to `core/`, `modules/`, `utils/build.js`, or the scaffold. An app already on 1.5.0 gains nothing by updating.

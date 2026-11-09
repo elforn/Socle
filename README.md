@@ -108,14 +108,14 @@ Firefox and Chrome on Android and desktop. iOS Safari is not supported — users
 
 ## Status
 
-**Current version: 1.5.1** — see [CHANGELOG.md](CHANGELOG.md)
+**Current version: 1.6.0** — see [CHANGELOG.md](CHANGELOG.md)
 
 | Module | Status |
 |--------|--------|
 | Core — AppElement, Router, Store, IDB | ✅ Complete |
 | SW lifecycle — offline caching, update flow, update banner | ✅ Complete |
 | Claude Code integration — slash commands, /setup-claude | ✅ Complete |
-| Gesture library — tap, long press, swipe, hold-drag, keyboard parity | ✅ Complete |
+| Gesture library — tap, long press, swipe, hold-drag, keyboard parity (mixin and `Gestures.attach`) | ✅ Complete |
 | Multilingual support — locale registry, t(), locale switching | ✅ Complete |
 | Sync — binary export/import, event-log and simple store | ✅ Complete |
 | CLI — scaffold, update, add/remove modules, cert wizard | ✅ Complete |
