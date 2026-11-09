@@ -594,6 +594,8 @@ describe('Gestures.attach', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    tapSpy = vi.fn();
+    longPressSpy = vi.fn();
     holdDragStartSpy = vi.fn();
     holdDragSpy = vi.fn();
     holdDragEndSpy = vi.fn();
@@ -694,6 +696,157 @@ describe('Gestures.attach', () => {
     child.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));
     vi.advanceTimersByTime(500);
     expect(vibrateSpy).toHaveBeenCalledWith(40);
+  });
+
+  it('does not capture the pointer on pointerdown', () => {
+    const captureSpy = vi.spyOn(child, 'setPointerCapture');
+    Gestures.attach(child, { onTap: tapSpy, onHoldDragStart: holdDragStartSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true, pointerId: 1 }));
+    expect(captureSpy).not.toHaveBeenCalled();
+  });
+
+  it('captures the pointer when hold-drag activates', () => {
+    const captureSpy = vi.spyOn(child, 'setPointerCapture');
+    Gestures.attach(child, { onHoldDragStart: holdDragStartSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true, pointerId: 7 }));
+    vi.advanceTimersByTime(500);
+    expect(captureSpy).toHaveBeenCalledWith(7);
+  });
+
+  it('captures the pointer when a swipe is confirmed', () => {
+    const captureSpy = vi.spyOn(child, 'setPointerCapture');
+    Gestures.attach(child, { onSwipe: swipeSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true, pointerId: 3 }));
+    child.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 0, bubbles: true, pointerId: 3 }));
+    expect(captureSpy).toHaveBeenCalledWith(3);
+  });
+});
+
+describe('Gestures.attach — tap and long press parity with the mixin', () => {
+  let child;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    tapSpy = vi.fn();
+    longPressSpy = vi.fn();
+    holdDragStartSpy = vi.fn();
+    swipeSpy = vi.fn();
+    child = document.createElement('div');
+    document.body.appendChild(child);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.innerHTML = '';
+  });
+
+  it('fires onTap on pointerup under the 18px threshold', () => {
+    Gestures.attach(child, { onTap: tapSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }));
+    child.dispatchEvent(new PointerEvent('pointerup', { clientX: 12, clientY: 11, bubbles: true }));
+    expect(tapSpy).toHaveBeenCalledTimes(1);
+    expect(tapSpy.mock.calls[0][0].type).toBe('tap');
+    expect(tapSpy.mock.calls[0][0].direction).toBeNull();
+    expect(tapSpy.mock.calls[0][0].dx).toBe(2);
+  });
+
+  it('does not fire onTap when movement exceeds the threshold', () => {
+    Gestures.attach(child, { onTap: tapSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true }));
+    child.dispatchEvent(new PointerEvent('pointermove', { clientX: 40, clientY: 0, bubbles: true }));
+    child.dispatchEvent(new PointerEvent('pointerup', { clientX: 40, clientY: 0, bubbles: true }));
+    expect(tapSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not fire onTap after a completed swipe', () => {
+    Gestures.attach(child, { onTap: tapSpy, onSwipe: swipeSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true }));
+    child.dispatchEvent(new PointerEvent('pointermove', { clientX: 60, clientY: 0, bubbles: true }));
+    child.dispatchEvent(new PointerEvent('pointerup', { clientX: 60, clientY: 0, bubbles: true, cancelable: true }));
+    expect(swipeSpy).toHaveBeenCalledTimes(1);
+    expect(tapSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not fire onTap after a hold-drag', () => {
+    Gestures.attach(child, { onTap: tapSpy, onHoldDragStart: holdDragStartSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true }));
+    vi.advanceTimersByTime(500);
+    child.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 0, bubbles: true }));
+    expect(holdDragStartSpy).toHaveBeenCalledTimes(1);
+    expect(tapSpy).not.toHaveBeenCalled();
+  });
+
+  it('fires onLongPress after 500ms stationary hold', () => {
+    Gestures.attach(child, { onLongPress: longPressSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 5, clientY: 5, button: 0, bubbles: true }));
+    vi.advanceTimersByTime(500);
+    expect(longPressSpy).toHaveBeenCalledTimes(1);
+    expect(longPressSpy.mock.calls[0][0].type).toBe('longpress');
+    expect(longPressSpy.mock.calls[0][0].distance).toBe(0);
+  });
+
+  it('suppresses the tap that follows a long press', () => {
+    Gestures.attach(child, { onTap: tapSpy, onLongPress: longPressSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true }));
+    vi.advanceTimersByTime(500);
+    child.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 0, bubbles: true }));
+    expect(longPressSpy).toHaveBeenCalledTimes(1);
+    expect(tapSpy).not.toHaveBeenCalled();
+  });
+
+  it('cancels a pending long press on movement', () => {
+    Gestures.attach(child, { onLongPress: longPressSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true }));
+    child.dispatchEvent(new PointerEvent('pointermove', { clientX: 30, clientY: 0, bubbles: true }));
+    vi.advanceTimersByTime(500);
+    expect(longPressSpy).not.toHaveBeenCalled();
+  });
+
+  it('hold-drag takes precedence over long press, as in the mixin', () => {
+    Gestures.attach(child, { onLongPress: longPressSpy, onHoldDragStart: holdDragStartSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true }));
+    vi.advanceTimersByTime(500);
+    expect(holdDragStartSpy).toHaveBeenCalledTimes(1);
+    expect(longPressSpy).not.toHaveBeenCalled();
+  });
+
+  it('cleanup stops tap and long press firing', () => {
+    const cleanup = Gestures.attach(child, { onTap: tapSpy, onLongPress: longPressSpy });
+    cleanup();
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true }));
+    vi.advanceTimersByTime(500);
+    child.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 0, bubbles: true }));
+    expect(tapSpy).not.toHaveBeenCalled();
+    expect(longPressSpy).not.toHaveBeenCalled();
+  });
+
+  it('warns on a handler key it will never call', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    Gestures.attach(child, { onTapped: tapSpy });
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0][0]).toContain('onTapped');
+    warn.mockRestore();
+  });
+
+  it('wires Arrow keys when onHoldDragKey is the only handler', () => {
+    const keySpy = vi.fn();
+    Gestures.attach(child, { onHoldDragKey: keySpy });
+    expect(child.getAttribute('tabindex')).toBe('0');
+    child.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    child.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(keySpy).toHaveBeenNthCalledWith(1, 'right');
+    expect(keySpy).toHaveBeenNthCalledWith(2, 'left');
+  });
+
+  it('does not warn on any supported handler key', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    Gestures.attach(child, {
+      onTap: tapSpy, onLongPress: longPressSpy, onSwipe: swipeSpy, onSwipeMove: swipeSpy,
+      onHoldDragStart: holdDragStartSpy, onHoldDrag: holdDragStartSpy,
+      onHoldDragEnd: holdDragStartSpy, onHoldDragKey: holdDragStartSpy,
+    });
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 

@@ -261,7 +261,20 @@ export const Gestures = (Base) => class extends Base {
   }
 };
 
+const ATTACH_HANDLERS = [
+  'onTap', 'onLongPress', 'onSwipe', 'onSwipeMove',
+  'onHoldDragStart', 'onHoldDrag', 'onHoldDragEnd', 'onHoldDragKey',
+];
+
 Gestures.attach = (element, handlers) => {
+  // A handler the implementation never reads is a dead control that looks live at the
+  // call site. Silent for a release, and it cost a downstream app weeks.
+  for (const key of Object.keys(handlers)) {
+    if (!ATTACH_HANDLERS.includes(key)) {
+      console.warn(`Gestures.attach: unknown handler "${key}" — it will never fire. Expected one of: ${ATTACH_HANDLERS.join(', ')}`);
+    }
+  }
+
   let gesture = null;
   let longPressTimer = null;
 
@@ -282,13 +295,21 @@ Gestures.attach = (element, handlers) => {
     originalEvent: g.originalEvent,
   });
 
+  // Tap and long press report no direction — same shape as the mixin's _gestureEvent.
+  const makeStaticEvent = (type, g, endX, endY) => ({
+    ...makeEvent(type, g, endX, endY, endX - g.startX, endY - g.startY),
+    direction: null,
+  });
+
   const onDown = (e) => {
     if (e.button !== 0) return;
+    // Stops an ancestor's pointerdown listener only, so a host gesture does not run on
+    // the same press. Child clicks are unaffected — click is a separate event.
     e.stopPropagation();
-    // Capture immediately — attach() targets structural sub-elements (drag handles,
-    // sliders) that have no interactive children that need to receive click events.
-    element.setPointerCapture(e.pointerId);
-    gesture = { startX: e.clientX, startY: e.clientY, startTime: Date.now(), phase: 'tracking', originalEvent: e };
+    // Do not capture here. Capturing on pointerdown redirects click events to this
+    // element, breaking clicks on any interactive children — same reason as the mixin.
+    // Capture is deferred to gesture confirmation below.
+    gesture = { startX: e.clientX, startY: e.clientY, startTime: Date.now(), pointerId: e.pointerId, phase: 'tracking', originalEvent: e };
     element.addEventListener('pointermove', onMove);
     element.addEventListener('pointerup', onUp);
     element.addEventListener('pointercancel', onCancel);
@@ -297,8 +318,16 @@ Gestures.attach = (element, handlers) => {
         if (gesture?.phase === 'tracking') {
           gesture.phase = 'holdDrag';
           gesture.claim = 'x'; // hold completed without movement — see the mixin comment
+          element.setPointerCapture(gesture.pointerId);
           navigator.vibrate?.(40);
           handlers.onHoldDragStart(makeEvent('holddragstart', gesture, gesture.startX, gesture.startY, 0, 0));
+        }
+      }, LONG_PRESS_DELAY);
+    } else if (handlers.onLongPress) {
+      longPressTimer = setTimeout(() => {
+        if (gesture?.phase === 'tracking') {
+          gesture.phase = 'cancelled';
+          handlers.onLongPress(makeStaticEvent('longpress', gesture, gesture.startX, gesture.startY));
         }
       }, LONG_PRESS_DELAY);
     }
@@ -306,13 +335,16 @@ Gestures.attach = (element, handlers) => {
 
   const hasSwipe = !!(handlers.onSwipe || handlers.onSwipeMove);
   const hasHoldDragHandlers = !!(handlers.onHoldDragStart || handlers.onHoldDrag || handlers.onHoldDragEnd);
+  // Keyed separately from the pointer handlers: onHoldDragKey alone is a keyboard-only
+  // consumer, and wiring it off hasHoldDragHandlers made it another dead control.
+  const hasHoldDragKeys = hasHoldDragHandlers || !!handlers.onHoldDragKey;
 
-  if (hasHoldDragHandlers && !element.hasAttribute('tabindex')) {
+  if (hasHoldDragKeys && !element.hasAttribute('tabindex')) {
     element.setAttribute('tabindex', '0');
   }
 
   let keydownHandler = null;
-  if (hasHoldDragHandlers) {
+  if (hasHoldDragKeys) {
     keydownHandler = e => {
       if (e.key === 'ArrowLeft')  handlers.onHoldDragKey?.('left');
       if (e.key === 'ArrowRight') handlers.onHoldDragKey?.('right');
@@ -342,9 +374,9 @@ Gestures.attach = (element, handlers) => {
         if (isVertical) {
           g.phase = 'cancelled';
           g.claim = null; // release it — see the mixin comment
-          element.releasePointerCapture(e.pointerId);
           removeInflight();
         } else {
+          element.setPointerCapture(e.pointerId);
           g.phase = 'swipe';
           handlers.onSwipeMove?.(makeEvent('swipemove', g, e.clientX, g.startY, dx, 0));
         }
@@ -352,7 +384,6 @@ Gestures.attach = (element, handlers) => {
         if (isVertical) {
           g.phase = 'cancelled';
           g.claim = null;
-          element.releasePointerCapture(e.pointerId);
           removeInflight();
         }
       } else {
@@ -366,13 +397,14 @@ Gestures.attach = (element, handlers) => {
     clearTimeout(longPressTimer);
     removeInflight();
     gesture = null;
-    if (g?.phase === 'holdDrag') {
+    if (!g) return;
+    if (g.phase === 'holdDrag') {
       const dx = e.clientX - g.startX;
       const dy = e.clientY - g.startY;
       handlers.onHoldDragEnd?.(makeEvent('holddragend', g, e.clientX, e.clientY, dx, dy));
       return;
     }
-    if (g?.phase === 'swipe') {
+    if (g.phase === 'swipe') {
       e.preventDefault(); // suppress synthetic click after swipe (see mixin comment)
       const dx = e.clientX - g.startX;
       const duration = Date.now() - g.startTime;
@@ -387,7 +419,12 @@ Gestures.attach = (element, handlers) => {
         velocity: duration > 0 ? Math.abs(dx) / duration : 0,
         originalEvent: g.originalEvent,
       });
+      return;
     }
+
+    if (g.phase === 'cancelled') return;
+
+    handlers.onTap?.(makeStaticEvent('tap', g, e.clientX, e.clientY));
   };
 
   const onCancel = () => {
@@ -395,7 +432,8 @@ Gestures.attach = (element, handlers) => {
     clearTimeout(longPressTimer);
     removeInflight();
     gesture = null;
-    if (g?.phase === 'holdDrag') {
+    if (!g) return;
+    if (g.phase === 'holdDrag') {
       handlers.onHoldDragEnd?.(makeEvent('holddragend', g, g.startX, g.startY, 0, 0));
     }
   };
