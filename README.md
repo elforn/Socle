@@ -108,7 +108,7 @@ Firefox and Chrome on Android and desktop. iOS Safari is not supported — users
 
 ## Status
 
-**Current version: 0.9.0** — see [CHANGELOG.md](CHANGELOG.md)
+**Current version: 1.5.0** — see [CHANGELOG.md](CHANGELOG.md)
 
 | Module | Status |
 |--------|--------|
@@ -121,7 +121,9 @@ Firefox and Chrome on Android and desktop. iOS Safari is not supported — users
 | CLI — scaffold, update, add/remove modules, cert wizard | ✅ Complete |
 | Simple store — snapshot-based alternative to event-log store | ✅ Complete |
 | Toast — action buttons, undo, swipe-to-dismiss, pause on hover/focus | ✅ Complete |
-| Gesture library — drag-to-reorder | 📋 Planned |
+| Reorder — drag-to-reorder, cross-section, keyboard parity | ✅ Complete |
+| Filter state — localStorage-backed filter/search persistence | ✅ Complete |
+| Notifications — opt-in digests, dedup, periodic sync | ✅ Complete |
 | P2P sync | 📋 Planned V2 |
 
 ## Contributing

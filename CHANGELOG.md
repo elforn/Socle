@@ -10,6 +10,32 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.5.0] — 2026-11-09
+
+### Fixed
+- **A component's own `:host` rule was silently ignored, and the docs told you to write one anyway.** `core/styles/base.js` applied its defaults as a bare `:host`, and adopted stylesheets are ordered *after* a shadow root's own `<style>`. Same specificity, later origin — so the base sheet's `display: block` beat every component `:host` rule. Your CSS sat in the file, visibly doing nothing, with nothing to indicate why. The `:host` defaults are now wrapped in `:where()`, which carries zero specificity, so anything a component writes wins.
+
+  [`docs/components.md`](docs/components.md#base-reset) was the direct cause: its *Base reset* section documented `:host { display: flex; flex-direction: column; }` as the pattern to add layout on top of the default. That example could not work. Reported by a BladeNCode fencing app after three bugs traced to it — a flex layout that rendered stacked, a full-screen overlay that could not be hidden, and a paged picker that laid out wrongly — each worked around by moving layout onto a redundant inner wrapper or escalating to `:host(:not([open]))` purely to win on specificity. Both workarounds still function and can be unwound at leisure.
+
+  Nothing in the library depended on the old behaviour: every `core/`, `modules/`, reference-app and scaffold component uses its host as a positioning context and declares either `display: block` or nothing at all, which is why this survived to 1.4.2 unnoticed here while biting an app that tried to use `:host` as a layout container.
+
+### Changed
+- **`[hidden]` no longer carries `!important`.** It stays a bare `[hidden]` attribute selector: at one class worth of specificity it ties a rule like `.footer { display: flex }` and wins on cascade order, because adopted stylesheets come after the component's `<style>`. The effect for ordinary component CSS is unchanged, but a legitimate override no longer has to escalate to `!important` of its own — a two-class rule is now enough.
+
+  Wrapping `[hidden]` in `:where()` was proposed alongside the `:host` change and declined. At zero specificity it loses to any single-class rule, so `.footer { display: flex }` wins and the element renders while hidden. Checked at runtime rather than by inspection: under that version five elements in the reference app alone leak — `year-header`'s two `.confirm-actions` blocks, its `#photo-change` and `#photo-remove` menu items, and `modal-dialog`'s `.handle-tabs` — two of which specificity maths by hand had missed. A hidden element that still renders is also still in the accessibility tree, so this is a correctness issue, not only a layout one.
+
+### Breaking
+- Two patterns change behaviour. Neither appears in the library, but both are plausible in an app that worked around the old sheet:
+
+  1. **`display: … !important` on an element that also gets the `hidden` attribute.** Previously `[hidden] { display: none !important }` won on ordering; now your `!important` wins and the element renders while hidden. Drop the `!important`, or toggle the attribute from JS instead.
+  2. **Relying on the base sheet's `display: block` to override a component's own `:host` rule.** That rule now applies. Unlikely to be deliberate, but it is the one real break.
+
+  Also note any rule *above* one class — an id selector, a two-class rule — now outranks `[hidden]` and will render a hidden element. `reference-app/tests/e2e/base-styles.spec.js` walks every shadow root asserting each `[hidden]` element computes `display: none`; the same check is worth copying into an app with heavily-styled conditional UI.
+
+  **For unit tests:** happy-dom does not resolve `:where(:host)` against the host at all — `getComputedStyle(host).display` returns `''` rather than `'block'`. Real browsers are unaffected. A happy-dom test asserting a host's default display will fail after updating; assert on the rule or move the check to Playwright. Verified in Chromium 148 and Firefox 150.
+
+---
+
 ## [1.4.2] — 2026-11-07
 
 ### Changed
