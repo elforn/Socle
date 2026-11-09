@@ -160,8 +160,10 @@ Three handlers form the lifecycle:
 
 ```js
 onHoldDragStart(e) {
-  // Fires once after the 500ms hold — drag is now committed
-  navigator.vibrate?.(50);
+  // Fires once after the 500ms hold — drag is now committed.
+  // The library already fired the haptic pulse; add a visible state change,
+  // because the pulse does nothing on Firefox or iOS.
+  this.classList.add('hold-active');
   this._fill.style.transition = 'none';
 }
 
@@ -184,6 +186,8 @@ onHoldDragEnd(e) {
 `touch-action` stays permissive (`manipulation`) so the page can still be scrolled by a finger that lands on the element *before* the 500ms hold completes. Once the hold fires, the gesture claims the touch sequence (see **Axis ownership** below) so the browser cannot pan underneath the drag.
 
 **Note on haptics:** the library calls `navigator.vibrate?.(40)` automatically on hold-drag activation. Do not call it from app code — it will double-fire.
+
+**Haptics are not feedback.** `navigator.vibrate` only does anything in Chromium on Android. Firefox has been a silent no-op since v79 and removed the API outright in v129, and it has never existed on iOS. Roughly half of Socle's primary browsers get nothing. Hold-drag activation must therefore always carry a *visible* state change as well — `goal-item` adds a `.hold-active` class, and the scaffolded demo page does the same. Never let the pulse be the only signal that a gesture engaged.
 
 ## Gesture event object
 
@@ -377,8 +381,11 @@ Static method. Attaches gesture listeners to a child element that is not its own
 **Parameters**
 - `element` {HTMLElement} — the child element to attach gestures to
 - `handlers` {object} — object with any of the handler methods as keys:
-  - `onHoldDragStart(e)`, `onHoldDrag(e)`, `onHoldDragEnd(e)`
+  - `onTap(e)`, `onLongPress(e)`
+  - `onHoldDragStart(e)`, `onHoldDrag(e)`, `onHoldDragEnd(e)`, `onHoldDragKey(direction)`
   - `onSwipeMove(e)`, `onSwipe(e)`
+
+  Any other key logs a warning — it would otherwise be a control that reads as live and never fires.
 
 **Returns** {function} — cleanup function; removes all listeners and cancels any active timer
 
@@ -400,7 +407,13 @@ unsubscribe() {
 }
 ```
 
-**Notes** — child gestures are independent of the host's gesture state. `e.stopPropagation()` is called on `pointerdown` to prevent the parent from also starting a gesture sequence on the same event.
+**Notes** — child gestures are independent of the host's gesture state. `e.stopPropagation()` is called on `pointerdown` to prevent the parent from also starting a gesture sequence on the same event. It stops ancestor `pointerdown` listeners only — `click` is a separate event, so interactive children of the target still receive their clicks.
+
+A handler key `attach` does not recognise is a `console.warn`, not a silent no-op. Every gesture the mixin supports is supported here, so the two layers have the same capability set.
+
+The pointer is captured when the gesture is confirmed — the hold timer firing, or the swipe threshold being crossed — never on `pointerdown`, so interactive children keep receiving their clicks until a gesture actually commits.
+
+`onHoldDragKey` works on its own. Pass it without any pointer hold-drag handler and you get Arrow-key control plus a `tabindex="0"` fallback, which is enough for a keyboard-only affordance.
 
 ---
 

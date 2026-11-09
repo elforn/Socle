@@ -55,7 +55,7 @@ class MyComponent extends Gestures(AppElement) {
 }
 ```
 
-`Gestures.attach(element, handlers)` accepts an object of named handler callbacks. Only include the gesture types you need — unrecognised keys are ignored. Returns a cleanup function that removes all listeners and clears any pending timers.
+`Gestures.attach(element, handlers)` accepts an object of named handler callbacks: `onTap`, `onLongPress`, `onSwipe`, `onSwipeMove`, `onHoldDragStart`, `onHoldDrag`, `onHoldDragEnd`, `onHoldDragKey` — the same set as the mixin. Only include the gesture types you need. An unrecognised key logs a `console.warn`; it is never silently dropped. Returns a cleanup function that removes all listeners and clears any pending timers.
 
 Child-element gestures are **independent** of host gestures — pointer events on the child do not propagate to the host's gesture state.
 
@@ -95,7 +95,8 @@ Read `modules/gestures/gestures.js` in full. Understand:
 
 `Gestures.attach` is already implemented as a static method. When adding a new gesture type:
 - Add the handler detection inside `onDown`/`onMove`/`onUp` of `Gestures.attach` to match what you added to the mixin
-- Keep the `Gestures.attach` state machine in sync with the mixin's — same phase transitions, same thresholds
+- **Add the handler name to the `ATTACH_HANDLERS` array** — a key missing from it warns, and a key present but unread is a silent dead control. The two layers must have the same capability set; a gap here shipped as a dead `onTap` for an entire release
+- Keep the `Gestures.attach` state machine in sync with the mixin's — same phase transitions, same thresholds, same capture timing (capture on confirmation, never on `pointerdown`)
 - `touch-action` in `Gestures.attach` is derived from `hasSwipe` flag — update this logic if the new gesture needs different `touch-action`
 - The method must **not share state with the host's `this._gesture`** — child gestures are independent
 - **If the gesture is a hold-drag variant**, also accept `onHoldDragKey` in the handlers object. `Gestures.attach` additionally sets `tabindex="0"` on the element when hold-drag handlers are present and the element has no existing tabindex.
