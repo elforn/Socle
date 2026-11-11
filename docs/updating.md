@@ -127,6 +127,8 @@ Remove anyway? [y/N]:
 
 On confirmation, it removes `_lib/modules/<module>/` and updates `lib-version.json`. Your `app/` imports are left in place — you need to clean those up manually to avoid broken imports.
 
+The scan reads both import forms — the relative `../../_lib/modules/<module>/` path and the `socle/modules/<module>/` alias — and it follows symlinked directories, so shared code kept outside the app tree and symlinked into `app/` is covered. Paths in the warning are shown as they resolve through the symlink. `node_modules`, `dist`, and `.git` are skipped.
+
 `core` cannot be removed.
 
 ---
