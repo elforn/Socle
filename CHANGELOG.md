@@ -10,6 +10,21 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.1] — 2026-11-11
+
+Fixes a CLI guard, not library code. Nothing in `_lib/` changes and `socle update` has nothing to apply — you get this by running a newer `npx socle`.
+
+### Fixed
+- `cli/index.js` — `npx socle remove <module>` and `npx socle manage` deleted a module without warning when the only code importing it used the `socle/` alias, or lived in a directory symlinked into `app/`. The pre-removal scan that is supposed to list usages and ask for confirmation returned zero results, so the prompt never appeared. No warning, no error — the app built fine until the next bundle, which then failed on an import with nothing left to resolve to.
+
+  Two independent causes, either one sufficient. The scan matched only the literal string `_lib/modules/<name>/`, so it could not see `socle/modules/<name>/` — the form shared code outside the app tree must use, and the form `socle update` itself tells apps to adopt. And it walked `app/` with `fs.readdirSync({ recursive: true })`, which lists a symlinked directory as an entry but never descends it, so no file inside a symlinked `app/shared` was ever read. An app with both — alias imports in symlinked shared code, which is the layout [`library_tests/socle-alias.test.js`](library_tests/socle-alias.test.js) exists to support — was unguarded twice over.
+
+  Found while reviewing one of the fencing apps' shared-component setup, before it cost them anything. It was latent for every app that adopted the alias in 1.5.0, which is the release that made the alias the recommended way to reach `_lib/`.
+
+  Two things to expect now. The warning lists paths *through* the symlink (`shared/capture/strip.js`), pointing at a file in the shared repo rather than the app repo — correct, but it reads oddly the first time. And the walk skips `node_modules`, `dist`, and `.git`, which a shared repo running its own test suite will have and which would otherwise be both slow to traverse and a source of false positives from dependency fixtures that mention module paths in strings.
+
+---
+
 ## [1.6.0] — 2026-11-09
 
 `Gestures.attach` reaches capability parity with the gesture mixin. If your app passes `onTap`, `onLongPress`, or a standalone `onHoldDragKey` to `Gestures.attach`, those handlers fire now where they previously did nothing.
