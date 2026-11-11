@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll, vi } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync } from 'fs';
 import { join } from 'path';
 import os from 'os';
 import { replaceTokens, replaceBlockTokens, scaffoldApp, updateLib, addModule, removeModule, findModuleImports, ensureDevHttps, readLibManifest, verifyLibFiles } from './index.js';
@@ -378,6 +378,83 @@ describe('updateLib', () => {
 });
 
 // ── unit: findModuleImports ───────────────────────────────────────────────────
+
+// This scan is the only thing standing between `remove`/`manage` and deleting a
+// module that app code still imports. It was blind to both the alias specifier
+// and anything inside a symlinked directory, which together made it return zero
+// usages for every app keeping shared components outside the app tree.
+
+describe('findModuleImports', () => {
+  function appWith(files, { sharedFiles } = {}) {
+    const dir = makeTmpDir();
+    const appDir = join(dir, 'app');
+    mkdirSync(join(appDir, 'pages'), { recursive: true });
+    for (const [rel, body] of Object.entries(files)) {
+      writeFileSync(join(appDir, rel), body);
+    }
+    if (sharedFiles) {
+      const shared = join(dir, 'shared', 'capture');
+      mkdirSync(shared, { recursive: true });
+      for (const [rel, body] of Object.entries(sharedFiles)) {
+        writeFileSync(join(shared, rel), body);
+      }
+      symlinkSync(join(dir, 'shared'), join(appDir, 'shared'));
+    }
+    return appDir;
+  }
+
+  it('finds relative _lib/ imports', () => {
+    const appDir = appWith({
+      'pages/home.js': "import { toast } from '../../_lib/modules/toast/toast.js';",
+    });
+    expect(findModuleImports(appDir, 'toast')).toEqual(['pages/home.js']);
+  });
+
+  it('finds socle/ alias imports', () => {
+    const appDir = appWith({
+      'pages/home.js': "import { Gestures } from 'socle/modules/gestures/gestures.js';",
+    });
+    expect(findModuleImports(appDir, 'gestures')).toEqual(['pages/home.js']);
+  });
+
+  it('descends a symlinked directory, where shared components live', () => {
+    const appDir = appWith({ 'pages/home.js': "export const x = 1;" }, {
+      sharedFiles: { 'strip.js': "import { Gestures } from 'socle/modules/gestures/gestures.js';" },
+    });
+    expect(findModuleImports(appDir, 'gestures')).toEqual(['shared/capture/strip.js']);
+  });
+
+  it('does not match a different module', () => {
+    const appDir = appWith({
+      'pages/home.js': "import { Gestures } from 'socle/modules/gestures/gestures.js';",
+    });
+    expect(findModuleImports(appDir, 'reorder')).toEqual([]);
+  });
+
+  it('skips node_modules, which a shared repo running its own suite will have', () => {
+    const dir = makeTmpDir();
+    const appDir = join(dir, 'app');
+    mkdirSync(join(appDir, 'node_modules', 'vitest'), { recursive: true });
+    writeFileSync(
+      join(appDir, 'node_modules', 'vitest', 'index.js'),
+      "// mentions socle/modules/gestures/gestures.js in a fixture",
+    );
+    expect(findModuleImports(appDir, 'gestures')).toEqual([]);
+  });
+
+  it('terminates on a symlink cycle', () => {
+    const dir = makeTmpDir();
+    const appDir = join(dir, 'app');
+    mkdirSync(join(appDir, 'pages'), { recursive: true });
+    writeFileSync(join(appDir, 'pages/home.js'), "import 'socle/modules/toast/toast.js';");
+    symlinkSync(appDir, join(appDir, 'pages', 'loop'));
+    expect(findModuleImports(appDir, 'toast')).toEqual(['pages/home.js']);
+  });
+
+  it('returns nothing when app/ is absent', () => {
+    expect(findModuleImports(join(makeTmpDir(), 'nope'), 'toast')).toEqual([]);
+  });
+});
 
 // ── regression: devDependencies are developer-owned ───────────────────────────
 

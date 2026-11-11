@@ -184,17 +184,46 @@ function _semverLt(a, b) {
   return false;
 }
 
+// Shared code lives outside the app tree and is symlinked to app/shared, so its
+// own node_modules (vitest, for a shared repo that runs its own suite) is reachable
+// from this walk and would be both slow and a source of false positives.
+const SCAN_SKIP_DIRS = new Set(['node_modules', 'dist', '.git']);
+
+// Two specifier forms reach a module and both must be found: the relative path,
+// and the socle/ alias — the only form available to shared code outside the app,
+// and the one `socle update` tells apps to adopt.
+//
+// The walk is manual because fs.readdirSync({ recursive: true }) lists a symlinked
+// directory without ever descending it. That hid every file in a symlinked
+// app/shared from this scan, so `remove` and `manage` deleted modules that shared
+// components still imported, with no warning and no error until the next bundle.
 export function findModuleImports(appDir, moduleName) {
-  const pattern = `_lib/modules/${moduleName}/`;
+  const patterns = [`_lib/modules/${moduleName}/`, `socle/modules/${moduleName}/`];
   const results = [];
+  const visited = new Set();
   if (!fs.existsSync(appDir)) return results;
-  for (const entry of fs.readdirSync(appDir, { recursive: true })) {
-    if (!entry.endsWith('.js')) continue;
-    const full = path.join(appDir, entry);
-    if (fs.statSync(full).isFile() && fs.readFileSync(full, 'utf8').includes(pattern)) {
-      results.push(entry);
+
+  const walk = (dir, prefix) => {
+    let real;
+    try { real = fs.realpathSync(dir); } catch { return; }
+    if (visited.has(real)) return;
+    visited.add(real);
+
+    for (const entry of fs.readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      const rel = prefix ? `${prefix}/${entry}` : entry;
+      let stat;
+      try { stat = fs.statSync(full); } catch { continue; }
+      if (stat.isDirectory()) {
+        if (!SCAN_SKIP_DIRS.has(entry)) walk(full, rel);
+      } else if (stat.isFile() && entry.endsWith('.js')) {
+        const src = fs.readFileSync(full, 'utf8');
+        if (patterns.some(pat => src.includes(pat))) results.push(rel);
+      }
     }
-  }
+  };
+
+  walk(appDir, '');
   return results;
 }
 
