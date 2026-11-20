@@ -6,7 +6,9 @@ class GoalDialog extends AppElement {
   // `activity` is this goal's events, already fetched and filtered by the caller (home-page
   // owns Store access) — goal-dialog stays a zero-store-knowledge UI component, same as
   // every other property it receives.
-  open(goal = null, activity = []) {
+  // `tab` lets a caller land directly on the activity page — used by the save
+  // toast's "Activity" action, which exists to show where the change just landed.
+  open(goal = null, activity = [], { tab = 0 } = {}) {
     this._input.value = goal?.title ?? '';
     this._saveBtn.disabled = !this._input.value.trim();
     if (this._deleteBtn) this._deleteBtn.hidden = !goal;
@@ -15,8 +17,9 @@ class GoalDialog extends AppElement {
     // goal (goal === null) has nothing to show, so it stays on the plain single-page
     // dialog rather than exposing an empty second tab.
     this._modal.tabCount = goal ? 2 : 1;
-    this._modal.activeTab = 0;
-    this._showPage(0);
+    const page = goal ? tab : 0;
+    this._modal.activeTab = page;
+    this._showPage(page);
     this._renderActivity(activity);
 
     this._modal.show();

@@ -6,8 +6,21 @@ const TAP_THRESHOLD = 18; // matches modules/gestures/gestures.js's own constant
 const DISMISS_DURATION = 200; // fallback when transitionend doesn't fire
 const DRAG_TRANSITION = 'transform var(--duration-fast, 120ms) ease, opacity var(--duration-fast, 120ms) ease';
 
+const MAX_ACTIONS = 2; // a third does not fit the width a toast actually has
+
 function reducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// `action` and `actions` are the same mechanism at different arity — normalise to
+// one list and render from that. Over the cap, render what fits and say so:
+// silently dropping an action leaves a control the caller believes shipped.
+function resolveActions(action, actions) {
+  if (actions && action) console.warn('toast: both `action` and `actions` given — `actions` wins');
+  const list = actions ?? (action ? [action] : []);
+  if (list.length <= MAX_ACTIONS) return list;
+  console.warn(`toast: ${list.length} actions given — only the first ${MAX_ACTIONS} are rendered`);
+  return list.slice(0, MAX_ACTIONS);
 }
 
 let container = null;
@@ -24,8 +37,21 @@ function ensureStyles() {
       position: fixed;
       inset: auto;
       inset-block-end: calc(var(--space-4, 16px) + var(--safe-area-bottom, 0px));
-      inset-inline-start: 50%;
-      transform: translateX(-50%);
+      /* Spans the viewport and lets align-items centre the toast, rather than
+         starting at 50% and pulling back with translateX(-50%). That transform
+         centred the container visually, but its layout width stayed
+         shrink-to-fit against the space from the 50% start edge to the end of
+         the viewport — half the viewport, whatever the app asked for. Measured
+         on a 375px viewport: the toast capped at 187px with ~103px left for the
+         message after padding and one button, and a max-inline-size set by the
+         app was dead CSS that never got the chance to apply.
+         Both declarations below are load-bearing. The container is
+         popover="manual", and the UA popover rules set width: fit-content,
+         which re-imposes shrink-to-fit even with both insets at 0. And the old
+         transform has to go, not just look redundant: against a now full-width
+         container it would shift every toast half a viewport to the start. */
+      inset-inline: 0;
+      inline-size: auto;
       display: flex;
       flex-direction: column-reverse;
       align-items: center;
@@ -77,6 +103,13 @@ function ensureStyles() {
     }
     .socle-toast-msg {
       flex: 1;
+    }
+    /* Only present for 2+ buttons, so the toast's own gap between message and
+       actions does not also become the gap between the buttons. */
+    .socle-toast-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3, 12px);
     }
     .socle-toast-btn {
       color: inherit;
@@ -131,17 +164,18 @@ function raiseContainer(c) {
   try { c.showPopover(); containerOpen = true; } catch { /* not connected */ }
 }
 
-export function toast(message, type = 'info', { duration, action } = {}) {
+export function toast(message, type = 'info', { duration, action, actions } = {}) {
   activeToast?.dismiss({ instant: true });
 
   ensureStyles();
   const c = getContainer();
   raiseContainer(c);
 
-  const hasAction = !!action;
+  const actionList = resolveActions(action, actions);
   const persistent = duration === Infinity;
-  const showBtn = hasAction || persistent;
-  const defaultDuration = hasAction ? 5000 : 4000;
+  const showBtn = actionList.length > 0 || persistent;
+  // Two actions mean two decisions to read and make before the toast goes away.
+  const defaultDuration = [4000, 5000, 6000][actionList.length];
   const effectiveDuration = persistent ? Infinity : (duration ?? defaultDuration);
 
   const el = document.createElement('div');
@@ -154,13 +188,26 @@ export function toast(message, type = 'info', { duration, action } = {}) {
   msgEl.textContent = message;
   el.appendChild(msgEl);
 
-  let btn;
+  // Rendered start-to-end in array order, so the last entry sits at the end edge
+  // — Undo belongs last. Only 2+ buttons get the .socle-toast-actions wrapper: a
+  // single action stays a direct child of the toast, which is the structure apps
+  // and tests already read.
+  const buttons = [];
   if (showBtn) {
-    btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'socle-toast-btn';
-    btn.textContent = hasAction ? action.label : t('toast.close');
-    el.appendChild(btn);
+    const items = actionList.length ? actionList : [{ label: t('toast.close') }];
+    const host = items.length > 1 ? document.createElement('div') : el;
+    if (host !== el) {
+      host.className = 'socle-toast-actions';
+      el.appendChild(host);
+    }
+    items.forEach((item, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `socle-toast-btn${i < items.length - 1 ? ' socle-toast-btn-secondary' : ''}`;
+      btn.textContent = item.label;
+      host.appendChild(btn);
+      buttons.push([btn, item.onClick]);
+    });
   }
 
   let timerId = null;
@@ -219,9 +266,9 @@ export function toast(message, type = 'info', { duration, action } = {}) {
     startTimer();
   };
 
-  if (btn) {
+  for (const [btn, onClick] of buttons) {
     btn.addEventListener('click', () => {
-      if (hasAction) action.onClick();
+      onClick?.();
       dismiss();
     });
   }
@@ -344,7 +391,7 @@ export function toast(message, type = 'info', { duration, action } = {}) {
     }
     clearTimeout(timerId);
     paused = false;
-    remaining = hasAction ? 5000 : 4000;
+    remaining = defaultDuration;
     startTimer();
   };
 

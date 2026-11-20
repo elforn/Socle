@@ -42,6 +42,7 @@ defineStrings({
   'home.toast-goal-saved':       'Objectiu desat',
   'home.toast-goal-deleted':     'Objectiu eliminat',
   'home.toast-undo':             'Desfés',
+  'home.toast-activity':         'Activitat',
 
   'year-header.menu':            'Menú',
   'year-header.year-section':    'Aquest any',

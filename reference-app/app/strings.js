@@ -42,6 +42,7 @@ defineStrings({
   'home.toast-goal-saved':       'Goal saved',
   'home.toast-goal-deleted':     'Goal deleted',
   'home.toast-undo':             'Undo',
+  'home.toast-activity':         'Activity',
 
   'year-header.menu':            'Menu',
   'year-header.year-section':    'This year',

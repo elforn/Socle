@@ -226,9 +226,9 @@ class HomePage extends AppElement {
     // A goal's activity tab shows its own slice of the append-only event log —
     // home-page owns Store access, so it fetches and filters before handing the
     // dialog an already-resolved list; goal-dialog itself stays store-agnostic.
-    this._openDialog = async goal => {
+    this._openDialog = async (goal, opts) => {
       const activity = goal ? (await Store.getAllEvents()).filter(e => e.payload?.id === goal.id) : [];
-      this._dialog.open(goal, activity);
+      this._dialog.open(goal, activity, opts);
     };
 
     // ── Capstone events ───────────────────────────────────────────────────
@@ -313,9 +313,32 @@ class HomePage extends AppElement {
 
     this._onGoalSaved = e => {
       const prefix = EVENT_PREFIX[this._editingSection];
-      const id     = this._editingGoal?.id ?? crypto.randomUUID();
-      Store.dispatch(`${prefix}:title-set`, { year: String(this._year), id, title: e.detail.title });
-      toast(t('home.toast-goal-saved'), 'success');
+      const prior  = this._editingGoal;
+      const id     = prior?.id ?? crypto.randomUUID();
+      const year   = String(this._year);
+      const title  = e.detail.title;
+      Store.dispatch(`${prefix}:title-set`, { year, id, title });
+      // Two actions on one toast: "Activity" jumps to the event log slice the save
+      // just landed in, "Undo" reverses it — restoring the previous title for an
+      // edit, or deleting the goal that this save created. Undo is last, so it sits
+      // at the end edge.
+      toast(t('home.toast-goal-saved'), 'success', {
+        actions: [
+          {
+            label: t('home.toast-activity'),
+            onClick: () => {
+              this._editingGoal = { id, title };
+              this._openDialog({ id, title }, { tab: 1 });
+            },
+          },
+          {
+            label: t('home.toast-undo'),
+            onClick: () => prior
+              ? Store.dispatch(`${prefix}:title-set`, { year, id, title: prior.title })
+              : Store.dispatch(`${prefix}:deleted`, { year, id }),
+          },
+        ],
+      });
     };
     this.shadowRoot.addEventListener('goal-saved', this._onGoalSaved);
 

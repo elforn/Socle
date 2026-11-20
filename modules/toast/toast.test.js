@@ -172,6 +172,210 @@ describe('toast', () => {
     vi.useRealTimers();
   });
 
+  // --- multiple actions ---
+
+  it('a single action via `action` stays a direct child with no wrapper', () => {
+    toast('Done', 'success', { action: { label: 'Undo', onClick: () => {} } });
+    const el = document.querySelector('.socle-toast');
+    expect(el.querySelector('.socle-toast-actions')).toBeNull();
+    const btns = el.querySelectorAll('.socle-toast-btn');
+    expect(btns.length).toBe(1);
+    expect(btns[0].parentElement).toBe(el);
+    expect(btns[0].classList.contains('socle-toast-btn-secondary')).toBe(false);
+  });
+
+  it('renders two actions in array order inside the wrapper, last one primary', () => {
+    toast('Moved', 'success', {
+      actions: [
+        { label: 'Go to', onClick: () => {} },
+        { label: 'Undo',  onClick: () => {} },
+      ],
+    });
+    const wrapper = document.querySelector('.socle-toast-actions');
+    expect(wrapper).toBeTruthy();
+    const btns = [...wrapper.querySelectorAll('.socle-toast-btn')];
+    expect(btns.map(b => b.textContent)).toEqual(['Go to', 'Undo']);
+    expect(btns[0].classList.contains('socle-toast-btn-secondary')).toBe(true);
+    expect(btns[1].classList.contains('socle-toast-btn-secondary')).toBe(false);
+  });
+
+  it('every action button keeps the .socle-toast-btn class and type=button', () => {
+    toast('Moved', 'success', {
+      actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+    });
+    // document.querySelector('.socle-toast-btn') is what several apps' undo flows
+    // reach for — it must still find a button, not just the wrapper.
+    expect(document.querySelector('.socle-toast-btn')).toBeTruthy();
+    for (const b of document.querySelectorAll('.socle-toast-btn')) expect(b.type).toBe('button');
+  });
+
+  it('clicking the first action calls only its own onClick and dismisses', () => {
+    vi.useFakeTimers();
+    const first = vi.fn();
+    const second = vi.fn();
+    toast('Moved', 'success', {
+      actions: [{ label: 'Go to', onClick: first }, { label: 'Undo', onClick: second }],
+    });
+    document.querySelectorAll('.socle-toast-btn')[0].click();
+    expect(first).toHaveBeenCalledOnce();
+    expect(second).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('clicking the second action calls only its own onClick and dismisses', () => {
+    vi.useFakeTimers();
+    const first = vi.fn();
+    const second = vi.fn();
+    toast('Moved', 'success', {
+      actions: [{ label: 'Go to', onClick: first }, { label: 'Undo', onClick: second }],
+    });
+    document.querySelectorAll('.socle-toast-btn')[1].click();
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('default duration is 6000 with two actions', () => {
+    vi.useFakeTimers();
+    toast('Moved', 'success', {
+      actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+    });
+    vi.advanceTimersByTime(5999);
+    expect(document.querySelector('.socle-toast')).toBeTruthy();
+    vi.advanceTimersByTime(201); // 1ms fires dismiss + 200ms exit animation
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('an explicit duration still overrides the two-action default', () => {
+    vi.useFakeTimers();
+    toast('Moved', 'success', {
+      duration: 1000,
+      actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+    });
+    vi.advanceTimersByTime(1201);
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('duration: Infinity still overrides the two-action default', () => {
+    vi.useFakeTimers();
+    toast('Moved', 'success', {
+      duration: Infinity,
+      actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+    });
+    vi.advanceTimersByTime(60000);
+    expect(document.querySelectorAll('.socle-toast-btn').length).toBe(2);
+    vi.useRealTimers();
+  });
+
+  it('update() after two actions restarts the timer at 6000', () => {
+    vi.useFakeTimers();
+    const { update } = toast('Moving…', 'info', {
+      duration: Infinity,
+      actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+    });
+    update({ message: 'Moved', type: 'success' });
+    vi.advanceTimersByTime(5999);
+    expect(document.querySelector('.socle-toast')).toBeTruthy();
+    vi.advanceTimersByTime(201);
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('actions: [] behaves as no action at all', () => {
+    vi.useFakeTimers();
+    toast('Plain', 'info', { actions: [] });
+    const el = document.querySelector('.socle-toast');
+    expect(el.querySelector('.socle-toast-btn')).toBeNull();
+    expect(el.classList.contains('socle-toast-has-btn')).toBe(false);
+    vi.advanceTimersByTime(3999);
+    expect(document.querySelector('.socle-toast')).toBeTruthy();
+    vi.advanceTimersByTime(201); // 1ms fires dismiss + 200ms exit animation
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('caps at two actions and warns rather than silently dropping the third', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      toast('Too many', 'info', {
+        actions: [
+          { label: 'One',   onClick: () => {} },
+          { label: 'Two',   onClick: () => {} },
+          { label: 'Three', onClick: () => {} },
+        ],
+      });
+      const btns = [...document.querySelectorAll('.socle-toast-btn')];
+      expect(btns.map(b => b.textContent)).toEqual(['One', 'Two']);
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('prefers `actions` over `action` and warns when both are given', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      toast('Both', 'info', {
+        action: { label: 'Legacy', onClick: () => {} },
+        actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+      });
+      const btns = [...document.querySelectorAll('.socle-toast-btn')];
+      expect(btns.map(b => b.textContent)).toEqual(['Go to', 'Undo']);
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('the info accent rule still targets both buttons of a two-action toast', () => {
+    toast('Moved', 'info', {
+      actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+    });
+    for (const b of document.querySelectorAll('.socle-toast-btn')) {
+      expect(getComputedStyle(b).color).not.toBe('');
+      expect(b.closest('.socle-toast-info')).toBeTruthy();
+    }
+  });
+
+  it('a drag starting on the toast body still dismisses with two actions present', () => {
+    vi.useFakeTimers();
+    toast('Moved', 'success', {
+      actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+    });
+    const el = document.querySelector('.socle-toast');
+    const msg = document.querySelector('.socle-toast-msg');
+    msg.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove', { clientX: 150, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointerup', { clientX: 150, bubbles: true }));
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector('.socle-toast')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('does not capture the pointer for a plain press-and-release on either button', () => {
+    const captureSpy = vi.fn();
+    const original = HTMLElement.prototype.setPointerCapture;
+    HTMLElement.prototype.setPointerCapture = captureSpy;
+    try {
+      toast('Moved', 'success', {
+        actions: [{ label: 'Go to', onClick: () => {} }, { label: 'Undo', onClick: () => {} }],
+      });
+      for (const b of document.querySelectorAll('.socle-toast-btn')) {
+        b.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, bubbles: true }));
+        b.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, bubbles: true }));
+      }
+      expect(captureSpy).not.toHaveBeenCalled();
+    } finally {
+      HTMLElement.prototype.setPointerCapture = original;
+    }
+  });
+
   // --- Escape key ---
 
   it('Escape key dismisses the toast', () => {
