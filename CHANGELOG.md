@@ -10,6 +10,48 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.0] — 2026-11-18
+
+A toast can carry two actions, and — separately — a toast can finally use more than half the viewport's width. The width fix is the one to read: it was silently capping every toast in every app, and apps working around it in their own CSS can drop the override.
+
+### Fixed
+- `modules/toast/toast.js` — **a toast could never be wider than half the viewport.** `#toast-container` was centred with `inset-inline-start: 50%` plus `transform: translateX(-50%)`. The transform centres the container visually, but its *layout* width stayed shrink-to-fit against the space from the 50% start edge to the end of the viewport — half the viewport — and everything inside was capped by that, whatever the app asked for.
+
+  Measured on a 375px viewport by one of the downstream apps: a toast with a single Undo action came out 187px wide, of which **103px** was left for the message after padding and the button — about 12 characters. That app had `max-inline-size: min(90vw, 420px)` on `.socle-toast` and it was simply dead CSS; it never got the chance to apply. After the fix, the same toast measures 314px with 230px for the message, and a 31-character message renders in full on one line.
+
+  The container now spans the viewport (`inset-inline: 0`) and centres the toast with its own `align-items: center`. Two details are load-bearing. `inline-size: auto` is required because the container is `popover="manual"` and the UA popover rules set `width: fit-content`, which re-imposes shrink-to-fit even with both insets at 0. And the `transform` had to be removed rather than merely left as redundant — against a now full-width container it would shift every toast half a viewport to the start side. `pointer-events: none` on the container was already there, so a full-width container still intercepts nothing.
+
+  Nothing looked broken until a message was long enough to matter, which is exactly when a toast most needs the room. If your app carries a `!important` override block for toast width, you can drop it — keep only any `inset-block-end` lift you need to clear your own bottom navigation.
+
+  A unit test cannot see this; it is computed layout, not a DOM property. The guard is [`reference-app/tests/e2e/toast.spec.js`](reference-app/tests/e2e/toast.spec.js) → "a toast is not capped at half the viewport width", which asserts at a 375px viewport that the container's layout box spans the viewport, the toast uses more than half of it, and it is on screen and centred to within a pixel. Reverting the CSS fails it (container measures 238px against an expected 375px).
+
+### Added
+- `modules/toast/toast.js` — `toast()` accepts an `actions` array alongside the existing `action`, for a toast that both points somewhere and offers a way back:
+
+  ```js
+  toast('“Gym” goal moved to Milestones', 'success', {
+    actions: [
+      { label: 'Go to', onClick: () => navigate(…) },
+      { label: 'Undo',  onClick: () => restore(snap) },
+    ],
+  });
+  ```
+
+  Buttons render start-to-end in array order, so the last entry sits at the end edge — Undo belongs last. `action` and `actions` are the same mechanism at different arity (`action: x` is exactly `actions: [x]`), normalised to one internal list; **every existing `action` call site is unchanged, including its DOM structure.**
+
+  Two is the cap: a third does not fit the width a toast actually has. Over the cap, the first two render and the rest are dropped with a `console.warn` rather than silently — a silently dropped action is a dead control the caller believes shipped, which is how a dead `onTap` shipped for a release in 1.6.0. Passing both `action` and `actions` also warns; `actions` wins. `actions: []` behaves as no action at all.
+
+  Markup: every button keeps `.socle-toast-btn`, so `document.querySelector('.socle-toast-btn')` still finds a button at any arity. Two or more are wrapped in a `.socle-toast-actions` flex row so the toast's own message-to-actions gap does not also become the gap *between* the buttons; a single action stays a direct child, as before. Every button but the last also gets `.socle-toast-btn-secondary` — no visual difference by default, there for apps that want to de-emphasise the secondary. The `--color-accent` tint on `'info'` toasts applies to all of them.
+
+  The swipe-to-dismiss gesture, its deferred pointer capture, the direction lock and the `touch-action` value are all untouched — the existing reasoning about capturing only on a confirmed horizontal move applies verbatim to a second button.
+
+### Changed
+- `modules/toast/toast.js` — the default duration now scales with action count: 4000ms with none, 5000ms with one (unchanged), **6000ms with two**, since two actions mean two decisions to read and make. An explicit `duration` and `duration: Infinity` keep overriding, unchanged. `update()` restarts the timer on the same default the toast was created with.
+- `reference-app/` — the save-a-goal toast now carries two actions: **Activity** (opens the goal's dialog directly on its activity tab, where the event the save just wrote is listed) and **Undo** (restores the previous title for an edit, or deletes the goal the save created). This is the library feature exercised in a real app, as every feature must be. `goal-dialog.open()` takes an optional `{ tab }` so a caller can land on the activity page; `home.toast-activity` is registered in `app/strings.js` and both locale packs.
+- `docs/toast.md` — documents `actions`, the per-arity durations, and a new **Width** section explaining the container rule and which parts of it are load-bearing. Also corrects a stale claim that the toast "requires `touch-action: none`" — it has used `pan-y pinch-zoom` with an explicit axis claim since the axis-ownership work, and `none` is now forbidden library-wide.
+
+---
+
 ## [1.6.1] — 2026-11-11
 
 Fixes a CLI guard, not library code. Nothing in `_lib/` changes and `socle update` has nothing to apply — you get this by running a newer `npx socle`.
