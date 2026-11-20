@@ -385,6 +385,59 @@ test.describe('Goal fail / restore', () => {
     });
     expect(pct).toBeGreaterThanOrEqual(0);
   });
+
+  test('action button marks goal as failed via a real pointer tap', async ({ page }) => {
+    // goal-item's action button is wired through Gestures.attach({ onTap }) — a
+    // synthetic element.click() exercises only the keyboard fallback (see the other
+    // tests in this file), not the pointer path attach() owns. The action button only
+    // sits on top of the bar (z-index) once swiped into view, so reveal it with a real
+    // swipe first — same drag technique as tests/e2e/axis-ownership.spec.js — then tap
+    // it with a real mouse click on its bounding box.
+    const barBounds = await page.evaluate(() => {
+      const bar = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item').shadowRoot
+        .querySelector('.bar');
+      return bar.getBoundingClientRect().toJSON();
+    });
+    const y = barBounds.y + barBounds.height / 2;
+    const startX = barBounds.x + barBounds.width - 10;
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    for (let dx = 20; dx <= 100; dx += 20) await page.mouse.move(startX - dx, y);
+    await page.mouse.up();
+
+    await page.waitForFunction(() => {
+      const item = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item');
+      return item?._revealed === true;
+    });
+
+    const btnBounds = await page.evaluate(() => {
+      const btn = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item').shadowRoot
+        .querySelector('#action');
+      return btn.getBoundingClientRect().toJSON();
+    });
+    await page.mouse.click(btnBounds.x + btnBounds.width / 2, btnBounds.y + btnBounds.height / 2);
+
+    await page.waitForFunction(() => {
+      const item = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item');
+      return (item?._goal?.percentage ?? 0) < 0;
+    });
+
+    const pct = await page.evaluate(() => {
+      const item = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item');
+      return item._goal?.percentage;
+    });
+    expect(pct).toBeLessThan(0);
+  });
 });
 
 test.describe('Goal delete via dialog', () => {
