@@ -60,28 +60,22 @@ const EXEMPT = new Set([
   'sync.js:applyReplace',
   'sync.js:applyMerge',
 
-  // periodic-sync.js is wholly unused — not wired into digest-notifier.js (its
-  // natural caller) or anywhere else. Unlike the other exemptions above, this is
-  // not a deliberate design choice, just an undiscovered gap surfaced by writing
-  // this test. Left exempt (not fixed) because closing it is a feature decision
-  // (should digest-notifier request periodic background sync?), not a mechanical
-  // wiring job — tracked here instead of silently passing.
+  // periodic-sync.js is deliberately unused — reference-app/app/sw-extensions.js
+  // documents why: YourYear uses the event-log store, which has no persisted state
+  // snapshot a classic-script SW handler could read (state only exists by replaying
+  // events in the page's own boot()). Wiring periodicsync here would mean
+  // duplicating the reducer inside the service worker just to serve this one
+  // feature. The foreground checker (digest-notifier, on boot + resume) is the
+  // mechanism that actually fits this store. Revisit if a simple-store reference
+  // app is ever added — that store's single persisted snapshot IS readable from a
+  // classic script, and periodic-sync.js would fit it directly.
   'periodic-sync.js:isPeriodicSyncSupported',
   'periodic-sync.js:PeriodicSync',
 
   // filter-state.js's FilterState() has zero reference-app usage — the reference
-  // app's goal lists have no search/filter bar. Same undiscovered-gap category as
-  // periodic-sync and app-header below: a feature decision (does a yearly goals
-  // list need search?), not a mechanical wiring job.
+  // app's goal lists have no search/filter bar. A feature decision (does a yearly
+  // goals list need search?), not a mechanical wiring job.
   'filter-state.js:FilterState',
-
-  // app-header.js's <app-header> custom element has zero reference-app usage.
-  // year-header.js is the reference app's own header and was built before (or
-  // instead of) adopting the generic module — same undiscovered-gap category as
-  // periodic-sync above. Closing it is a feature decision (should the reference
-  // app's header be the generic module instead of a bespoke one?), not something
-  // this test should paper over by skipping the module.
-  'app-header.js:<app-header>',
 ]);
 
 function walkJs(dir, results = []) {
