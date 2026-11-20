@@ -831,7 +831,7 @@ export async function updateLib(projectDir, ask) {
     console.log("       import { fileURLToPath } from 'url';");
     console.log("       resolve: { alias: { socle: fileURLToPath(new URL('./_lib', import.meta.url)) } },");
     console.log('  Add a jsconfig.json alongside it so your editor resolves socle/ too:');
-    console.log('       { "compilerOptions": { "baseUrl": ".", "paths": { "socle/*": ["./_lib/*"] } } }');
+    console.log('       { "compilerOptions": { "paths": { "socle/*": ["./_lib/*"] } } }');
     console.log('  Existing relative _lib/ imports keep working — the alias is additive.');
     console.log('  See docs/shared-code.md for the multi-app layout it enables.');
   }
