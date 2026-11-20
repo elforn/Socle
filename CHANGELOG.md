@@ -10,6 +10,37 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.2] — 2026-11-20
+
+Closes one of the two gaps 1.7.1's new reference-coverage test left open, and fixes
+a TypeScript 7.0 deprecation warning in both generated `jsconfig.json` files.
+
+### Fixed
+- `reference-app/app/pages/not-found-page.js` — now renders `<app-header>` instead
+  of a bare `<h1>`, giving `modules/app-header/app-header.js` its first
+  reference-app consumer. `year-header.js` stays as the app's own richer header for
+  year pages; the two aren't a duplication — `app-header` is the minimal
+  title-plus-action-slot header the not-found page actually needs, not a smaller
+  version of what `year-header` does. `library_tests/reference-coverage.test.js`'s
+  `app-header.js:<app-header>` exemption is removed accordingly.
+- `reference-app/jsconfig.json`, `scaffold/jsconfig.json`, and the matching
+  migration hint printed by `npx socle update` for apps below 1.4.0 — dropped the
+  `baseUrl` compiler option. TypeScript 7.0 removes it; current TypeScript already
+  warns ("Option 'baseUrl' is deprecated"). The `paths` entry it supported
+  (`socle/*` → `./_lib/*`) doesn't need it — without `baseUrl`, TypeScript resolves
+  `paths` relative to the config file itself, which was already `.`, so this is a
+  pure removal with no behaviour change.
+
+`modules/notifications/periodic-sync.js` stays exempt — unlike `app-header`, it
+isn't an unused convenience, it's structurally incompatible with the reference
+app's event-log store. `reference-app/app/sw-extensions.js` already documents why:
+periodic sync runs in the service worker's classic-script scope, which has no
+persisted state snapshot to read (the event-log store only ever computes state by
+replaying events inside the page's own `boot()`). Wiring it in here would mean
+duplicating the reducer inside the service worker for one feature. It would fit a
+simple-store reference app directly, since that store persists one JSON snapshot
+that a classic script *can* read — worth revisiting if one is ever added.
+
 ## [1.7.1] — 2026-11-20
 
 A downstream app correctly pointed out that `Gestures.attach` had no reference-app
