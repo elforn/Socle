@@ -3,6 +3,7 @@ import { navigate } from '../../_lib/core/router/router.js';
 import * as Store from '../../_lib/core/store/store.js';
 import { t } from '../../_lib/core/strings.js';
 import { toast } from '../../_lib/modules/toast/toast.js';
+import { withUndo } from '../../_lib/modules/toast/undo.js';
 import '../components/year-header/year-header.js';
 import '../components/goal-item/goal-item.js';
 import '../components/goal-dialog/goal-dialog.js';
@@ -347,12 +348,12 @@ class HomePage extends AppElement {
       if (this._editingGoal) {
         const { id, title } = this._editingGoal;
         const year = String(this._year);
-        Store.dispatch(`${prefix}:deleted`, { year, id });
-        toast(t('home.toast-goal-deleted'), 'info', {
-          action: {
-            label: t('home.toast-undo'),
-            onClick: () => Store.dispatch(`${prefix}:title-set`, { year, id, title }),
-          },
+        withUndo({
+          getSnapshot: () => ({ id, title }),
+          apply: () => Store.dispatch(`${prefix}:deleted`, { year, id }),
+          restore: snapshot => Store.dispatch(`${prefix}:title-set`, { year, id: snapshot.id, title: snapshot.title }),
+          message: t('home.toast-goal-deleted'),
+          undoLabel: t('home.toast-undo'),
         });
       }
     };
