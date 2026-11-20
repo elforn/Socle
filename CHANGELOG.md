@@ -10,6 +10,42 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.1] — 2026-11-20
+
+A downstream app correctly pointed out that `Gestures.attach` had no reference-app
+consumer exercising its tap path in a real browser — the same blind spot that let
+the dead `onTap`/`onLongPress` handlers ship in 1.6.0. This release closes that gap
+and adds a check so it can't reopen silently.
+
+### Added
+- `library_tests/reference-coverage.test.js` — new build-time guardrail: fails if an
+  exported entry point in `modules/` (a named export, a static method such as
+  `Gestures.attach`, or a custom element tag) has no call site anywhere in
+  `reference-app/app/`. Enforces the existing CLAUDE.md rule "every library feature
+  must be used in the reference app before it is considered complete" — previously
+  a stated principle with nothing checking it. Writing it surfaced two real,
+  pre-existing gaps, kept as named, reasoned exemptions rather than silently fixed:
+  `modules/notifications/periodic-sync.js` is wired nowhere, not even inside
+  `digest-notifier.js`, its natural caller; and `modules/app-header/app-header.js`'s
+  `<app-header>` has never been adopted by the reference app, which uses its own
+  bespoke `year-header.js` instead. Both are feature decisions, not wiring bugs, and
+  are left open for a future session rather than resolved here.
+
+### Fixed
+- `reference-app/app/components/goal-item/goal-item.js` — the fail/restore/delete
+  button hand-wired `pointerdown`/`pointerup`/`click` to reproduce exactly what
+  `Gestures.attach({ onTap })` already does (deferred capture, `stopPropagation` on
+  `pointerdown` so the host mixin doesn't start a drag). It now calls `attach`
+  directly. This is the first reference-app consumer of `attach`'s tap path, and
+  `reference-app/tests/e2e/goals.spec.js` gained a test that swipes the row open and
+  clicks the real button pixels — a real pointer sequence, not a synthetic
+  `element.click()` — so the path the library promises now has real-browser coverage.
+- `reference-app/app/pages/home-page.js` — the single-action delete-undo toast was
+  hand-rolling the exact snapshot/apply/toast-with-undo sequence
+  `modules/toast/undo.js`'s `withUndo()` exists for. Found by the new coverage test;
+  now calls `withUndo` directly. The two-action save toast (Activity + Undo) is
+  unchanged — `withUndo` only supports one action.
+
 ## [1.7.0] — 2026-11-18
 
 A toast can carry two actions, and — separately — a toast can finally use more than half the viewport's width. The width fix is the one to read: it was silently capping every toast in every app, and apps working around it in their own CSS can drop the override.
