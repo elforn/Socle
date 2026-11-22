@@ -3,6 +3,7 @@ import './strings.js';
 import { setLocale, getLocale } from '../_lib/core/strings.js';
 %%STORE_IMPORT%%
 %%REDUCER_IMPORT%%
+import { setBasePath } from '../_lib/core/router/router.js';
 import '../_lib/core/router/app-router.js';
 import '../_lib/core/sw-manager/sw-manager.js';
 import '../_lib/core/components/update-banner/update-banner.js';
@@ -24,6 +25,7 @@ document.body.prepend(swm);
 
 console.log('%%APP_NAME%%', __APP_VERSION__);
 
+setBasePath(__BASE_PATH__);
 const router = document.querySelector('app-router');
 router.routes = [
   { path: '/', component: 'home-page' },

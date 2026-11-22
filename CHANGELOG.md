@@ -10,6 +10,44 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.3] — 2026-11-22
+
+Fixes the router for apps deployed to a GitHub Pages project page
+(`user.github.io/repo-name/`) rather than a domain root. Reported against a real
+deployment by a downstream app (BladeNCode / Point Assaut), which was serving its
+own not-found page on every load.
+
+### Fixed
+- `core/router/router.js` — `matchRoute`/`app-router.js`'s `_route()` matched
+  routes against raw `location.pathname`, so an app served under a prefix (e.g.
+  `/point-assaut/`) never matched its `/` route and always fell through to `*`.
+  `navigate()` pushed prefix-free paths to `history.pushState`, so in-app
+  navigation appeared to work and then 404'd on the next hard reload. Added
+  `setBasePath(base)` (call once in `main.js`, before `router.routes` is
+  assigned, with the already-injected `__BASE_PATH__`) and `currentPath()`
+  (prefix-stripped `location.pathname`, used by the router for matching).
+  `navigate()` now re-adds the prefix before pushing. Routes and `navigate()`
+  calls elsewhere in app code stay prefix-free — this is additive; an app at a
+  domain root is unaffected. `reference-app/app/main.js` and
+  `scaffold/app/main.js` now call `setBasePath(__BASE_PATH__)`.
+- `reference-app/utils/build.js`, `scaffold/utils/build.js` — added an `OUT_DIR`
+  environment override (defaults to `dist`) so a test can build into an isolated
+  directory instead of the shared `dist/` a running Playwright `webServer` may be
+  serving from concurrently.
+
+### Added
+- `reference-app/tests/e2e/base-path.spec.js`, `scaffold/tests/e2e/base-path.spec.js`
+  — builds with a non-root `BASE_PATH`, serves the result under that prefix (the
+  same shape as a real GitHub Pages project-page deployment), and asserts the
+  router resolves `home-page` rather than `not-found-page`. This is the class of
+  bug `library_tests/reference-coverage.test.js` doesn't catch — it covers
+  `modules/` entry points, not `core/` features the build already substitutes
+  values for but nothing previously exercised end to end.
+- `core/router/router.test.js` — 13 new unit tests covering prefix normalisation
+  (with/without trailing slash), the bare prefixed root, deep-path stripping, an
+  unrelated path left unmangled, a same-prefix-string false positive, and the
+  `navigate()` → `currentPath()` round-trip.
+
 ## [1.7.2] — 2026-11-20
 
 Closes one of the two gaps 1.7.1's new reference-coverage test left open, and fixes

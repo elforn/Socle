@@ -85,6 +85,8 @@ BASE_PATH=/my-app/ node utils/build.js
 
 The included `deploy.yml` sets this automatically from the repository name. Local development uses the default `/`.
 
+`BASE_PATH` only affects asset URLs at build time. The router needs to know it too — see [Deploying under a sub-path](#deploying-under-a-sub-path) below.
+
 ## Router
 
 The router uses the History API (`pushState` / `popstate`). There is no hash routing.
@@ -172,6 +174,27 @@ When a user navigates to `/goals/42` and then hard-refreshes, the browser reques
 The Service Worker solves this: it intercepts all navigation requests (requests with `mode === 'navigate'`) and returns the cached `index.html` instead. The app shell loads, the router reads the current URL, and renders the correct page. This is why offline-first and SPA routing work together without a server-side fallback.
 
 The SW intercept is active after the first visit, once the SW has installed and taken control of the page.
+
+### Deploying under a sub-path
+
+A GitHub Pages project page serves your app at `https://user.github.io/repo-name/`, not at the domain root. Routes in your app stay prefix-free — you write `/goals/:id`, never `/repo-name/goals/:id`. Call `setBasePath()` once in `main.js`, before `router.routes` is assigned, using the same `BASE_PATH` value already injected at build time:
+
+```js
+import { setBasePath } from '../_lib/core/router/router.js';
+
+setBasePath(__BASE_PATH__);
+
+const router = document.querySelector('app-router');
+router.routes = [
+  { path: '/',         component: 'home-page' },
+  { path: '/goals/:id', component: 'goal-page' },
+  { path: '*',         component: 'not-found-page' },
+];
+```
+
+`setBasePath` strips the prefix before routes are matched and adds it back on every `navigate()` call, so route definitions and `navigate()` calls elsewhere in your app never need to know about it. An app deployed at the domain root never calls `setBasePath` (or calls it with `__BASE_PATH__` equal to `'/'`) and behaves exactly as before — this is additive, not a new requirement.
+
+Without this call, an app served under a sub-path falls straight through to the `*` route on every load — `/repo-name/` never matches `/` — and `navigate()` pushes a prefix-free URL that 404s on the next hard refresh.
 
 ## Store and IDB
 

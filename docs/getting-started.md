@@ -237,7 +237,7 @@ Design within the 80% maskable safe zone: keep all visual elements within a circ
 <meta name="theme-color" content="#1C1C1E">
 ```
 
-For GitHub Pages deployments, `scope` should match `BASE_PATH` (e.g. `"/my-repo/"`). The scaffold sets this automatically via the `%%BASE_PATH%%` token.
+For GitHub Pages deployments, `scope` should match `BASE_PATH` (e.g. `"/my-repo/"`). The scaffold sets this automatically via the `%%BASE_PATH%%` token. `main.js` also passes this value to the router via `setBasePath()` — see [Deploying under a sub-path](architecture.md#deploying-under-a-sub-path) — so routes keep working once the app is live at a project-page URL instead of the domain root.
 
 ### Verify installability
 

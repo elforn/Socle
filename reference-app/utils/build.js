@@ -5,7 +5,9 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import * as esbuild from 'esbuild';
 
 const root      = join(dirname(fileURLToPath(import.meta.url)), '..');
-const dist      = join(root, 'dist');
+// OUT_DIR lets a test build into an isolated directory instead of the shared
+// dist/ a running webServer may be serving from — never set for a real deploy.
+const dist      = join(root, process.env.OUT_DIR ?? 'dist');
 const BASE_PATH = process.env.BASE_PATH ?? '/';
 
 rmSync(dist, { recursive: true, force: true });
@@ -108,7 +110,7 @@ writeFileSync(join(dist, 'manifest.json'), manifestSrc.replaceAll('%%BASE_PATH%%
 // 6. Copy app/icons/ — referenced by manifest
 if (existsSync(iconDir)) cpSync(iconDir, join(dist, 'app', 'icons'), { recursive: true });
 
-console.log(`Built ${version} (base: ${BASE_PATH}) → dist/`);
+console.log(`Built ${version} (base: ${BASE_PATH}) → ${process.env.OUT_DIR ?? 'dist'}/`);
 console.log(`  ${mainFilename} (${(jsContent.length / 1024).toFixed(1)} KB)`);
 if (mapFile) console.log(`  ${mainFilename}.map`);
 console.log(`  sw.js (cache: ${version}-${cacheHash})`);

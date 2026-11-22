@@ -3,6 +3,8 @@ exp
 scratch/
 node_modules/
 reference-app/dist/
+reference-app/tests/.base-path-dist/
+reference-app/tests/.base-path-build/
 **/*.pem
 **/*.key
 **/*.crt

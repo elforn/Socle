@@ -5,6 +5,7 @@ import './locales/ca.js';
 import { setLocale, getLocale } from '../_lib/core/strings.js';
 import { boot } from '../_lib/core/store/store.js';
 import { reducer } from './store/reducer.js';
+import { setBasePath } from '../_lib/core/router/router.js';
 import '../_lib/core/router/app-router.js';
 import '../_lib/core/sw-manager/sw-manager.js';
 import '../_lib/core/components/update-banner/update-banner.js';
@@ -47,6 +48,7 @@ onColdLaunchMessage(NOTIFICATIONS_OPEN_MESSAGE, () => window.scrollTo({ top: 0, 
 
 console.log('YourYear', __APP_VERSION__);
 
+setBasePath(__BASE_PATH__);
 const router = document.querySelector('app-router');
 router.routes = [
   { path: '/',       component: 'year-redirect' },

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { navigate, matchRoute } from './router.js';
+import { navigate, matchRoute, setBasePath, currentPath } from './router.js';
 
 describe('matchRoute', () => {
   it('matches an exact path', () => {
@@ -85,5 +85,83 @@ describe('navigate', () => {
     window.addEventListener('navigate', e => { detail = e.detail; }, { once: true });
     navigate('/goals/1');
     expect(detail).toEqual({ path: '/goals/1' });
+  });
+});
+
+// setBasePath tests run last and set module-level state for the rest of the
+// file — order matters, since the tests above assume no prefix is set.
+describe('base path', () => {
+  it('currentPath returns pathname unchanged with no base path set', () => {
+    history.pushState(null, '', '/goals/1');
+    expect(currentPath()).toBe('/goals/1');
+  });
+
+  it('ignores undefined and empty base paths', () => {
+    setBasePath(undefined);
+    setBasePath('');
+    history.pushState(null, '', '/goals/1');
+    expect(currentPath()).toBe('/goals/1');
+  });
+
+  it('normalises a base path without a trailing slash', () => {
+    setBasePath('/point-assaut');
+    history.pushState(null, '', '/point-assaut/bout/1');
+    expect(currentPath()).toBe('/bout/1');
+  });
+
+  it('strips a trailing-slash base path the same way', () => {
+    setBasePath('/point-assaut/');
+    history.pushState(null, '', '/point-assaut/bout/1');
+    expect(currentPath()).toBe('/bout/1');
+  });
+
+  it('maps the bare prefixed root (with trailing slash) to /', () => {
+    setBasePath('/point-assaut');
+    history.pushState(null, '', '/point-assaut/');
+    expect(currentPath()).toBe('/');
+  });
+
+  it('maps the bare prefixed root (without trailing slash) to /', () => {
+    setBasePath('/point-assaut');
+    history.pushState(null, '', '/point-assaut');
+    expect(currentPath()).toBe('/');
+  });
+
+  it('strips a deep path correctly', () => {
+    setBasePath('/point-assaut');
+    history.pushState(null, '', '/point-assaut/bout/abc/capture');
+    expect(currentPath()).toBe('/bout/abc/capture');
+  });
+
+  it('leaves an unrelated path alone rather than mangling it', () => {
+    setBasePath('/point-assaut');
+    history.pushState(null, '', '/other/path');
+    expect(currentPath()).toBe('/other/path');
+  });
+
+  it('does not treat a path that merely shares a prefix string as matching', () => {
+    setBasePath('/point-assaut');
+    history.pushState(null, '', '/point-assaut-other/bout/1');
+    expect(currentPath()).toBe('/point-assaut-other/bout/1');
+  });
+
+  it('navigate() prepends the base path to the pushed URL', () => {
+    setBasePath('/point-assaut');
+    navigate('/bout/1');
+    expect(location.pathname).toBe('/point-assaut/bout/1');
+  });
+
+  it('navigate() then currentPath() round-trips to the prefix-free path', () => {
+    setBasePath('/point-assaut');
+    navigate('/bout/2/capture');
+    expect(currentPath()).toBe('/bout/2/capture');
+  });
+
+  it('navigate() still dispatches the prefix-free path in the event detail', () => {
+    setBasePath('/point-assaut');
+    let detail;
+    window.addEventListener('navigate', e => { detail = e.detail; }, { once: true });
+    navigate('/bout/3');
+    expect(detail).toEqual({ path: '/bout/3' });
   });
 });

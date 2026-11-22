@@ -1,5 +1,25 @@
+let basePath = '';
+
+// Call once at boot, before assigning routes, when the app is served from a
+// sub-path (e.g. a GitHub Pages project page). Routes and navigate() stay
+// prefix-free; this is the only place the prefix is applied or stripped.
+export function setBasePath(base) {
+  if (!base) return;
+  basePath = base.endsWith('/') ? base.slice(0, -1) : base;
+}
+
+export function currentPath() {
+  const path = location.pathname;
+  if (!basePath) return path;
+  const boundary = path.length === basePath.length || path[basePath.length] === '/';
+  if (!path.startsWith(basePath) || !boundary) return path;
+  const stripped = path.slice(basePath.length);
+  return stripped === '' ? '/' : stripped;
+}
+
 export function navigate(path) {
-  history.pushState(null, '', path);
+  const full = basePath + path;
+  history.pushState(null, '', full);
   window.dispatchEvent(new CustomEvent('navigate', { detail: { path } }));
 }
 

@@ -186,8 +186,11 @@ describe('scaffold/tests/unit/store.test.js', () => {
 // and domain-specific components (year-header); scaffold versions use / and are generic.
 // update-flow legitimately differs: scaffold includes a simple-store IDB data-survival
 // test that doesn't apply to the reference-app (which uses the event-log store).
+// base-path legitimately differs: reference-app additionally exercises the /:year
+// navigate() round-trip under a prefix; the generic scaffold template has no
+// second route to assume, so it checks a hard reload at the prefixed root instead.
 const SCAFFOLD_E2E_IDENTICAL = ['install.spec.js'];
-const SCAFFOLD_E2E_ALL = ['install.spec.js', 'navigation.spec.js', 'offline.spec.js', 'persistence.spec.js', 'update-flow.spec.js'];
+const SCAFFOLD_E2E_ALL = ['base-path.spec.js', 'install.spec.js', 'navigation.spec.js', 'offline.spec.js', 'persistence.spec.js', 'update-flow.spec.js'];
 
 describe('scaffold/tests/e2e/', () => {
   it('contains exactly the expected infrastructure spec files', () => {

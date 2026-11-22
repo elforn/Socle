@@ -1,5 +1,5 @@
 import { AppElement } from '../app-element.js';
-import { matchRoute } from './router.js';
+import { matchRoute, currentPath } from './router.js';
 
 const transitionSheet = new CSSStyleSheet();
 transitionSheet.replaceSync(`
@@ -35,7 +35,7 @@ class AppRouter extends AppElement {
 
   _route() {
     if (!this._routes) return;
-    const path = location.pathname;
+    const path = currentPath();
     if (path === this._currentPath) return;
     this._currentPath = path;
     const matched = matchRoute(this._routes, path);
